@@ -16,6 +16,18 @@ import { actions as editorActions } from '../../../flux/editor';
 import styles from './styles.styl';
 import { HEAD_CNC, SVG_NODE_NAME_TEXT } from '../../../constants';
 
+const X_ANCHOR = {
+    LEFT: 'left',
+    CENTER: 'center',
+    RIGHT: 'right'
+};
+
+const Y_ANCHOR = {
+    TOP: 'top',
+    CENTER: 'center',
+    BOTTOM: 'bottom'
+};
+
 /**
  * Transformation section.
  *
@@ -41,6 +53,9 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
     const config = useSelector(state => state[headType]?.modelGroup?.getSelectedModel()?.config);
     const isTextVector = (config.svgNodeName === SVG_NODE_NAME_TEXT);
     const [minSize, setMinSize] = useState(0.1);
+    const [xAnchor, setXAnchor] = useState(X_ANCHOR.CENTER);
+    const [yAnchor, setYAnchor] = useState(Y_ANCHOR.CENTER);
+
     // calculate logical transformation
     // TODO: convert positions in flux
     const { x: logicalX, y: logicalY } = convertSVGPointToLogicalPoint({ x, y }, size);
@@ -68,16 +83,59 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
         });
     }, [selectedModelArray]);
 
+    const transform = {
+        x: () => {
+            let value = toFixed(logicalX, 1);
+
+            if (xAnchor === X_ANCHOR.LEFT) {
+                value -= width / 2;
+            } else if (xAnchor === X_ANCHOR.RIGHT) {
+                value += width / 2;
+            }
+
+            return value.toFixed(1);
+        },
+
+        y: () => {
+            let value = toFixed(logicalY, 1);
+
+            if (yAnchor === Y_ANCHOR.BOTTOM) {
+                value -= height / 2;
+            } else if (yAnchor === Y_ANCHOR.TOP) {
+                value += height / 2;
+            }
+
+            return value.toFixed(1);
+        }
+    };
+
     const actions = {
+        onAnchorChanged: (anchorX, anchorY) => {
+            setXAnchor(anchorX);
+            setYAnchor(anchorY);
+        },
+
         onChangeLogicalX: (newLogicalX) => {
             const elements = selectedElements;
-            const newX = newLogicalX + size.x;
+            let newX = newLogicalX + size.x;
+            if (xAnchor === X_ANCHOR.LEFT) {
+                newX += width / 2;
+            } else if (xAnchor === X_ANCHOR.RIGHT) {
+                newX -= width / 2;
+            }
+
             dispatch(editorActions.moveElementsImmediately(headType, elements, { newX }));
         },
 
         onChangeLogicalY: (newLogicalY) => {
             const elements = selectedElements;
-            const newY = -newLogicalY + size.y;
+            let newY = -newLogicalY + size.y;
+            if (yAnchor === Y_ANCHOR.TOP) {
+                newY += height / 2;
+            } else if (yAnchor === Y_ANCHOR.BOTTOM) {
+                newY -= height / 2;
+            }
+
             dispatch(editorActions.moveElementsImmediately(headType, elements, { newY }));
         },
 
@@ -94,6 +152,7 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                 }
             }
         },
+
         onChangeHeight: (newHeight) => {
             const elements = selectedElements;
 
@@ -148,7 +207,7 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                                         suffix="mm"
                                         className="margin-horizontal-2"
                                         disabled={disabled || !selectedNotHide || drawing}
-                                        value={toFixed(logicalX, 1)}
+                                        value={transform.x(logicalX)}
                                         size="small"
                                         min={-size.x}
                                         max={size.x}
@@ -167,7 +226,7 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                                         suffix="mm"
                                         disabled={disabled || !selectedNotHide || drawing}
                                         className="margin-horizontal-2"
-                                        value={toFixed(logicalY, 1)}
+                                        value={transform.y(logicalY)}
                                         size="small"
                                         min={-size.y}
                                         max={size.y}
@@ -176,6 +235,94 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                                         }}
                                     />
                                 </span>
+                            </div>
+                        </span>
+                    </div>
+                </TipTrigger>
+                <TipTrigger
+                    title={i18n._('key-CncLaser/TransformationSection-Move')}
+                    content={i18n._('key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.')}
+                >
+                    <div className="sm-flex margin-vertical-8 ">
+                        <span className="sm-flex-auto sm-flex-order-negative width-64 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-Move')}</span>
+                        <span className="sm-flex-width sm-flex sm-flex-direction-c justify-space-between">
+                            <div className="margin-vertical-4">
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('left', 'top')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-left-16"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('center', 'top')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-horizontal-4"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('right', 'top')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                            </div>
+                            <div className="margin-vertical-4">
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('left', 'center')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-left-16"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('center', 'center')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-horizontal-4"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('right', 'center')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                            </div>
+                            <div className="margin-vertical-4">
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('left', 'bottom')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-left-16"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('center', 'bottom')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-horizontal-4"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
+                                <SvgIcon
+                                    onClick={() => actions.onAnchorChanged('right', 'bottom')}
+                                    name="FlipVertical"
+                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1"
+                                    disabled={disabled || !selectedNotHide || drawing}
+                                    size={26}
+                                    borderRadius={8}
+                                />
                             </div>
                         </span>
                     </div>
