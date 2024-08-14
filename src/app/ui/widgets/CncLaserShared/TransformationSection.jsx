@@ -248,21 +248,21 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                         <span className="sm-flex-width sm-flex sm-flex-direction-c justify-space-between">
                             <div className="margin-vertical-4">
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('left', 'top')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.LEFT, Y_ANCHOR.TOP)}
                                     name="AnchorTopLeft"
                                     className="border-radius-8 border-default-grey-1 margin-left-16"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.TOP)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('center', 'top')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.CENTER, Y_ANCHOR.TOP)}
                                     name="AnchorTopCenter"
                                     className="border-radius-8 border-default-grey-1 margin-horizontal-4"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.TOP)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('right', 'top')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.RIGHT, Y_ANCHOR.TOP)}
                                     name="AnchorTopRight"
                                     className="border-radius-8 border-default-grey-1"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.TOP)}
@@ -271,21 +271,21 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                             </div>
                             <div className="margin-vertical-4">
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('left', 'center')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.LEFT, Y_ANCHOR.CENTER)}
                                     name="AnchorMiddleLeft"
                                     className="border-radius-8 border-default-grey-1 margin-left-16"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.CENTER)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('center', 'center')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.CENTER, Y_ANCHOR.CENTER)}
                                     name="AnchorMiddleCenter"
                                     className="border-radius-8 border-default-grey-1 margin-horizontal-4"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.CENTER)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('right', 'center')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.RIGHT, Y_ANCHOR.CENTER)}
                                     name="AnchorMiddleRight"
                                     className="border-radius-8 border-default-grey-1"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.CENTER)}
@@ -294,21 +294,21 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                             </div>
                             <div className="margin-vertical-4">
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('left', 'bottom')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.LEFT, Y_ANCHOR.BOTTOM)}
                                     name="AnchorBottomLeft"
                                     className="border-radius-8 border-default-grey-1 margin-left-16"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.BOTTOM)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('center', 'bottom')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.CENTER, Y_ANCHOR.BOTTOM)}
                                     name="AnchorBottomCenter"
                                     className="border-radius-8 border-default-grey-1 margin-horizontal-4"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.BOTTOM)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
-                                    onClick={() => actions.onAnchorChanged('right', 'bottom')}
+                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.RIGHT, Y_ANCHOR.BOTTOM)}
                                     name="AnchorBottomRight"
                                     className="border-radius-8 border-default-grey-1"
                                     disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.BOTTOM)}
