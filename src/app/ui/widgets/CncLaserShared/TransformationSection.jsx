@@ -240,87 +240,78 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                     </div>
                 </TipTrigger>
                 <TipTrigger
-                    title={i18n._('key-CncLaser/TransformationSection-Move')}
-                    content={i18n._('key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.')}
+                    title={i18n._('key-CncLaser/TransformationSection-AnchorPoint')}
+                    content={i18n._('key-CncLaser/TransformationSection-Sets the reference point for aligning the object. Adjusts the objects position based on the selected anchor point.')}
                 >
                     <div className="sm-flex margin-vertical-8 ">
-                        <span className="sm-flex-auto sm-flex-order-negative width-64 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-Move')}</span>
+                        <span className="sm-flex-auto sm-flex-order-negative width-64 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-AnchorPoint')}</span>
                         <span className="sm-flex-width sm-flex sm-flex-direction-c justify-space-between">
                             <div className="margin-vertical-4">
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('left', 'top')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorTopLeft"
+                                    className="border-radius-8 border-default-grey-1 margin-left-16"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.TOP)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('center', 'top')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorTopCenter"
+                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.TOP)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('right', 'top')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorTopRight"
+                                    className="border-radius-8 border-default-grey-1"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.TOP)}
                                     borderRadius={8}
                                 />
                             </div>
                             <div className="margin-vertical-4">
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('left', 'center')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorMiddleLeft"
+                                    className="border-radius-8 border-default-grey-1 margin-left-16"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.CENTER)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('center', 'center')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorMiddleCenter"
+                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.CENTER)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('right', 'center')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorMiddleRight"
+                                    className="border-radius-8 border-default-grey-1"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.CENTER)}
                                     borderRadius={8}
                                 />
                             </div>
                             <div className="margin-vertical-4">
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('left', 'bottom')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorBottomLeft"
+                                    className="border-radius-8 border-default-grey-1 margin-left-16"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.BOTTOM)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('center', 'bottom')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorBottomCenter"
+                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.BOTTOM)}
                                     borderRadius={8}
                                 />
                                 <SvgIcon
                                     onClick={() => actions.onAnchorChanged('right', 'bottom')}
-                                    name="FlipVertical"
-                                    className="padding-horizontal-8 border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing}
-                                    size={26}
+                                    name="AnchorBottomRight"
+                                    className="border-radius-8 border-default-grey-1"
+                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.BOTTOM)}
                                     borderRadius={8}
                                 />
                             </div>

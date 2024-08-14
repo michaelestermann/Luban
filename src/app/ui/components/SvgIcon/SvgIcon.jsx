@@ -5,12 +5,12 @@ import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
 import * as Icons from 'snapmaker-react-icon';
 import styles from './styles.styl';
-
-// FIXME: This is just a temporary solution. The correct approach would be to move this component into the xxx dependency library.
+import * as CustomIcons from '../../widgets/CncLaserShared/Icons/Icons';
 import MainToolbarAbPosition from './Icons/MainToolbarAbPosition';
 
+// FIXME: This is just a temporary solution. The correct approach would be to move this component into the xxx dependency library.
+Object.assign(Icons, CustomIcons);
 Icons.MainToolbarAbPosition = MainToolbarAbPosition;
-
 
 
 class SvgIcon extends PureComponent {
