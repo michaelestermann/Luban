@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { WorkflowStatus } from '@snapmaker/luban-platform';
-import { ResponseCallback } from '@snapmaker/snapmaker-sacp-sdk';
+import { Response, ResponseCallback } from '@snapmaker/snapmaker-sacp-sdk';
 import { PeerId } from '@snapmaker/snapmaker-sacp-sdk/dist/communication/Header';
 import { readString, readUint16, readUint32, readUint8 } from '@snapmaker/snapmaker-sacp-sdk/dist/helper';
 import {
@@ -55,7 +55,7 @@ import {
     SINGLE_EXTRUDER_TOOLHEAD_FOR_SM2,
 } from '../../../constants';
 import logger from '../../../lib/logger';
-import SacpClient, { CoordinateType } from '../sacp/SacpClient';
+import SacpClient, { CoordinateType, MotorPowerMode } from '../sacp/SacpClient';
 import { MarlinStateData } from '../types';
 import Channel, {
     AirPurifierChannelInterface,
@@ -71,6 +71,7 @@ import Channel, {
     UploadFileOptions,
 } from './Channel';
 import { ChannelEvent } from './ChannelEvent';
+import { L20WLaserToolModule, L2WLaserToolModule, L40WLaserToolModule } from '../../../../app/machines/snapmaker-2-toolheads';
 
 const log = logger('machine:channels:SacpChannel');
 
@@ -84,7 +85,7 @@ class SacpChannelBase extends Channel implements
     EnclosureChannelInterface,
     AirPurifierChannelInterface {
     // heart beat
-    private heartbeatTimerLegacy;
+    private heartbeatTimerLegacy = [];
     private heartbeatTimer;
     private shuttingDown: boolean = false;
 
@@ -206,7 +207,7 @@ class SacpChannelBase extends Channel implements
         log.info(`Subscribe heartbeat, result = ${res.code}`);
     }
 
-    public async stopHeartbeat(): Promise<void> {
+    public async stopHeartbeat(id?: string): Promise<void> {
         this.shuttingDown = true;
 
         // Remove heartbeat timeout check
@@ -214,14 +215,14 @@ class SacpChannelBase extends Channel implements
             clearTimeout(this.heartbeatTimer);
             this.heartbeatTimer = null;
         }
-        if (this.heartbeatTimerLegacy) {
-            clearTimeout(this.heartbeatTimerLegacy);
-            this.heartbeatTimerLegacy = null;
+        if (this.heartbeatTimerLegacy[id]) {
+            clearTimeout(this.heartbeatTimerLegacy[id]);
+            this.heartbeatTimerLegacy[id] = null;
         }
 
         // Cancel subscription of heartbeat
         const res = await this.sacpClient.unsubscribeHeartbeat(null);
-        log.info(`Unsubscribe heartbeat, result = ${res.code}`);
+        log.info(`Unsubscribe heartbeat, result = ${res.code}, ${id}, ${this.heartbeatTimerLegacy[id]}`);
     }
 
     /**
@@ -814,8 +815,9 @@ class SacpChannelBase extends Channel implements
     }
 
     // TODO: refactor startHeartbeatLegacy(), put subscriptions on machine instances.
-    public startHeartbeatLegacy = async (sacpClient: SacpClient, client?: net.Socket) => {
+    public startHeartbeatLegacy = async (sacpClient: SacpClient, client?: net.Socket, id = 'uuid') => {
         this.sacpClient = sacpClient;
+        log.info(`SACP start heartbeat ${id}`,);
 
         let stateData: MarlinStateData = {};
 
@@ -840,17 +842,22 @@ class SacpChannelBase extends Channel implements
             }
         });
 
-        this.sacpClient.setHandler(0x01, 0x36, ({ param }) => {
+        // this.sacpClient.on('311', ())
+        this.sacpClient.setHandler(0x01, 0x36, ({ param, packet }) => {
             const isHomed = readUint8(param, 0);
             stateData = {
                 ...stateData,
                 isHomed: !isHomed
             };
-            if (stateData.headType !== HEAD_PRINTING) {
-                this.sacpClient.updateCoordinate(CoordinateType.WORKSPACE).then(({ response }) => {
-                    log.info(`updateCoordinateType, ${response.result}`);
-                });
-            }
+            this.sacpClient.ack(0x01, 0x36, packet, new Response(0).toBuffer()).then(() => {
+                if (stateData.headType !== HEAD_PRINTING) {
+                    this.sacpClient.getCurrentCoordinateInfo().then(({ response }) => {
+                        this.sacpClient.updateCoordinate(CoordinateType.WORKSPACE).then(({ response }) => {
+                            log.info(`updateCoordinateType, ${response.result}`);
+                        });
+                    });
+                }
+            });
             this.socket && this.socket.emit('move:status', { isHoming: false });
         });
 
@@ -862,15 +869,15 @@ class SacpChannelBase extends Channel implements
 
             const statusKey = readUint8(data.response.data, 0);
 
-            if (this.heartbeatTimerLegacy) {
-                clearTimeout(this.heartbeatTimerLegacy);
-                this.heartbeatTimerLegacy = null;
+            if (this.heartbeatTimerLegacy[id]) {
+                clearTimeout(this.heartbeatTimerLegacy[id]);
+                this.heartbeatTimerLegacy[id] = null;
             }
 
-            this.heartbeatTimerLegacy = setTimeout(() => {
+            this.heartbeatTimerLegacy[id] = setTimeout(() => {
                 client && client.destroy();
-                log.info('TCP close');
-                this.socket && this.socket.emit('connection:close');
+                log.info(`SACP close ${id}, ${this.heartbeatTimerLegacy[id]}`,);
+                this.heartbeatTimerLegacy[id] && this.socket && this.socket.emit('connection:close');
             }, 10000);
 
             this.machineStatus = WORKFLOW_STATUS_MAP[statusKey];
@@ -885,6 +892,8 @@ class SacpChannelBase extends Channel implements
                 }
             });
         };
+
+        // this.setMotorPowerMode(0);
 
         // Subscribe heart beat
         this.shuttingDown = false;
@@ -1274,11 +1283,6 @@ class SacpChannelBase extends Channel implements
             log.info(`Go-Home, ${response}`);
             this.socket && this.socket.emit('serialport:read', { data: response.result === 0 ? 'OK' : 'WARNING' });
         });
-        if (headType === HEAD_LASER || headType === HEAD_CNC) {
-            await this.sacpClient.updateCoordinate(CoordinateType.WORKSPACE).then(res => {
-                log.info(`Update Coordinate: ${res}`);
-            });
-        }
     };
 
     public coordinateMove = async ({ moveOrders, jogSpeed, headType, beforeGcodeStart = false }) => {
@@ -1299,9 +1303,18 @@ class SacpChannelBase extends Channel implements
 
     public setWorkOrigin = async ({ xPosition, yPosition, zPosition, bPosition }) => {
         log.info(`position: ${xPosition}, ${yPosition}, ${zPosition}, ${bPosition}`);
-        const coordinateInfos = [new CoordinateInfo(Direction.X1, 0), new CoordinateInfo(Direction.Y1, 0), new CoordinateInfo(Direction.Z1, 0)];
+        const coordinateInfos = [];
+        if (xPosition) {
+            coordinateInfos.push(new CoordinateInfo(Direction.X1, xPosition));
+        }
+        if (yPosition) {
+            coordinateInfos.push(new CoordinateInfo(Direction.Y1, yPosition));
+        }
+        if (zPosition) {
+            coordinateInfos.push(new CoordinateInfo(Direction.Z1, zPosition));
+        }
         if (bPosition) {
-            coordinateInfos.push(new CoordinateInfo(Direction.B1, 0));
+            coordinateInfos.push(new CoordinateInfo(Direction.B1, bPosition));
         }
         await this.sacpClient.setWorkOrigin(coordinateInfos).then(res => {
             log.info(`Set Work Origin: ${res.data}`);
@@ -1561,9 +1574,16 @@ class SacpChannelBase extends Channel implements
             return;
         }
         const { laserToolHeadInfo } = await this.sacpClient.getLaserToolHeadInfo(headModule.key);
-        log.debug(`laserFocalLength:${laserToolHeadInfo.laserFocalLength}, materialThickness: ${materialThickness}, platformHeight:${laserToolHeadInfo.platformHeight}`);
+        log.info(`toolHead:${toolHead}, hasLaserFocalLenth:${includes([L2WLaserToolModule.identifier, L20WLaserToolModule.identifier, L40WLaserToolModule.identifier], toolHead)}, laserFocalLength:${laserToolHeadInfo.laserFocalLength}, materialThickness: ${materialThickness}, platformHeight:${laserToolHeadInfo.platformHeight}`);
+        let z;
+        if (includes([L2WLaserToolModule.identifier, L20WLaserToolModule.identifier, L40WLaserToolModule.identifier], toolHead)) {
+            z = laserToolHeadInfo.platformHeight + materialThickness;
+        } else {
+            z = laserToolHeadInfo.laserFocalLength + laserToolHeadInfo.platformHeight + materialThickness;
+        }
+
         await this.setAbsoluteWorkOrigin({
-            z: laserToolHeadInfo.laserFocalLength + laserToolHeadInfo.platformHeight + materialThickness,
+            z,
             isRotate
         });
     }
@@ -1583,6 +1603,10 @@ class SacpChannelBase extends Channel implements
 
     public async getNetworkStationState(): Promise<NetworkStationState> {
         return this.sacpClient.getNetworkStationState();
+    }
+
+    public async setMotorPowerMode(setMotorPowerHoldMode: MotorPowerMode) {
+        return this.sacpClient.setMotorPowerHoldMode(setMotorPowerHoldMode);
     }
 }
 
