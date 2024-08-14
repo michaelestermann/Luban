@@ -80,7 +80,7 @@ module.exports = {
             "fs": require.resolve('browserify-fs'),
             "timers": require.resolve('timers-browserify'),
             "stream": require.resolve('stream-browserify')
-          }
+        }
     },
     resolveLoader: {
         modules: [NODE_MODULES]

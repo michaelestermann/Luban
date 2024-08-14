@@ -22,19 +22,19 @@ const devServer = {
         directory: path.resolve(__dirname, 'output/src/app'),
     },
     proxy: [
-    {
-        context: ['/api', '/data', '/worker', '/resources'],
-        target: `http://localhost:${SERVER_PORT}`,
-        changeOrigin: true,
-        secure: false
-    },
-    {
-        context: ['/socket.io'],
-        target: `ws://localhost:${SERVER_PORT}`,
-        ws: true,
-        changeOrigin: true,
-        secure: false
-    }
+        {
+            context: ['/api', '/data', '/worker', '/resources'],
+            target: `http://localhost:${SERVER_PORT}`,
+            changeOrigin: true,
+            secure: false
+        },
+        {
+            context: ['/socket.io'],
+            target: `ws://localhost:${SERVER_PORT}`,
+            ws: true,
+            changeOrigin: true,
+            secure: false
+        }
     ],
     devMiddleware: {
         index: true,
@@ -67,7 +67,7 @@ module.exports = {
             "fs": require.resolve('browserify-fs'),
             "timers": require.resolve('timers-browserify'),
             "stream": require.resolve('stream-browserify')
-          }
+        }
     },
     entry: {
         app: path.resolve(__dirname, 'src/app/index.jsx'),

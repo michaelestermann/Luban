@@ -45,7 +45,7 @@ module.exports = {
             "fs": require.resolve('browserify-fs'),
             "timers": require.resolve('timers-browserify'),
             "stream": require.resolve('stream-browserify')
-          }
+        }
     },
     entry: {
         polyfill: path.resolve(__dirname, 'src/app/polyfill/index.js'),
