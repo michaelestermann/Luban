@@ -5,11 +5,13 @@ import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
 import * as Icons from 'snapmaker-react-icon';
 import styles from './styles.styl';
-import * as CustomIcons from '../../widgets/CncLaserShared/Icons/Icons';
+import * as CustomIcons from '../../widgets/CncLaserShared/Icons/AnchorIcons';
+import * as AlignmentIcons from '../../widgets/CncLaserShared/Icons/AlignmentIcons';
 import MainToolbarAbPosition from './Icons/MainToolbarAbPosition';
 
 // FIXME: This is just a temporary solution. The correct approach would be to move this component into the xxx dependency library.
 Object.assign(Icons, CustomIcons);
+Object.assign(Icons, AlignmentIcons);
 Icons.MainToolbarAbPosition = MainToolbarAbPosition;
 
 
