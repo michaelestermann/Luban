@@ -59,14 +59,16 @@ module.exports = {
             'node_modules',
         ],
         alias: {
-            'threads/dist/master/pool-types': path.resolve(__dirname, 'node_modules/threads/dist/master/pool-types.js')
+            'threads/dist/master/pool-types': path.resolve(__dirname, 'node_modules/threads/dist/master/pool-types.js'),
+            'process/browser': require.resolve('process/browser.js')
         },
         extensions: ['.js', '.json', '.jsx', '.styl', '.ts', '.tsx'],
         fallback: {
-            "path": require.resolve('path-browserify'),
-            "fs": require.resolve('browserify-fs'),
-            "timers": require.resolve('timers-browserify'),
-            "stream": require.resolve('stream-browserify')
+            path: require.resolve('path-browserify'),
+            fs: require.resolve('browserify-fs'),
+            timers: require.resolve('timers-browserify'),
+            stream: require.resolve('stream-browserify'),
+            process: require.resolve('process/browser')
         }
     },
     entry: {
@@ -121,6 +123,9 @@ module.exports = {
         new HtmlWebpackPlugin({
             filename: 'index.html',
             template: path.resolve(__dirname, 'src/app/resources/assets/index.html'),
+        }),
+        new webpack.ProvidePlugin({
+            process: 'process/browser'
         })
     ],
     module: {

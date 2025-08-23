@@ -13,6 +13,7 @@ const t = (...args) => {
 };
 
 function processKey(value, options) {
+    // @ts-ignore
     const { context, count } = { ...options };
     const containsContext = (context !== undefined) && (context !== null);
     const containsPlural = (typeof count === 'number');

@@ -17,7 +17,6 @@ import SacpTcpChannel from '../channels/SacpTcpChannel';
 import TextSerialChannel from '../channels/TextSerialChannel';
 import { ConnectedData } from '../types';
 import MachineInstance from './Instance';
-import SacpChannelBase from '../channels/SacpChannel';
 
 const log = logger('machine:instance:J1Instance');
 
@@ -32,7 +31,7 @@ class J1MachineInstance extends MachineInstance {
         state.series = SnapmakerJ1Machine.identifier;
 
         // module info
-        const moduleInfos = await (this.channel as SacpChannelBase).getModuleInfo();
+        const moduleInfos = await this.getChannelAsSacpChannel().getModuleInfo();
 
         const moduleListStatus = {
             // airPurifier: false,
@@ -86,12 +85,12 @@ class J1MachineInstance extends MachineInstance {
         // await this.channel.startHeartbeat();
 
         // Legacy
-        const sacpClient = (this.channel as SacpChannelBase).sacpClient;
-        await (this.channel as SacpChannelBase).startHeartbeatLegacy(sacpClient, undefined);
+        const sacpClient = this.getChannelAsSacpChannel().sacpClient;
+        await this.getChannelAsSacpChannel().startHeartbeatLegacy(sacpClient, undefined);
 
-        (this.channel as SacpChannelBase).registerErrorReportHandler();
+        this.getChannelAsSacpChannel().registerErrorReportHandler();
 
-        (this.channel as SacpChannelBase).setROTSubscribeApi();
+        this.getChannelAsSacpChannel().setROTSubscribeApi();
     }
 
     public async onPrepare(): Promise<void> {
@@ -113,7 +112,7 @@ class J1MachineInstance extends MachineInstance {
         log.info('Stop heartbeat.');
         await this.channel.stopHeartbeat(this.id);
 
-        (this.channel as SacpChannelBase).unregisterErrorReportHandler();
+        this.getChannelAsSacpChannel().unregisterErrorReportHandler();
     }
 }
 

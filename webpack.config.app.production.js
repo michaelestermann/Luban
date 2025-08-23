@@ -39,12 +39,16 @@ module.exports = {
             path.resolve(__dirname, 'src/app'),
             'node_modules'
         ],
+        alias: {
+            'process/browser': require.resolve('process/browser.js')
+        },
         extensions: ['.js', '.json', '.jsx', '.styl', '.ts', '.tsx'],
         fallback: {
-            "path": require.resolve('path-browserify'),
-            "fs": require.resolve('browserify-fs'),
-            "timers": require.resolve('timers-browserify'),
-            "stream": require.resolve('stream-browserify')
+            path: require.resolve('path-browserify'),
+            fs: require.resolve('browserify-fs'),
+            timers: require.resolve('timers-browserify'),
+            stream: require.resolve('stream-browserify'),
+            process: require.resolve('process/browser')
         }
     },
     entry: {
@@ -90,6 +94,9 @@ module.exports = {
         new HtmlWebpackPlugin({
             filename: 'index.html',
             template: path.resolve(__dirname, 'src/app/resources/assets/index.html'),
+        }),
+        new webpack.ProvidePlugin({
+            process: 'process/browser'
         })
     ],
     module: {

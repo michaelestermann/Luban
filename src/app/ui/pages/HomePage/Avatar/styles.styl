@@ -1,0 +1,59 @@
+.avatarBox {
+    position: absolute;
+    top: 0;
+    right: 2.5%;
+    height: 50px;
+    z-index: 16;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.userInfo {
+    display: flex;
+    align-items: center;
+}
+.userInfoName {
+    font-size: 16px;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.imgBox {
+    width: 40px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    img {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+.webviewModal {
+    width: 90% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    z-index: 99999;
+
+    :global(.ant-modal-body) {
+        max-height none !important;
+    }
+}
+
+.contentBox {
+    margin: 20px;
+    webview {
+        border: none;
+        height: 800px;
+        width: 100%;
+    }
+}
+
+.not-online, .error-tips {
+    padding: 10px;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

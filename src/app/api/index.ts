@@ -282,6 +282,15 @@ const getCaseResourcesList = (() => {
     };
 })();
 
+//
+// user info
+//
+const getUserInfo = (() => {
+    return async (token) => {
+        const getData = defaultAPIFactory(() => request.get('/api/common/accounts/current').query({ token }));
+        return getData();
+    };
+})();
 
 const getInformationFlow = (() => {
     // cache CaseResources data for once load
@@ -300,6 +309,9 @@ const getSvgShapeLabelList = defaultAPIFactory((options) => request.get('/api/sv
 export default {
     // version
     getLatestVersion,
+
+    // user info
+    getUserInfo,
 
     // utils
     utils,

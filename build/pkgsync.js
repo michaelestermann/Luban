@@ -5,6 +5,14 @@ const fs = require('fs');
 const path = require('path');
 const findImports = require('find-imports');
 
+// Ensure running from repository root so globs resolve correctly even when invoked in output/
+try {
+  const repoRoot = path.resolve(__dirname, '..');
+  if (process.cwd() !== repoRoot) {
+    process.chdir(repoRoot);
+  }
+} catch (_) {}
+
 // Copy necessary properties from 'package.json' to 'src/package.json'
 const pkg = require('../package.json');
 const pkgApp = require('../src/package.json');
@@ -13,12 +21,14 @@ const files = [
     'src/*.{ts,js}',
     'src/server/**/*.{ts,js,jsx}',
     'src/shared/**/*.{ts,js,jsx}',
+    '!src/shared/lib/FontManager.js',
     'packages/**/*.ts',
 ];
 const deps = [
     '@babel/runtime', // 'babel-runtime' is required for electron app
     'debug', // 'debug' is required for electron app
     '@electron/remote', // '@electron/remote/main' is required
+    '@sentry/electron'
 ].concat(findImports(files, { flatten: true })).sort();
 
 pkgApp.name = pkg.name;

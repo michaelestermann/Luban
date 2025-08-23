@@ -4,7 +4,6 @@ var _interopRequireDefault = require('@babel/runtime/helpers/interopRequireDefau
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
-exports['default'] = void 0;
 var _classCallCheck2 = _interopRequireDefault(require('@babel/runtime/helpers/classCallCheck'));
 var _createClass2 = _interopRequireDefault(require('@babel/runtime/helpers/createClass'));
 var _defineProperty2 = _interopRequireDefault(require('@babel/runtime/helpers/defineProperty'));
@@ -60,5 +59,5 @@ var ParameterContext = /*#__PURE__*/function () {
     }]);
     return ParameterContext;
 }();
-var _default = ParameterContext;
-exports['default'] = _default;
+
+module.exports = ParameterContext;

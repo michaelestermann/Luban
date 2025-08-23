@@ -10,9 +10,13 @@ import * as AlignmentIcons from '../../widgets/CncLaserShared/Icons/AlignmentIco
 import MainToolbarAbPosition from './Icons/MainToolbarAbPosition';
 
 // FIXME: This is just a temporary solution. The correct approach would be to move this component into the xxx dependency library.
-Object.assign(Icons, CustomIcons);
-Object.assign(Icons, AlignmentIcons);
-Icons.MainToolbarAbPosition = MainToolbarAbPosition;
+// Avoid mutating the ESM namespace import (Icons). Create a merged icon registry instead.
+const AllIcons = {
+    ...Icons,
+    ...CustomIcons,
+    ...AlignmentIcons,
+    MainToolbarAbPosition
+};
 
 
 class SvgIcon extends PureComponent {
@@ -103,9 +107,9 @@ class SvgIcon extends PureComponent {
         } = this.props;
         let iconBackground = 'transparent';
         let iconLineHeight = `${hoversize}px`;
-        let Component = Icons[name];
+        let Component = AllIcons[name];
         if (!Component) {
-            Component = Icons.PrintingSettingNormal;
+            Component = AllIcons.PrintingSettingNormal;
         }
         const hoverBackgroundColor = includes(type, 'hoverNoBackground') ? 'transparent' : '#EEEFF0';
         const hoverIconColor = includes(type, 'hoverNoBackground') ? '#2A2C2E' : color;

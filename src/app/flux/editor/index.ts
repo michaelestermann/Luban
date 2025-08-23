@@ -74,6 +74,9 @@ import { actions as projectActions } from '../project';
 import { SVGClippingResultType, SVGClippingType } from '../../constants/clipping';
 import { actions as appGlobalActions } from '../app-global';
 import UpdateHrefOperation2D from '../operation-history/UpdateHrefOperation2D';
+import { toast } from '../../ui/components/Toast';
+import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
+import AddMaterialTestGenerate from '../operation-history/AddMaterialTestGenerate';
 
 
 declare type HeadType = 'laser' | 'cnc';
@@ -812,13 +815,20 @@ export const actions = {
         } else {
             const extname = path.extname(uploadName);
             const isScale = !includes(scaleExtname, extname);
-            const newModelSize = sourceType !== SOURCE_TYPE.IMAGE3D && sourceType !== SOURCE_TYPE.SVG
-                ? limitModelSizeByMachineSize(coordinateSize, sourceWidth, sourceHeight, isLimit, isScale)
-                : sizeModel(size, materials, sourceWidth, sourceHeight);
+            const originalExtname = path.extname(originalName).toLowerCase();
+            if (originalExtname !== '.dxf') {
+                const newModelSize = sourceType !== SOURCE_TYPE.IMAGE3D && sourceType !== SOURCE_TYPE.SVG
+                    ? limitModelSizeByMachineSize(coordinateSize, sourceWidth, sourceHeight, isLimit, isScale)
+                    : sizeModel(size, materials, sourceWidth, sourceHeight);
 
-            width = newModelSize?.width;
-            height = newModelSize?.height;
-            scale = newModelSize?.scale;
+                width = newModelSize?.width;
+                height = newModelSize?.height;
+                scale = newModelSize?.scale;
+            } else {
+                width = sourceWidth;
+                height = sourceHeight;
+                scale = 1;
+            }
         }
 
         if (`${headType}-${sourceType}-${mode}` === 'cnc-raster-greyscale') {
@@ -1648,6 +1658,185 @@ export const actions = {
         }
 
         dispatch(actions.resetProcessState(headType));
+    },
+
+    createElementAndGenToolPath: (headType, params, gcodeConfig, toolParams) => async (dispatch, getState) => {
+        dispatch(actions.resetProcessState(headType));
+        const { progressStatesManager, modelGroup, SVGActions, toolPathGroup, coordinateMode, coordinateSize, materials } = getState()[headType];
+        const { rectRows, speedMin, speedMax, rectHeight, rectCols, powerMin, powerMax, rectWidth } = params;
+        const origin: Origin = getState()[headType].origin;
+
+        if (!progressStatesManager.inProgress()) {
+            progressStatesManager.startProgress(PROCESS_STAGE.CNC_LASER_PROCESS_IMAGE, [1]);
+        } else {
+            progressStatesManager.startNextStep();
+        }
+
+        const progress = (p) => {
+            if (p === 1) {
+                progressStatesManager.finishProgress(true);
+            }
+            if (p === -1) {
+                progressStatesManager.finishProgress(false);
+                p = 1;
+            }
+            dispatch(
+                actions.updateState(headType, {
+                    stage: STEP_STAGE.CNC_LASER_PROCESSING_IMAGE,
+                    progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_PROCESSING_IMAGE, p)
+                })
+            );
+        };
+
+        const rectGap = 6;
+        const titleGap = 2;
+        // headTitleGap just use between head title and rects
+        const headTitleGap = 4;
+        const baseStyle = {
+            titleHeight: 2.5,
+            titleFontSize: 5,
+            numHeight: 2,
+            numFontSize: 4,
+            maxWidth: 16
+        };
+        if ((rectHeight < rectWidth ? rectHeight : rectWidth) > 4) {
+            baseStyle.titleHeight = 3;
+            baseStyle.titleFontSize = 8.5;
+            baseStyle.numHeight = 2;
+            baseStyle.numFontSize = 5.8;
+            baseStyle.maxWidth = 17.9;
+        }
+        if ((rectHeight < rectWidth ? rectHeight : rectWidth) > 6) {
+            baseStyle.titleHeight = 4;
+            baseStyle.titleFontSize = 11.2;
+            baseStyle.numHeight = 3;
+            baseStyle.numFontSize = 8.6;
+            baseStyle.maxWidth = 23.6;
+        }
+        const maxWidth = rectCols * (rectWidth + rectGap) - rectGap + titleGap * 2 + baseStyle.numHeight + baseStyle.titleHeight + (rectWidth > 3 ? 0 : 1);
+        const maxHeight = rectRows * (rectHeight + rectGap) - rectGap + headTitleGap + (titleGap + baseStyle.titleHeight) * 2 + baseStyle.numHeight;
+        progress(0.05);
+        // 越界判断
+        if (maxWidth > Math.max(coordinateSize.x, baseStyle.maxWidth) || maxHeight > coordinateSize.y) {
+            progress(-1);
+            toast(makeSceneToast('warning', `Need more workspace,limit width:${Math.max(coordinateSize.x, baseStyle.maxWidth, maxWidth)},limit height:${maxHeight}`));
+            return;
+        }
+
+        const position = {
+            x: SVGActions.size.x + coordinateMode.setting.sizeMultiplyFactor.x * coordinateSize.x / 2 - maxWidth / 2,
+            y: SVGActions.size.y - coordinateMode.setting.sizeMultiplyFactor.y * coordinateSize.y / 2 + maxHeight / 2
+        };
+
+        const toolPathBase = {
+            speed: (speedMax - speedMin) / ((rectRows - 1) || 1),
+            power: (powerMax - powerMin) / ((rectCols - 1) || 1),
+        };
+
+        const wordSpeed = Math.round((speedMax - speedMin) / 3 + speedMin);
+        const wordPower = Math.round((powerMax - powerMin) / 2 + powerMin);
+        const mergeList = [];
+        const backupModels = [];
+        const backupToolPath = [];
+        const createToolPath = (models, ws, fp) => {
+            modelGroup.selectedModelArray = models;
+            const toolPath = toolPathGroup.createToolPath({ materials, origin });
+            toolPath.name = models.length > 1 ? `${models[0].modelName}-${models[models.length - 1].modelName}` : models[0].modelName;
+            toolPath.gcodeConfig = gcodeConfig;
+            toolPath.toolParams = toolParams;
+            toolPath.gcodeConfig.workSpeed = ws;
+            toolPath.gcodeConfig.fixedPower = fp;
+            if (toolPathGroup.getToolPath(toolPath.id)) {
+                toolPathGroup.updateToolPath(toolPath.id, toolPath, { materials, origin });
+            } else {
+                toolPathGroup.saveToolPath(toolPath, { materials, origin }, false);
+            }
+            backupToolPath.push(toolPath);
+            modelGroup.selectedModelArray = [];
+        };
+        const createTextElement = async (text, x, y, h, fontSize, needRote) => {
+            const curX = position.x + x;
+            const curY = position.y + y;
+            const svg = await SVGActions.svgContentGroup.addSVGElement({
+                element: 'text',
+                attr: {
+                    x: curX,
+                    y: curY,
+                    'font-size': fontSize,
+                    'font-family': 'Helvetica LT Pro',
+                    style: 'Regular',
+                    alignment: 'left',
+                    textContent: text,
+                    height: h,
+                }
+            });
+            const newSVGModel = await SVGActions.createModelFromElement(svg);
+            const textElement = document.getElementById(svg.id);
+            if (needRote) {
+                await SVGActions.rotateElementsImmediately([textElement], { newAngle: -90 });
+            }
+            backupModels.push(newSVGModel);
+            mergeList.push(newSVGModel);
+        };
+        const createRectElement = async (x, y, w, h, ws, fp) => {
+            const curX = position.x + x;
+            const curY = position.y + y;
+            const svg = await SVGActions.svgContentGroup.addSVGElement({
+                element: 'rect',
+                attr: {
+                    x: curX,
+                    y: curY,
+                    fill: '#ffffff',
+                    'fill-opacity': '0',
+                    opacity: '1',
+                    stroke: '#000000',
+                    'stroke-width': '0.2756410256410256',
+                    width: w,
+                    height: h,
+                }
+            });
+            const newSVGModel = await SVGActions.createModelFromElement(svg);
+            const textElement = document.getElementById(svg.id);
+            await SVGActions.resizeElementsImmediately([textElement], { newWidth: w, newHeight: h });
+            backupModels.push(newSVGModel);
+            createToolPath([newSVGModel], ws, fp);
+        };
+
+        await createTextElement(`Passes : ${gcodeConfig.multiPasses}`, maxWidth / 2, -maxHeight + baseStyle.titleHeight / 2, baseStyle.titleHeight, baseStyle.titleFontSize, false);
+        await createTextElement('Power(%)', maxWidth / 2, -baseStyle.titleHeight / 2, baseStyle.titleHeight, baseStyle.titleFontSize, false);
+        await createTextElement('Speed(mm/m)', baseStyle.titleHeight / 2, -maxHeight / 2, baseStyle.titleHeight, baseStyle.titleFontSize, true);
+        progress(0.1);
+        const basicX = baseStyle.titleHeight + baseStyle.numHeight + titleGap * 2;
+        const basicY = -(baseStyle.titleHeight + baseStyle.numHeight + titleGap * 2);
+        for (let i = 0; i < rectCols; i++) {
+            const x = basicX + i * (rectWidth + rectGap);
+            const curPower = Math.round(powerMin + i * toolPathBase.power);
+            for (let j = 0; j < rectRows; j++) {
+                const y = basicY - j * (rectGap + rectHeight);
+                const curSpeed = Math.round(speedMin + j * toolPathBase.speed);
+                if (i === 0) {
+                    await createTextElement(`${curSpeed}`, x - (titleGap + baseStyle.numHeight / 2), y - rectHeight / 2, baseStyle.numHeight, baseStyle.numFontSize, true);
+                }
+                if (j === 0) {
+                    await createTextElement(`${curPower}`, x + rectWidth / 2, y + titleGap + baseStyle.numHeight / 2, baseStyle.numHeight, baseStyle.numFontSize, false);
+                }
+                await createRectElement(x, y - rectHeight, rectWidth, rectHeight, curSpeed, curPower);
+            }
+            progress(0.1 + (i + 1) * (0.9 / rectCols));
+        }
+        createToolPath(mergeList, wordSpeed, wordPower);
+        progress(0.95);
+        const operation = new AddMaterialTestGenerate({
+            toolPathGroup: toolPathGroup,
+            modelGroup: modelGroup,
+            svgActions: SVGActions,
+            models: backupModels
+        });
+        const operations = new CompoundOperation();
+        operations.push(operation);
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+        progress(1);
+        dispatch(baseActions.render(headType));
     },
 
     selectAllElements: headType => async (dispatch, getState) => {

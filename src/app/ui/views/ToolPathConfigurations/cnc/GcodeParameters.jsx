@@ -1,19 +1,28 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
-import { connect } from 'react-redux';
-import { TOOLPATH_TYPE_SCULPT, TOOLPATH_TYPE_VECTOR } from '../../../../constants';
+import { cloneDeep } from 'lodash';
+import { TOOLPATH_TYPE_IMAGE, TOOLPATH_TYPE_VECTOR, LASER_DEFAULT_GCODE_PARAMETERS_DEFINITION } from '../../../../constants';
 import i18n from '../../../../lib/i18n';
-import { NumberInput as Input } from '../../../components/Input';
-import TipTrigger from '../../../components/TipTrigger';
-import OptionalDropdown from '../../../components/OptionalDropdown';
+import SvgIcon from '../../../components/SvgIcon';
+import ToolParameters from '../cnc/ToolParameters';
+import { toHump } from '../../../../../shared/lib/utils';
+import PresentSelector from './PresentSelector';
 
 class GcodeParameters extends PureComponent {
     static propTypes = {
         toolPath: PropTypes.object.isRequired,
-        size: PropTypes.object.isRequired,
-        materials: PropTypes.object.isRequired,
+        activeToolDefinition: PropTypes.object.isRequired,
+        updateGcodeConfig: PropTypes.func.isRequired,
+        updateToolConfig: PropTypes.func.isRequired,
 
-        updateGcodeConfig: PropTypes.func.isRequired
+        toolDefinitions: PropTypes.array.isRequired,
+        setCurrentToolDefinition: PropTypes.func.isRequired,
+        isModifiedDefinition: PropTypes.bool.isRequired,
+        setCurrentValueAsProfile: PropTypes.func.isRequired,
+        isModel: PropTypes.bool,
+        zOffsetEnabled: PropTypes.bool,
+        halfDiodeModeEnabled: PropTypes.bool,
+        auxiliaryAirPumpEnabled: PropTypes.bool,
     };
 
     state = {
@@ -23,17 +32,155 @@ class GcodeParameters extends PureComponent {
     };
 
     render() {
-        const { toolPath, materials, size } = this.props;
+        const { toolPath, activeToolDefinition } = this.props;
+        const {
+            zOffsetEnabled = true,
+            halfDiodeModeEnabled = false,
+            auxiliaryAirPumpEnabled = false,
+        } = this.props;
 
-        const { type, gcodeConfig } = toolPath;
-
-        const { pathType, enableTab, tabHeight, tabSpace, tabWidth } = gcodeConfig;
-        const { targetDepth, safetyHeight, stopHeight } = gcodeConfig;
-
-        const { isRotate } = materials;
+        const { type, gcodeConfig } = toolPath || {};
+        const safeGcodeConfig = gcodeConfig || {};
 
         const isSVG = type === TOOLPATH_TYPE_VECTOR;
-        const isSculpt = type === TOOLPATH_TYPE_SCULPT;
+        const isImage = type === TOOLPATH_TYPE_IMAGE;
+
+        const allDefinition = LASER_DEFAULT_GCODE_PARAMETERS_DEFINITION;
+        Object.keys(allDefinition).forEach((key) => {
+            allDefinition[key].default_value = safeGcodeConfig[key];
+            // isGcodeConfig is true means to use updateGcodeConfig, false means to use updateToolConfig
+            allDefinition[key].isGcodeConfig = false;
+        });
+
+        Object.entries(cloneDeep(activeToolDefinition?.settings || {})).forEach(([key, value]) => {
+            if (!allDefinition[toHump(key)]) {
+                allDefinition[toHump(key)] = {};
+            }
+            allDefinition[toHump(key)].default_value = value?.default_value;
+        });
+
+        const pathType = allDefinition.pathType.default_value;
+        const movementMode = allDefinition.movementMode.default_value;
+        const multiPasses = allDefinition.multiPasses.default_value;
+        const fixedPowerEnabled = allDefinition.fixedPowerEnabled.default_value;
+
+        // section Method
+        const laserDefinitionMethod = {
+            'pathType': allDefinition.pathType
+        };
+
+        // section Fill
+        const laserDefinitionFillKeys = [];
+        const laserDefinitionFill = {};
+        if (pathType === 'fill') {
+            laserDefinitionFillKeys.push('movementMode');
+            if (isSVG) {
+                laserDefinitionFillKeys.push('fillInterval');
+                if (movementMode === 'greyscale-line') {
+                    laserDefinitionFillKeys.push('direction');
+                }
+            } else if (isImage) {
+                if (movementMode !== 'greyscale-dot') {
+                    laserDefinitionFillKeys.push('direction');
+                }
+                laserDefinitionFillKeys.push('fillInterval');
+            }
+        }
+        laserDefinitionFillKeys.forEach((key) => {
+            if (allDefinition[key]) {
+                laserDefinitionFill[key] = allDefinition[key];
+            }
+            if (key === 'movementMode') {
+                if (isSVG) {
+                    laserDefinitionFill[key].options = {
+                        'greyscale-line': 'Line',
+                        'greyscale-dot': 'Dot'
+                    };
+                } else {
+                    laserDefinitionFill[key].options = {
+                        'greyscale-line': 'Line',
+                        'greyscale-dot': 'Dot'
+                    };
+                }
+            }
+        });
+
+        // section Speed
+        const laserDefinitionSpeedKeys = ['jogSpeed'];
+        if (pathType === 'fill' && movementMode !== 'greyscale-dot') {
+            laserDefinitionSpeedKeys.push('workSpeed');
+        } else if (pathType === 'path') {
+            laserDefinitionSpeedKeys.push('workSpeed');
+        }
+        if (pathType === 'fill' && movementMode === 'greyscale-dot') {
+            laserDefinitionSpeedKeys.push('dwellTime');
+        }
+        const laserDefinitionSpeed = {};
+        laserDefinitionSpeedKeys.forEach((key) => {
+            if (allDefinition[key]) {
+                laserDefinitionSpeed[key] = allDefinition[key];
+            }
+        });
+
+        // section Pass
+        const laserDefinitionRepetitionKeys = [];
+        const laserDefinitionRepetition = {};
+        if (pathType === 'path') {
+            if (zOffsetEnabled) {
+                laserDefinitionRepetitionKeys.push('initialHeightOffset');
+            }
+            laserDefinitionRepetitionKeys.push('multiPasses');
+            if (zOffsetEnabled && multiPasses > 1) {
+                laserDefinitionRepetitionKeys.push('multiPassDepth');
+            }
+            laserDefinitionRepetitionKeys.forEach((key) => {
+                if (allDefinition[key]) {
+                    laserDefinitionRepetition[key] = allDefinition[key];
+                }
+            });
+        }
+
+        // section Power
+        const laserDefinitionPowerKeys = ['fixedPower', 'constantPowerMode'];
+        if (halfDiodeModeEnabled) {
+            laserDefinitionPowerKeys.push('halfDiodeMode');
+        }
+
+        // Optimization
+        const laserDefinitionOptimizationKeys = [];
+        if (pathType === 'fill' && movementMode === 'greyscale-line') {
+            laserDefinitionOptimizationKeys.push('dotWithCompensation');
+            laserDefinitionOptimizationKeys.push('scanningPreAccelRatio');
+            laserDefinitionOptimizationKeys.push('scanningOffset');
+        }
+        const laserDefinitionOptimization = {};
+        laserDefinitionOptimizationKeys.forEach((key) => {
+            if (allDefinition[key]) {
+                laserDefinitionOptimization[key] = allDefinition[key];
+            }
+        });
+
+        // if (pathType === 'fill' && movementMode === 'greyscale-variable-line') {
+        //     laserDefinitionPowerKeys.push('fixedMinPower');
+        // laserDefinitionPowerKeys.push('powerLevelDivisions');
+        // }
+        const laserDefinitionPower = {};
+        laserDefinitionPowerKeys.forEach((key) => {
+            if (allDefinition[key]) {
+                laserDefinitionPower[key] = allDefinition[key];
+            }
+        });
+
+        // section Assist Gas
+        const laserDefinitionAuxiliaryGasKeys = ['auxiliaryAirPump'];
+        const laserDefinitionAuxiliary = {};
+        laserDefinitionAuxiliaryGasKeys.forEach((key) => {
+            if (allDefinition[key]) {
+                laserDefinitionAuxiliary[key] = allDefinition[key];
+            }
+        });
+
+        console.log('true', pathType, movementMode, pathType === 'fill' && movementMode === 'greyscale-line');
 
         return (
             <React.Fragment>

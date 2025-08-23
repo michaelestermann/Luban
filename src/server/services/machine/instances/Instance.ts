@@ -1,5 +1,6 @@
 import SocketServer from '../../../lib/SocketManager';
 import Channel from '../channels/Channel';
+import SacpChannelBase from '../channels/SacpChannel';
 
 class MachineInstance {
     public id: string
@@ -12,6 +13,11 @@ class MachineInstance {
 
     public constructor() {
         this.isReady = false;
+    }
+
+    public getChannelAsSacpChannel() : SacpChannelBase {
+        // @ts-ignore
+        return this.channel as SacpChannelBase;
     }
 
     public setChannel<T extends Channel>(channel: T): void {

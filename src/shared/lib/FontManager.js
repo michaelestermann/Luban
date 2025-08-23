@@ -1,4 +1,3 @@
-import libFontManager from 'font-scanner';
 import fs from 'fs';
 import includes from 'lodash/includes';
 import log from 'loglevel';
@@ -33,6 +32,25 @@ const WEB_SAFE_FONTS = [
 
 export const DEFAULT_FONT_NAME = 'NotoSansSC-Regular.otf';
 
+// Optional dependency: font-scanner (native). It may fail to install on some systems.
+// Avoid static require so webpack/browser builds don't try to resolve it.
+let libFontManager = null;
+try {
+    const isNodeLike = typeof process !== 'undefined' && process.versions && (process.versions.node || process.versions.electron);
+    if (isNodeLike) {
+        // Use eval('require') to prevent bundlers from statically analyzing this import
+        const req = (0, eval)('require'); // eslint-disable-line no-eval
+        const moduleName = 'font-scanner';
+        libFontManager = req(moduleName);
+    }
+} catch (e) {
+    try {
+        log.warn('font-scanner not available; system font listing disabled.');
+    } catch (_) {
+        // log might not be initialized yet; ignore
+    }
+}
+
 function patchFont(font, displayName = '') {
     if (!font.names.fontFamily) {
         font.names.fontFamily = font.names.fullName;
@@ -43,24 +61,25 @@ function patchFont(font, displayName = '') {
 }
 
 class FontManager {
-    fontDir;
 
     constructor() {
+        this.fontDir = null;
         this.fonts = [];
         // preload fonts config
         this.systemFonts = [];
         this.loadDefaultFont();
-        libFontManager.getAvailableFontsSync()
-            .forEach((font) => {
-                if (path.extname(font.path)
-                    .toLocaleLowerCase() !== '.ttc'
-                    && this.systemFonts.findIndex(i => i.family === font.family) < 0) {
-                    this.systemFonts.push(font);
-                }
-            });
+        if (libFontManager && typeof libFontManager.getAvailableFontsSync === 'function') {
+            libFontManager.getAvailableFontsSync()
+                .forEach((font) => {
+                    if (path.extname(font.path).toLocaleLowerCase() !== '.ttc'
+                        && this.systemFonts.findIndex(i => i.family === font.family) < 0) {
+                        this.systemFonts.push(font);
+                    }
+                });
+        }
     }
 
-    async loadDefaultFont() {
+    loadDefaultFont() {
         if (this.defaultFont) {
             return;
         }
@@ -85,37 +104,38 @@ class FontManager {
         this.fontDir = fontDir;
     }
 
-    async loadLocalFontDir() {
-        const filenames = await new Promise((resolve, reject) => {
-            fs.readdir(this.fontDir, (err, files) => {
+    loadLocalFontDir() {
+        return new Promise((resolve, reject) => {
+            fs.readdir(this.fontDir, (err, filenames) => {
                 if (err) {
                     reject(err);
                     return;
                 }
-                resolve(files);
+                const promises = filenames.map((filename) => {
+                    const displayName = path.parse(filename).name;
+                    return this.loadLocalFont(`${this.fontDir}/${filename}`, displayName);
+                });
+                Promise.all(promises)
+                    .then((results) => results.filter(font => !!font))
+                    .then((fonts) => {
+                        this.fonts = fonts;
+                        this.fonts.forEach((font) => {
+                            if (this.systemFonts.findIndex(i => i.family === font?.names?.fontFamily?.en) < 0) {
+                                const newFont = {
+                                    family: font.names.fontFamily.en,
+                                    fontSubfamily: font.names.fontSubfamily.en,
+                                    style: font.names.fontSubfamily.en,
+                                    fullName: font.names.fullName.en,
+                                    displayName: font.names.displayName.en
+                                };
+                                this.systemFonts.push(newFont);
+                            }
+                        });
+                        resolve(fonts);
+                    })
+                    .catch(reject);
             });
         });
-
-        const promises = filenames.map((filename) => {
-            const displayName = path.parse(filename).name;
-            return this.loadLocalFont(`${this.fontDir}/${filename}`, displayName);
-        });
-        const fonts = (await Promise.all(promises)).filter(font => !!font);
-
-        this.fonts = fonts;
-        this.fonts.forEach((font) => {
-            if (this.systemFonts.findIndex(i => i.family === font?.names?.fontFamily?.en) < 0) {
-                const newFont = {
-                    family: font.names.fontFamily.en,
-                    fontSubfamily: font.names.fontSubfamily.en,
-                    style: font.names.fontSubfamily.en,
-                    fullName: font.names.fullName.en,
-                    displayName: font.names.displayName.en
-                };
-                this.systemFonts.push(newFont);
-            }
-        });
-        return fonts;
     }
 
     loadLocalFont(filePath, displayName = '') {
@@ -221,10 +241,16 @@ class FontManager {
         });
 
         if (!fontConfig || !fontConfig.path) {
-            // fontConfig = this.systemFonts.find(f => f.family === 'Arial');
+            // Try fallback to first known system font
             fontConfig = this.systemFonts[0];
-            family = fontConfig?.family;
-            if (!fontConfig || !fontConfig.path) {
+            family = fontConfig?.family || family;
+        }
+        if (!fontConfig || !fontConfig.path) {
+            // Fallback to default embedded font if available
+            if (this.fontDir) {
+                fontConfig = { path: `${this.fontDir}/${DEFAULT_FONT_NAME}` };
+                family = family || 'Default';
+            } else {
                 throw new Error('No Font Found!');
             }
         }
@@ -280,9 +306,9 @@ class FontManager {
 
 const fontManager = new FontManager();
 
-export async function initFonts(fontDir) {
+export function initFonts(fontDir) {
     fontManager.setFontDir(fontDir);
-    await fontManager.loadLocalFontDir();
+    return fontManager.loadLocalFontDir();
 }
 
 export default fontManager;

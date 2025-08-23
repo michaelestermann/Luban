@@ -15,7 +15,6 @@ import { SnapmakerRayMachine } from '../../../../app/machines';
 import { HEAD_LASER } from '../../../constants';
 import logger from '../../../lib/logger';
 import { PrintJobChannelInterface } from '../channels/Channel';
-import SacpChannelBase from '../channels/SacpChannel';
 import SacpSerialChannel from '../channels/SacpSerialChannel';
 import SacpUdpChannel from '../channels/SacpUdpChannel';
 import TextSerialChannel from '../channels/TextSerialChannel';
@@ -30,7 +29,7 @@ class RayMachineInstance extends MachineInstance {
 
     private async _prepareMachineSACP() {
         // configure channel
-        (this.channel as SacpChannelBase).setFilePeerId(PeerId.CONTROLLER);
+        this.getChannelAsSacpChannel().setFilePeerId(PeerId.CONTROLLER);
 
         const state: ConnectedData = {};
 
@@ -38,13 +37,13 @@ class RayMachineInstance extends MachineInstance {
         // (this.channel as SocketSerialNew).startHeartbeat();
 
         // Get Machine Info
-        const machineInfo = await (this.channel as SacpChannelBase).getMachineInfo();
+        const machineInfo = await this.getChannelAsSacpChannel().getMachineInfo();
         log.info(`Machine Firmware Version: ${machineInfo.masterControlFirmwareVersion}`);
 
         state.series = SnapmakerRayMachine.identifier;
 
         // module info
-        const moduleInfos = await (this.channel as SacpChannelBase).getModuleInfo();
+        const moduleInfos = await this.getChannelAsSacpChannel().getModuleInfo();
 
         /*
         e.g. moduleInfos = [
@@ -92,14 +91,14 @@ class RayMachineInstance extends MachineInstance {
 
         const isNewVersion = !isNil(machineInfo?.masterControlFirmwareVersion) && gt(machineInfo?.masterControlFirmwareVersion?.slice(1), '1.6.8');
         state.isRayNewVersion = isNewVersion;
-        log.info('connected Ray with version: ', machineInfo?.masterControlFirmwareVersion);
+        log.info('connected Ray with version: ' + machineInfo?.masterControlFirmwareVersion);
 
         //
         // Get Coordinate Info
         if (isNewVersion) {
-            const { data: coordinateInfos } = await (this.channel as SacpChannelBase).getCoordinateInfo();
-            const isHomed = !(coordinateInfos?.coordinateSystemInfo?.homed); // 0: homed, 1: need to home
-            state.isHomed = isHomed;
+            const { data: coordinateInfos } = await this.getChannelAsSacpChannel().getCoordinateInfo();
+            // 0: homed, 1: need to home
+            state.isHomed = !(coordinateInfos?.coordinateSystemInfo?.homed);
             state.isMoving = false;
         }
 
@@ -107,15 +106,15 @@ class RayMachineInstance extends MachineInstance {
 
         // Legacy
         if (isNewVersion) {
-            const sacpClient = (this.channel as SacpChannelBase).sacpClient;
-            await (this.channel as SacpChannelBase).startHeartbeatLegacy(sacpClient, undefined, this.id);
+            const sacpClient = this.getChannelAsSacpChannel().sacpClient;
+            await this.getChannelAsSacpChannel().startHeartbeatLegacy(sacpClient, undefined, this.id);
         } else {
             // Start heartbeat
             await this.channel.startHeartbeat();
         }
 
         // register handlers
-        (this.channel as SacpChannelBase).registerErrorReportHandler();
+        this.getChannelAsSacpChannel().registerErrorReportHandler();
 
         // Subscribe job progress
         await (this.channel as PrintJobChannelInterface).subscribeGetPrintCurrentLineNumber();
@@ -147,7 +146,7 @@ class RayMachineInstance extends MachineInstance {
         // Remove await temporarily, it blocks other unsubscribes
         await this.channel.stopHeartbeat(this.id);
 
-        (this.channel as SacpChannelBase).unregisterErrorReportHandler();
+        this.getChannelAsSacpChannel().unregisterErrorReportHandler();
 
         await (this.channel as PrintJobChannelInterface).unsubscribeGetPrintCurrentLineNumber();
 

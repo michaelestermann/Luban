@@ -52,6 +52,7 @@ import {
 import { ConnectionType } from './types';
 import SacpChannelBase from './channels/SacpChannel';
 import { L2WLaserToolModule } from '../../../app/machines/snapmaker-2-toolheads';
+import { octo } from './adaptor/Octo';
 
 const log = logger('lib:ConnectionManager');
 
@@ -135,6 +136,7 @@ class ConnectionManager {
         sstpHttpChannel.onDisconnection();
         textSerialChannel.onDisconnection(socket);
         this.scheduledTasksHandle.cancelTasks();
+        // closeServer();
     };
 
     /**
@@ -345,12 +347,15 @@ class ConnectionManager {
 
         log.info(`ConnectionOpen: type = ${connectionType}, channel = ${this.channel.constructor.name}.`);
         await this.channel.connectionOpen(options);
+        octo.onStart();
     };
 
     /**
      * Connection close.
      */
     public connectionClose = async (socket: SocketServer, options: ConnectionCloseOptions) => {
+        octo.onStop();
+
         if (!this.channel) {
             // success if no channel is used
             const result = {
@@ -362,7 +367,6 @@ class ConnectionManager {
             socket.emit('connection:close', result);
             return;
         }
-
         log.info(`Closing connection... ${this.channel.constructor.name}`);
 
         if (this.machineInstance) {
@@ -569,12 +573,11 @@ class ConnectionManager {
         if (!options.filePath.startsWith('/')) {
             options.filePath = path.resolve(`${DataStorage.tmpDir}/${options.filePath}`);
         }
-
         if (!options.targetFilename) {
             options.targetFilename = path.basename(options.filePath);
         }
 
-        log.info(`Upload file to controller... ${options.filePath} to ${options.targetFilename}`);
+        log.info(`Upload file to controller...2 ${options.filePath} to ${options.targetFilename}`);
 
         const success = await (this.channel as FileChannelInterface).uploadFile(options);
         if (success) {
@@ -734,9 +737,13 @@ class ConnectionManager {
             Promise.all(promises)
                 .then(() => {
                     this.channel.uploadGcodeFile(gcodeFilePath, headType, renderName, (msg) => {
+                        log.info('uploadGcodeFile result:' + msg);
                         if (msg) {
+                            socket.emit(SocketEvent.StartGCode, { err: 'failed', text: msg || 'Failed to upload file' });
                             // FIXME: Add abort message
                             return;
+                        } else {
+                            socket.emit(SocketEvent.StartGCode, { err: null, text: '' });
                         }
                         this.channel.startGcode(options);
                     });

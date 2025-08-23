@@ -19,7 +19,8 @@ export function serverCopyDevelopment() {
 //
 export function serverBuildDevelopment(cb) {
     const exec = require('child_process').exec;
-    exec('npm run build:server', () => {
+    // Build TypeScript server code and transpile Electron main process files for development
+    exec('npm run build:server && npm run build:main', () => {
         cb();
     });
 }
@@ -56,8 +57,7 @@ export function serverStartDevelopment(cb) {
             NODE_ENV: 'development',
         },
         ext: 'js json ts',
-        // tasks: ['serverBuildDevelopment'],
-        tasks: [],
+        tasks: ['serverBuildDevelopment'],
         done: cb,
         stdout: false,
     })

@@ -12,7 +12,6 @@ import {
 import { SnapmakerArtisanMachine } from '../../../../app/machines';
 import { HEAD_CNC, HEAD_LASER, HEAD_PRINTING } from '../../../constants';
 import logger from '../../../lib/logger';
-import SacpChannelBase from '../channels/SacpChannel';
 import SacpSerialChannel from '../channels/SacpSerialChannel';
 import SacpTcpChannel from '../channels/SacpTcpChannel';
 import TextSerialChannel from '../channels/TextSerialChannel';
@@ -32,7 +31,7 @@ class ArtisanMachineInstance extends MachineInstance {
         state.series = SnapmakerArtisanMachine.identifier;
 
         // module info
-        const moduleInfos = await (this.channel as SacpChannelBase).getModuleInfo();
+        const moduleInfos = await this.getChannelAsSacpChannel().getModuleInfo();
 
         const moduleListStatus = {
             // airPurifier: false,
@@ -65,7 +64,7 @@ class ArtisanMachineInstance extends MachineInstance {
             state.toolHead = MODULEID_TOOLHEAD_MAP['0']; // default extruder
         } else if (toolHeadModules.length === 1) {
             const module = toolHeadModules[0];
-            state.toolHead = (this.channel as SacpChannelBase).getModuleIdentifier(module);
+            state.toolHead = this.getChannelAsSacpChannel().getModuleIdentifier(module);
         } else if (toolHeadModules.length === 2) {
             // hard-coded IDEX head for J1, refactor this later.
             state.toolHead = MODULEID_TOOLHEAD_MAP['00'];
@@ -74,9 +73,9 @@ class ArtisanMachineInstance extends MachineInstance {
         state.moduleStatusList = moduleListStatus;
 
         // Get Coordinate Info
-        const { data: coordinateInfos } = await (this.channel as SacpChannelBase).getCoordinateInfo();
-        const isHomed = !(coordinateInfos?.coordinateSystemInfo?.homed); // 0: homed, 1: need to home
-        state.isHomed = isHomed;
+        const { data: coordinateInfos } = await this.getChannelAsSacpChannel().getCoordinateInfo();
+        // 0: homed, 1: need to home
+        state.isHomed = !(coordinateInfos?.coordinateSystemInfo?.homed);
         state.isMoving = false;
 
         this.socket.emit('connection:connected', { state: state, err: '' });
@@ -85,12 +84,12 @@ class ArtisanMachineInstance extends MachineInstance {
         // await this.channel.startHeartbeat();
 
         // Legacy
-        const sacpClient = (this.channel as SacpChannelBase).sacpClient;
-        await (this.channel as SacpChannelBase).startHeartbeatLegacy(sacpClient, undefined);
+        const sacpClient = this.getChannelAsSacpChannel().sacpClient;
+        await this.getChannelAsSacpChannel().startHeartbeatLegacy(sacpClient, undefined);
 
-        (this.channel as SacpChannelBase).registerErrorReportHandler();
+        this.getChannelAsSacpChannel().registerErrorReportHandler();
 
-        (this.channel as SacpChannelBase).setROTSubscribeApi();
+        this.getChannelAsSacpChannel().setROTSubscribeApi();
     }
 
     public async onPrepare(): Promise<void> {
@@ -112,7 +111,7 @@ class ArtisanMachineInstance extends MachineInstance {
         log.info('Stop heartbeat.');
         await this.channel.stopHeartbeat(this.id);
 
-        (this.channel as SacpChannelBase).unregisterErrorReportHandler();
+        this.getChannelAsSacpChannel().unregisterErrorReportHandler();
     }
 }
 
