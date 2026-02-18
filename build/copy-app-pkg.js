@@ -15,6 +15,12 @@ function ensureDirSync(dir) {
 
   ensureDirSync(destDir);
   fs.copyFileSync(srcPkg, destPkg);
-  // Also ensure a minimal index for server folder exists isn't needed here; only package.json needed for main.js import.
   console.log(`Copied ${srcPkg} -> ${destPkg}`);
+
+  // Also copy to dist/Luban/package.json so that `npm install --omit=dev`
+  // inside dist/Luban uses the right package.json and doesn't walk up to the
+  // root, which would wrongly trigger the root postinstall scripts.
+  const distLubanPkg = path.resolve(__dirname, '../dist/Luban/package.json');
+  fs.copyFileSync(srcPkg, distLubanPkg);
+  console.log(`Copied ${srcPkg} -> ${distLubanPkg}`);
 })();

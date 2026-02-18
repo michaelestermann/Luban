@@ -1,8 +1,7 @@
 #!/bin/bash
-set -x
+set -ex
 
 __dirname="$(CDPATH= cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-electron_version=$(electron --version)
 
 display_usage() {
     npm run electron-builder -- --help
@@ -18,16 +17,7 @@ if [[ ( $# == "--help") ||  $# == "-h" ]]; then
     exit 0
 fi
 
-pushd "$__dirname/../dist/Luban"
-echo "Cleaning up \"`pwd`/node_modules\""
-rm -rf node_modules
-echo "Installing packages..."
-npm install --omit=dev
-npm dedupe
-popd
-
-echo "Rebuild native modules using electron ${electron_version}"
-
-npm run electron-rebuild -- --version=${electron_version:1} --module-dir=dist/Luban --which-module=font-scanner,serialport
+echo "Installing production dependencies and rebuilding native modules for Electron..."
+"$__dirname/../node_modules/.bin/electron-builder" install-app-deps
 
 cross-env USE_HARD_LINKS=false npm run electron-builder -- "$@"
