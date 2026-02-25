@@ -70,11 +70,14 @@ interface VisualizerProps {
     undo: () => void;
     redo: () => void;
 
-    updateShowSVGShapeLibrary: (isShow: boolean) => void
+    updateShowSVGShapeLibrary: (isShow: boolean) => void;
 
-    isOnABPosition: boolean
-    updateIsOnABPosition: (isOnABPosition: boolean) => void
-    updateABpositionBackground: (APosition: any, BPosition: any) => void
+    isOnABPosition: boolean;
+    updateIsOnABPosition: (isOnABPosition: boolean) => void;
+    updateABpositionBackground: (APosition: any, BPosition: any) => void;
+
+    // new: decompose selected svg image
+    decomposeSelectedSVG: () => void;
 }
 
 
@@ -175,6 +178,7 @@ class Visualizer extends React.Component<VisualizerProps> {
         setPageMode: PropTypes.func.isRequired,
         APosition: PropTypes.object.isRequired,
         BPosition: PropTypes.object.isRequired,
+        decomposeSelectedSVG: PropTypes.func.isRequired,
     };
 
     private contextMenuRef = React.createRef();
@@ -387,7 +391,10 @@ class Visualizer extends React.Component<VisualizerProps> {
         setMode: (mode, extShape) => {
             this.props.setMode(mode, extShape);
         },
-        updateShowSVGShapeLibrary: (isShow: boolean) => this.props.updateShowSVGShapeLibrary(isShow)
+        updateShowSVGShapeLibrary: (isShow: boolean) => this.props.updateShowSVGShapeLibrary(isShow),
+        decomposeSelectedSVG: () => {
+            this.props.decomposeSelectedSVG();
+        }
     };
 
     public constructor(props) {
@@ -507,6 +514,14 @@ class Visualizer extends React.Component<VisualizerProps> {
         const displayedType = this.props.displayedType;
         const pasteDisabled = (this.props.modelGroup.clipboard.length === 0);
         const editable = this.props.pageMode !== PageMode.ABPosition;
+        const decomposeEnabled = (
+            this.props.selectedModelArray
+            && this.props.selectedModelArray.length === 1
+            && this.props.selectedModelArray[0].visible
+            && this.props.selectedModelArray[0].sourceType === 'svg'
+            && this.props.selectedModelArray[0].elem
+            && this.props.selectedModelArray[0].elem.nodeName === 'image'
+        );
 
         return (
             <div
@@ -639,6 +654,12 @@ class Visualizer extends React.Component<VisualizerProps> {
                                 label: i18n._('key-Laser/Edit/ContextMenu-Duplicate'),
                                 disabled: contextMenuDisabled,
                                 onClick: this.actions.duplicateSelectedModel
+                            },
+                            {
+                                type: 'item',
+                                label: i18n._('key-Laser/Edit/ContextMenu-Decompose'),
+                                disabled: !decomposeEnabled,
+                                onClick: this.actions.decomposeSelectedSVG
                             },
                             {
                                 type: 'separator'
@@ -883,6 +904,7 @@ const mapDispatchToProps = (dispatch) => {
         onBoxSelect: (bbox, onlyContainSelect) => dispatch(editorActions.boxSelect('laser', bbox, onlyContainSelect)),
         setMode: (mode, ext) => dispatch(editorActions.setCanvasMode('laser', mode, ext)),
         updateShowSVGShapeLibrary: (isShow: boolean) => dispatch(editorActions.updateShowSVGShapeLibrary(isShow)),
+        decomposeSelectedSVG: () => dispatch(editorActions.decomposeSelectedSVG('laser')),
 
         elementActions: {
             moveElementsStart: (elements) => dispatch(editorActions.moveElementsStart('laser', elements)),

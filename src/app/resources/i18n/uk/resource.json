@@ -1467,6 +1467,7 @@
     "key-Laser/Edit/ContextMenu-Copy": "Копіювати",
     "key-Laser/Edit/ContextMenu-Cut": "Вирізати",
     "key-Laser/Edit/ContextMenu-Duplicate": "Дублювати",
+    "key-Laser/Edit/ContextMenu-Decompose": "Розкласти",
     "key-Laser/Edit/ContextMenu-Flip Horizontal": "Перевернути по горизонталі",
     "key-Laser/Edit/ContextMenu-Flip Vertical": "Перевернути по вертикалі",
     "key-Laser/Edit/ContextMenu-Import Error": "Помилка імпорту",

@@ -1467,6 +1467,7 @@
     "key-Laser/Edit/ContextMenu-Copy": "복사",
     "key-Laser/Edit/ContextMenu-Cut": "잘라내기",
     "key-Laser/Edit/ContextMenu-Duplicate": "복제",
+    "key-Laser/Edit/ContextMenu-Decompose": "분해",
     "key-Laser/Edit/ContextMenu-Flip Horizontal": "수평 반전",
     "key-Laser/Edit/ContextMenu-Flip Vertical": "수직 반전",
     "key-Laser/Edit/ContextMenu-Import Error": "가져오기 오류",

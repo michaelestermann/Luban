@@ -48,3 +48,27 @@ if (!fs.existsSync(threadsPkgPath)) {
         console.log('[patch-node-gyp] threads/package.json already patched, skipping.');
     }
 }
+
+// Patch @sentry/electron: create missing sentry-minidump/index.js stub.
+// The package's main/index.js requires ./integrations/sentry-minidump/index.js
+// but the file was never shipped in the installed version, causing a crash on
+// electron startup in development mode.
+const sentryMinidumpDir = path.resolve(
+    __dirname, '../node_modules/@sentry/electron/main/integrations/sentry-minidump'
+);
+const sentryMinidumpFile = path.join(sentryMinidumpDir, 'index.js');
+
+if (!fs.existsSync(sentryMinidumpFile)) {
+    fs.mkdirSync(sentryMinidumpDir, { recursive: true });
+    fs.writeFileSync(
+        sentryMinidumpFile,
+        "Object.defineProperty(exports, '__esModule', { value: true });\n" +
+        "exports.sentryMinidumpIntegration = function sentryMinidumpIntegration() {\n" +
+        "    return { name: 'SentryMinidump', setupOnce() {} };\n" +
+        "};\n",
+        'utf8'
+    );
+    console.log('[patch-node-gyp] Created @sentry/electron sentry-minidump stub.');
+} else {
+    console.log('[patch-node-gyp] @sentry/electron sentry-minidump stub already exists, skipping.');
+}

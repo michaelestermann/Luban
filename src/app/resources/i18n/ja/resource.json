@@ -1467,6 +1467,7 @@
     "key-Laser/Edit/ContextMenu-Copy": "コピー",
     "key-Laser/Edit/ContextMenu-Cut": "切り取り",
     "key-Laser/Edit/ContextMenu-Duplicate": "複製",
+    "key-Laser/Edit/ContextMenu-Decompose": "分解",
     "key-Laser/Edit/ContextMenu-Flip Horizontal": "左右フリップ",
     "key-Laser/Edit/ContextMenu-Flip Vertical": "上下フリップ",
     "key-Laser/Edit/ContextMenu-Import Error": "インポートエラー",

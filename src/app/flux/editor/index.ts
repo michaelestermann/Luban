@@ -3103,6 +3103,150 @@ export const actions = {
             type: ACTION_UPDATE_STATE,
             state: { showSVGShapeLibrary }
         };
+    },
+
+    // Decompose a selected SVG image model into individual vector elements.
+    // Each shape in the SVG becomes a separate model placed at the same canvas
+    // position/size as the original, preserving parent <g> transforms correctly.
+    decomposeSelectedSVG: (headType) => async (dispatch, getState) => {
+        const { modelGroup } = getState()[headType];
+        const selected = modelGroup.getSelectedModelArray();
+        if (!selected || selected.length !== 1) return;
+        const model = selected[0];
+        // Only handle SVG source elements represented as an <image> on the canvas
+        if (!model || model.sourceType !== 'svg' || !model.elem || model.elem.nodeName !== 'image') return;
+
+        try {
+            // Use the href already on the <image> element — it is a fully-qualified
+            // URL the browser can fetch directly (e.g. http://localhost:PORT/...)
+            const href = model.elem.getAttribute('href');
+            if (!href) return;
+
+            const res = await fetch(href);
+            const svgText = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const root = doc.documentElement as unknown as SVGSVGElement;
+
+            // Resolve viewBox of the source SVG
+            const viewBoxAttr = root.getAttribute('viewBox');
+            let vx = 0, vy = 0, vw = 0, vh = 0;
+            if (viewBoxAttr) {
+                [vx, vy, vw, vh] = viewBoxAttr.trim().split(/[\s,]+/).map(parseFloat);
+            } else {
+                vw = parseFloat(root.getAttribute('width')) || 100;
+                vh = parseFloat(root.getAttribute('height')) || 100;
+            }
+
+            // Collect <defs> and top-level <style> elements so referenced assets
+            // (gradients, markers, etc.) survive in each per-shape SVG.
+            const defsEl = root.querySelector('defs');
+            const defsXml = defsEl ? new XMLSerializer().serializeToString(defsEl) : '';
+            const styleXml = Array.from(root.querySelectorAll(':scope > style'))
+                .map(s => new XMLSerializer().serializeToString(s))
+                .join('');
+
+            // Walk the SVG tree collecting individual shapes.
+            // Groups are flattened; their transforms are accumulated and wrapped
+            // around each child shape so geometry is preserved exactly.
+            const SHAPE_TAGS = new Set([
+                'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
+                'path', 'text', 'image'
+            ]);
+
+            interface ShapeEntry { element: Element; parentTransforms: string[]; }
+            const collectShapes = (node: Element, parentTransforms: string[]): ShapeEntry[] => {
+                const result: ShapeEntry[] = [];
+                for (const child of Array.from(node.children)) {
+                    // Strip namespace prefix (e.g. "svg:path" → "path")
+                    const tag = child.tagName.replace(/^[^:]+:/, '').toLowerCase();
+                    const childTransform = child.getAttribute('transform');
+                    if (tag === 'g') {
+                        const next = childTransform
+                            ? [...parentTransforms, childTransform]
+                            : parentTransforms;
+                        result.push(...collectShapes(child, next));
+                    } else if (SHAPE_TAGS.has(tag)) {
+                        result.push({ element: child, parentTransforms });
+                    } else {
+                        // Unknown container — recurse without adding a transform
+                        result.push(...collectShapes(child, parentTransforms));
+                    }
+                }
+                return result;
+            };
+
+            const shapes = collectShapes(root, []);
+            if (shapes.length === 0) return;
+
+            // Snapshot the original model's canvas transformation before removing it.
+            const {
+                positionX = 0, positionY = 0,
+                width = 10, height = 10,
+                rotationZ = 0, scaleX = 1, scaleY = 1
+            } = model.transformation;
+
+            // Remove the original compound <image> model first so the selection
+            // is clear when generateModel selects each new part.
+            dispatch(actions.removeSelectedModel(headType));
+
+            // For each extracted shape: build a standalone SVG (same viewBox as the
+            // original so coordinates remain correct), upload it, then place it at
+            // exactly the same canvas position/size as the original model.
+            for (const { element: shape, parentTransforms } of shapes) {
+                let shapeXml = new XMLSerializer().serializeToString(shape);
+
+                // Re-wrap with accumulated parent-group transforms (innermost last)
+                for (let i = parentTransforms.length - 1; i >= 0; i--) {
+                    shapeXml = `<g transform="${parentTransforms[i]}">${shapeXml}</g>`;
+                }
+
+                const svgContent = [
+                    '<svg xmlns="http://www.w3.org/2000/svg"',
+                    ` viewBox="${vx} ${vy} ${vw} ${vh}"`,
+                    ` width="${vw}" height="${vh}">`,
+                    defsXml,
+                    styleXml,
+                    shapeXml,
+                    '</svg>'
+                ].join('');
+
+                const modelID = `decompose-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                const file = new File([blob], `${modelID}.svg`);
+                const formData = new FormData();
+                formData.append('image', file);
+
+                // eslint-disable-next-line no-await-in-loop
+                const uploadRes = await api.uploadImage(formData);
+                const { originalName, uploadName, sourceWidth, sourceHeight } = uploadRes.body;
+
+                // Place the new part-model at the same position/size as the original.
+                // Passing width/height/positionX/positionY overrides generateModel's
+                // default auto-sizing logic (see the spread order in generateModel).
+                dispatch(actions.generateModel(headType, {
+                    originalName,
+                    uploadName,
+                    sourceWidth,
+                    sourceHeight,
+                    mode: 'vector',
+                    sourceType: 'svg',
+                    transformation: {
+                        positionX,
+                        positionY,
+                        width,
+                        height,
+                        rotationZ,
+                        scaleX,
+                        scaleY,
+                    }
+                }));
+            }
+
+            dispatch(baseActions.render(headType));
+        } catch (e) {
+            console.error('Failed to decompose SVG:', e);
+        }
     }
 };
 

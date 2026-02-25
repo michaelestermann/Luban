@@ -1467,6 +1467,7 @@
     "key-Laser/Edit/ContextMenu-Copy": "Copiar",
     "key-Laser/Edit/ContextMenu-Cut": "Cortar",
     "key-Laser/Edit/ContextMenu-Duplicate": "Duplicar",
+    "key-Laser/Edit/ContextMenu-Decompose": "Descomponer",
     "key-Laser/Edit/ContextMenu-Flip Horizontal": "Voltear horizontalmente",
     "key-Laser/Edit/ContextMenu-Flip Vertical": "Voltear verticalmente",
     "key-Laser/Edit/ContextMenu-Import Error": "Error de importación",
