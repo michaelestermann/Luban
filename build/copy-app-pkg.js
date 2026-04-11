@@ -10,11 +10,19 @@ function ensureDirSync(dir) {
 
 (function main() {
   const srcPkg = path.resolve(__dirname, '../src/package.json');
-  const destDir = path.resolve(__dirname, '../dist/Luban/src');
-  const destPkg = path.join(destDir, 'package.json');
+  const distDir = path.resolve(__dirname, '../dist/Luban');
+  const distSrcDir = path.join(distDir, 'src');
 
-  ensureDirSync(destDir);
-  fs.copyFileSync(srcPkg, destPkg);
-  // Also ensure a minimal index for server folder exists isn't needed here; only package.json needed for main.js import.
-  console.log(`Copied ${srcPkg} -> ${destPkg}`);
+  // 1) dist/Luban/package.json — used by electron-builder as the app package
+  // 2) dist/Luban/src/package.json — imported by main.js via `./package.json`
+  ensureDirSync(distDir);
+  ensureDirSync(distSrcDir);
+
+  const rootDest = path.join(distDir, 'package.json');
+  const srcDest = path.join(distSrcDir, 'package.json');
+  fs.copyFileSync(srcPkg, rootDest);
+  fs.copyFileSync(srcPkg, srcDest);
+
+  console.log(`Copied ${srcPkg} -> ${rootDest}`);
+  console.log(`Copied ${srcPkg} -> ${srcDest}`);
 })();
