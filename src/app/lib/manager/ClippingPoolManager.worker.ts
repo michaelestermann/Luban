@@ -1,9 +1,21 @@
 import { delay } from 'lodash';
 import { Pool, spawn, Transfer, Worker } from 'threads';
-import { PoolEventType } from 'threads/dist/master/pool-types';
 import { Box3, BufferAttribute, BufferGeometry, Line3, Matrix4, Plane, Vector3 } from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { expandBuffer, pointToBuffer } from '../buffer-utils';
+
+// `threads` restricts deep imports via its `exports` field, so we inline the
+// enum values we need. Values match threads@1.x dist/master/pool-types.js.
+enum PoolEventType {
+    initialized = 'initialized',
+    taskCanceled = 'taskCanceled',
+    taskCompleted = 'taskCompleted',
+    taskFailed = 'taskFailed',
+    taskQueued = 'taskQueued',
+    taskQueueDrained = 'taskQueueDrained',
+    taskStart = 'taskStart',
+    terminated = 'terminated',
+}
 
 type TPoint = { x: number, y: number, z?: number }
 
