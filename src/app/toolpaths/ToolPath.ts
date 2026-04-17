@@ -116,7 +116,13 @@ class ToolPath {
     }
 
     public getState() {
-        this.visibleModelIDs = this.modelGroup.models
+        // Use getModels() which flattens SvgGroup containers to their
+        // leaf children, so visibleModelIDs always contains concrete
+        // SvgModel IDs (never group entity IDs).
+        const allLeafModels = typeof this.modelGroup.getModels === 'function'
+            ? this.modelGroup.getModels()
+            : this.modelGroup.models;
+        this.visibleModelIDs = allLeafModels
             .filter((model) => {
                 return (
                     this.modelMap.has(model.modelID) && model.visible === true

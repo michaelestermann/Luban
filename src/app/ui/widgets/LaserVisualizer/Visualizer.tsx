@@ -217,6 +217,18 @@ class Visualizer extends React.Component<VisualizerProps> {
         cut: () => {
             this.props.cut();
         },
+        groupSelectedModels: () => {
+            this.props.groupSelectedModels();
+        },
+        ungroupSelectedGroup: () => {
+            this.props.ungroupSelectedGroup();
+        },
+        enterGroup: (groupID) => {
+            this.props.enterGroup(groupID);
+        },
+        exitGroup: () => {
+            this.props.exitGroup();
+        },
         onChangeFile: async (event) => {
             const file = event.target.files[0];
             const extname = path.extname(file.name).toLowerCase();
@@ -550,6 +562,7 @@ class Visualizer extends React.Component<VisualizerProps> {
                         onSelectElements={this.props.onSelectElements}
                         onClearSelection={this.props.onClearSelection}
                         editorActions={this.actions}
+                        modelGroup={this.props.modelGroup}
                         elementActions={this.props.elementActions}
                         getSelectedElementsUniformScalingState={this.props.getSelectedElementsUniformScalingState}
                         onMoveSelectedElementsByKey={this.props.onMoveSelectedElementsByKey}
@@ -859,6 +872,10 @@ const mapDispatchToProps = (dispatch) => {
         cut: () => dispatch(editorActions.cut('laser')),
         copy: () => dispatch(editorActions.copy('laser')),
         paste: () => dispatch(editorActions.paste('laser')),
+        groupSelectedModels: () => dispatch(editorActions.groupSelectedModels('laser')),
+        ungroupSelectedGroup: () => dispatch(editorActions.ungroupSelectedGroup('laser')),
+        enterGroup: (groupID) => dispatch(editorActions.enterGroup('laser', groupID)),
+        exitGroup: () => dispatch(editorActions.exitGroup('laser')),
         onCreateElement: (element) => dispatch(editorActions.createModelFromElement('laser', element)),
         selectAllElements: () => dispatch(editorActions.selectAllElements('laser')),
         onSelectElements: (elements) => dispatch(editorActions.selectElements('laser', elements)),
@@ -890,6 +907,7 @@ const mapDispatchToProps = (dispatch) => {
             moveElementsFinish: (elements, options) => dispatch(editorActions.moveElementsFinish('laser', elements, options)),
             resizeElementsStart: (elements, options) => dispatch(editorActions.resizeElementsStart('laser', elements, options)),
             resizeElements: (elements, options) => dispatch(editorActions.resizeElements('laser', elements, options)),
+            resizeGroupElements: (elements, options) => dispatch(editorActions.resizeGroupElements('laser', elements, options)),
             resizeElementsFinish: (elements, options) => dispatch(editorActions.resizeElementsFinish('laser', elements, options)),
             rotateElementsStart: (elements, options) => dispatch(editorActions.rotateElementsStart('laser', elements, options)),
             rotateElements: (elements, options) => dispatch(editorActions.rotateElements('laser', elements, options)),

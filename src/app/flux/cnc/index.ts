@@ -35,6 +35,10 @@ import definitionManager from '../manager/DefinitionManager';
 const ACTION_CHANGE_TOOL_PARAMS = 'cnc/ACTION_CHANGE_TOOL_PARAMS';
 
 const initModelGroup = new ModelGroup2D('cnc');
+const initToolPathGroup = new ToolPathGroup(initModelGroup, 'cnc');
+// Wire the tool-path-group back-reference so ModelGroup2D.group() can
+// enforce the "Model leaves Tool Path" rule on grouped children.
+initModelGroup.setToolPathGroupRef(initToolPathGroup);
 const operationHistory = new OperationHistory();
 
 const initialWorkpiece: Workpiece = {
@@ -81,7 +85,8 @@ const INITIAL_STATE = {
     modelGroup: initModelGroup,
 
     displayedType: DISPLAYED_TYPE_MODEL,
-    toolPathGroup: new ToolPathGroup(initModelGroup, 'cnc'),
+    toolPathGroup: initToolPathGroup,
+    enteredGroupId: null as string | null,
     showToolPath: false,
     showSimulation: false,
     simulationNeedToPreview: true,
