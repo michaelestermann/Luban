@@ -108,7 +108,7 @@ class LaserParameters extends PureComponent {
 
         const { useLegacyEngine, name } = toolPath;
 
-        const zOffsetEnabled = activeMachine.metadata.size.z > 0;
+        const zOffsetEnabled = (activeMachine?.metadata?.size?.z ?? 0) > 0;
         const halfDiodeModeEnabled = includes([L40WLaserToolModule.identifier], toolHeadIdentifier);
         const auxiliaryAirPumpEnabled = includes([L20WLaserToolModule.identifier, L40WLaserToolModule.identifier], toolHeadIdentifier);
 

@@ -165,6 +165,24 @@ class DataStorage {
         if (!overwriteProfiles && !fs.existsSync(this.configDir)) {
             overwriteProfiles = true;
         }
+        // configDir exists but a required sub-category is missing/empty — previous
+        // init may have been interrupted, or the user deleted files manually. Re-copy
+        // defaults so the front-end can load `active.def.json` and tool definitions.
+        if (!overwriteProfiles) {
+            const requiredSubcategories = [
+                CNC_CONFIG_SUBCATEGORY,
+                LASER_CONFIG_SUBCATEGORY,
+                PRINTING_CONFIG_SUBCATEGORY,
+            ];
+            for (const subcategory of requiredSubcategories) {
+                const subDir = `${this.configDir}/${subcategory}`;
+                if (!fs.existsSync(subDir) || fs.readdirSync(subDir).length === 0) {
+                    log.warn(`Config subcategory "${subcategory}" missing or empty — re-initialising profiles.`);
+                    overwriteProfiles = true;
+                    break;
+                }
+            }
+        }
         if (config.has('DefinitionUpdated')) {
             config.unset('DefinitionUpdated');
         }
