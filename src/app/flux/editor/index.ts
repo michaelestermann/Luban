@@ -1321,11 +1321,17 @@ export const actions = {
     removeSelectedModel: headType => (dispatch, getState) => {
         const { modelGroup, SVGActions, toolPathGroup } = getState()[headType];
         const operations = new CompoundOperation();
+        // Snapshot parent group before deletion so undo can restore it
+        const parentGroup = modelGroup.selectedGroupID
+            ? modelGroup.models.find(m => m.modelID === modelGroup.selectedGroupID) ?? null
+            : null;
+
         for (const svgModel of modelGroup.getSelectedModelArray()) {
             const operation = new DeleteOperation2D({
                 target: svgModel,
                 svgActions: SVGActions,
                 toolPathGroup,
+                parentGroup,
                 toolPaths: toolPathGroup.toolPaths.filter(item => {
                     if (item.modelMap.has(svgModel.modelID)) {
                         item.modelMap.delete(svgModel.modelID);
