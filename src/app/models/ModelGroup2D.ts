@@ -498,6 +498,16 @@ class ModelGroup2D extends EventEmitter {
             ThreeUtils.dispose(model.modelObject3D);
             ThreeUtils.dispose(model.processObject3D);
             model.meshObject.removeEventListener('update', this.onModelUpdate);
+
+            // If the model belongs to a group, detach it
+            const parentGroup = this.getParentGroup(model.modelID);
+            if (parentGroup) {
+                parentGroup.removeChild(model);
+                // Remove the group if it's now empty
+                if (parentGroup.children.length === 0) {
+                    this.models = this.models.filter((item) => item !== parentGroup);
+                }
+            }
         }
         this.models = this.models.filter((item) => item !== model);
         if (model instanceof SvgModel) {

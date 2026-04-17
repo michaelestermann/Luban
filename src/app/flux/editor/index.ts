@@ -1348,6 +1348,7 @@ export const actions = {
         });
 
         SVGActions.deleteSelectedElements();
+        modelGroup.selectedGroupID = null;
         const modelState = modelGroup.removeSelectedModel();
 
         dispatch(operationHistoryActions.setOperations(headType, operations));
