@@ -240,10 +240,11 @@ const ToolPathConfigurations: React.FC<ToolPathConfigurationsProps> = ({ toolpat
                 toolParams
             };
             await dispatch(editorActions.saveToolPath(headType, newToolPath));
-            await dispatch(editorActions.changeActiveToolListDefinition(headType, currentToolDefinition?.definitionId, currentToolDefinition?.name));
+            if (currentToolDefinition?.definitionId) {
+                await dispatch(editorActions.changeActiveToolListDefinition(headType, currentToolDefinition.definitionId, currentToolDefinition.name));
+            }
             await dispatch(editorActions.selectToolPathById(headType));
             await dispatch(editorActions.selectToolPathById(headType, toolpath?.id));
-
             dispatch(editorActions.refreshToolPathPreview(headType));
             onClose && onClose();
         },

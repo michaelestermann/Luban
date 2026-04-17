@@ -176,10 +176,30 @@ class ToolPathGroup {
 
         const { gcodeConfig } = generateModelDefaultConfigs(this.headType, models[0].sourceType, models[0].mode, materials.isRotate);
 
+        // If the user has a group selected at top-level, track that
+        // association via baseName so the tool path list displays the
+        // group's name. visibleModelIDs continues to hold the concrete
+        // leaf models (the group's current children) so the existing
+        // g-code generation code keeps working unchanged.
+        const selectedGroupID = this.modelGroup.selectedGroupID as string | null;
+        const targetGroup = selectedGroupID
+            ? (this.modelGroup.models as unknown as { modelID: string; name: string }[]).find(
+                (m) => m && (m as unknown as { modelID: string }).modelID === selectedGroupID,
+            )
+            : null;
+
         this._updated();
+        let baseName: string;
+        if (targetGroup) {
+            baseName = (targetGroup as { name: string }).name;
+        } else if (models[0] instanceof ThreeModel) {
+            baseName = models[0].uploadName;
+        } else {
+            baseName = models[0].resource.originalFile.name;
+        }
         const toolPathInfo = new ToolPath({
             name: createToolPathNameByType(this.count, type, this.headType),
-            baseName: models[0] instanceof ThreeModel ? models[0].uploadName : models[0].resource.originalFile.name,
+            baseName,
             modelMode: models[0].mode,
             headType: this.headType,
             type,
@@ -245,7 +265,10 @@ class ToolPathGroup {
     public addSelectedToolpathColor(withoutSelection = false) {
         // 2D SVGCanvas
         const { modelGroup } = this;
-        modelGroup.models.forEach((model) => {
+        const leafModels = typeof modelGroup.getModels === 'function'
+            ? modelGroup.getModels()
+            : modelGroup.models;
+        leafModels.forEach((model) => {
             model.updateIsToolPathSelect(false);
         });
         this.selectedToolPathArray.forEach((id) => {
@@ -367,6 +390,34 @@ class ToolPathGroup {
         this.selectToolPathById(null);
 
         this._updated();
+    }
+
+    /**
+     * Remove a model's ID from every tool path that references it.
+     * Implements the "Model leaves Tool Path" rule: a tool path whose
+     * visibleModelIDs become empty as a result is deleted entirely;
+     * any other tool path keeps its remaining members.
+     *
+     * Returns the list of tool path ids that ended up deleted, which
+     * the caller (e.g. an operation-history entry) can use to undo.
+     */
+    public removeModelFromToolPaths(modelID: string): { deletedToolPathIDs: string[] } {
+        const deleted: string[] = [];
+        for (const toolPath of this.toolPaths.slice()) {
+            const idx = toolPath.visibleModelIDs.indexOf(modelID);
+            if (idx === -1) continue;
+            toolPath.visibleModelIDs.splice(idx, 1);
+            if (toolPath.visibleModelIDs.length === 0) {
+                this.deleteToolPath(toolPath.id);
+                deleted.push(toolPath.id);
+            }
+        }
+        if (deleted.length === 0) {
+            // No tool path was deleted, but membership still changed —
+            // tell consumers so they can refresh their UI.
+            this._updated();
+        }
+        return { deletedToolPathIDs: deleted };
     }
 
     public deleteAllToolPaths() {

@@ -137,7 +137,13 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                 },
                 [PREDEFINED_SHORTCUT_ACTIONS.UNSELECT]: () => {
                     if (!(menuDisabledCountRef.current > 0)) {
-                        props.editorActions.unselectAll();
+                        // If inside a group, Escape exits the group
+                        // instead of unselecting.
+                        if (props.editorActions.exitGroup && props.modelGroup?.getEnteredGroupId?.()) {
+                            props.editorActions.exitGroup();
+                        } else {
+                            props.editorActions.unselectAll();
+                        }
                     }
                 },
                 [PREDEFINED_SHORTCUT_ACTIONS.DELETE]: () => {
@@ -163,6 +169,16 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                 [PREDEFINED_SHORTCUT_ACTIONS.CUT]: () => {
                     if (!(menuDisabledCountRef.current > 0)) {
                         props.editorActions.cut();
+                    }
+                },
+                [PREDEFINED_SHORTCUT_ACTIONS.GROUP]: () => {
+                    if (!(menuDisabledCountRef.current > 0)) {
+                        props.editorActions.groupSelectedModels && props.editorActions.groupSelectedModels();
+                    }
+                },
+                [PREDEFINED_SHORTCUT_ACTIONS.UNGROUP]: () => {
+                    if (!(menuDisabledCountRef.current > 0)) {
+                        props.editorActions.ungroupSelectedGroup && props.editorActions.ungroupSelectedGroup();
                     }
                 },
                 [PREDEFINED_SHORTCUT_ACTIONS.ENTER]: () => {
@@ -388,6 +404,8 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             onDrawComplete={props.editorActions.onDrawComplete}
                             onBoxSelect={props.editorActions.onBoxSelect}
                             setMode={changeCanvasMode}
+                            editorActions={props.editorActions}
+                            modelGroup={props.modelGroup}
                         />
                     </div>
                     <SVGLeftBar

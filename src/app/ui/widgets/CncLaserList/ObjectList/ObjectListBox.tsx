@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import { actions as editorActions } from '../../../../flux/editor';
@@ -59,6 +59,18 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType }) => {
     }, [previewFailed]);
     const allModels = (models) && models.filter(model => !model.supportTag);
 
+    // Expansion state of group rows in the sidebar (ephemeral, not
+    // persisted in Redux). Default: expanded.
+    const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+    const toggleGroup = useCallback((groupID: string) => {
+        setCollapsedGroups((prev) => ({ ...prev, [groupID]: !prev[groupID] }));
+    }, []);
+
+    const onDoubleClickGroup = useCallback((groupID: string) => {
+        dispatch(editorActions.enterGroup(headType, groupID));
+    }, [dispatch, headType]);
+
     return (
         <div
             className={classNames(
@@ -68,7 +80,82 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType }) => {
         >
             <div className={classNames('padding-vertical-4')}>
                 {
-                    allModels && allModels.map((model) => {
+                    allModels && allModels.map((entity) => {
+                        // Render a foldable group row with its children
+                        // indented underneath.
+                        if (entity && (entity as { type?: string }).type === '2d-group') {
+                            const group = entity as unknown as {
+                                modelID: string;
+                                name: string;
+                                visible: boolean;
+                                children: Array<{
+                                    modelID: string;
+                                    visible: boolean;
+                                    modelName?: string;
+                                }>;
+                            };
+                            const isCollapsed = !!collapsedGroups[group.modelID];
+                            return (
+                                <React.Fragment key={group.modelID}>
+                                    <div
+                                        className={classNames(
+                                            'padding-vertical-4',
+                                            'padding-horizontal-8',
+                                            'sm-flex',
+                                            'justify-space-between',
+                                        )}
+                                        onDoubleClick={() => onDoubleClickGroup(group.modelID)}
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleGroup(group.modelID);
+                                            }}
+                                            style={{ cursor: 'pointer', marginRight: 6, background: 'none', border: 'none', padding: 0 }}
+                                        >
+                                            {isCollapsed ? '▶' : '▼'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (group.children.length > 0) {
+                                                    dispatch(
+                                                        editorActions.selectTargetModel(
+                                                            headType,
+                                                            group.children[0],
+                                                            false,
+                                                        ),
+                                                    );
+                                                }
+                                            }}
+                                            className="flex-1"
+                                            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}
+                                        >
+                                            {group.name}
+                                        </button>
+                                    </div>
+                                    {!isCollapsed && group.children.map((child) => (
+                                        <div
+                                            key={child.modelID}
+                                            style={{ paddingLeft: 16 }}
+                                        >
+                                            <ModelItem
+                                                model={child as unknown as never}
+                                                visible={child.visible}
+                                                styles={styles}
+                                                isSelected={selectedModelArray && selectedModelArray.includes(child)}
+                                                onSelect={onSelectItem}
+                                                onToggleVisible={actions.onClickModelHideBox}
+                                                inProgress={inProgress}
+                                                placement="right"
+                                            />
+                                        </div>
+                                    ))}
+                                </React.Fragment>
+                            );
+                        }
+                        const model = entity;
                         return (
                             <ModelItem
                                 model={model}

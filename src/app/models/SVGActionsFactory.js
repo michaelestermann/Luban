@@ -190,6 +190,12 @@ class SVGActionsFactory {
 
     init(svgContentGroup) {
         this.svgContentGroup = svgContentGroup;
+        // Give the ModelGroup direct access to the `#svg-data` `<g>` so
+        // SvgGroup.group() / ungroup() / rehydrateGroup() can reparent
+        // DOM nodes.
+        if (this.modelGroup && typeof this.modelGroup.setSvgDataContainer === 'function') {
+            this.modelGroup.setSvgDataContainer(svgContentGroup.group);
+        }
     }
 
     updateSize(size) {
@@ -204,7 +210,7 @@ class SVGActionsFactory {
             ...size
         };
 
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             svgModel.updateSize(this.size);
         }
         if (this.svgContentGroup) {
@@ -406,7 +412,7 @@ class SVGActionsFactory {
     // }
 
     getSVGModelByElement(elem) {
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             if (svgModel.elem === elem) {
                 return svgModel;
             }
@@ -416,7 +422,7 @@ class SVGActionsFactory {
 
     getModelsByElements(elems) {
         const svgModels = [];
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             if (elems.includes(svgModel.elem)) {
                 svgModels.push(svgModel);
             }
@@ -660,7 +666,7 @@ class SVGActionsFactory {
      */
     selectElements(elements, isRotate = false) {
         const svgModels = [];
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             if (elements.includes(svgModel.elem)) {
                 this.selectedSvgModels.push(svgModel);
                 // todo, not modelGroup here, use flux/editor
@@ -690,7 +696,7 @@ class SVGActionsFactory {
      */
     getAllModelElements() {
         const elements = [];
-        for (const model of this.modelGroup.models) {
+        for (const model of this.modelGroup.getModels()) {
             elements.push(model.elem);
         }
         return elements;
