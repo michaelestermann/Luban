@@ -101,12 +101,40 @@ export const groupActions = {
     enterGroup: (headType: HeadType, groupID: string) => (dispatch, getState) => {
         const modelGroup: ModelGroup2D = getState()[headType].modelGroup;
         modelGroup.setEnteredGroupId(groupID);
+
+        // Dim elements outside the entered group
+        const group = modelGroup.models.find(
+            (m) => (m as SvgGroup).modelID === groupID && (m as SvgGroup).type === '2d-group',
+        ) as SvgGroup | undefined;
+        if (group) {
+            const groupChildIDs = new Set(group.children.map((c) => c.modelID));
+            const allLeafs = modelGroup.getModels();
+            for (const model of allLeafs) {
+                if (model.elem) {
+                    if (!groupChildIDs.has(model.modelID)) {
+                        (model.elem as SVGElement).style.opacity = '0.35';
+                    } else {
+                        (model.elem as SVGElement).style.opacity = '';
+                    }
+                }
+            }
+        }
+
         dispatch(baseActions.updateState(headType, { enteredGroupId: groupID }));
     },
 
     exitGroup: (headType: HeadType) => (dispatch, getState) => {
         const modelGroup: ModelGroup2D = getState()[headType].modelGroup;
         modelGroup.setEnteredGroupId(null);
+
+        // Restore opacity on all elements
+        const allLeafs = modelGroup.getModels();
+        for (const model of allLeafs) {
+            if (model.elem) {
+                (model.elem as SVGElement).style.opacity = '';
+            }
+        }
+
         dispatch(baseActions.updateState(headType, { enteredGroupId: null }));
     },
 };
