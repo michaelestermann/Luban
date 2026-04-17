@@ -247,9 +247,11 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
         },
     );
 
-    // Group / Ungroup
-    const canUngroup = modelGroup?.canUngroup?.() ?? false;
-    const canGroup = modelGroup?.canGroup?.() ?? false;
+    // Group / Ungroup — renderingTimestamp forces re-evaluation when
+    // the selection changes (modelGroup is mutable, its ref never changes).
+    const renderingTimestamp = useSelector(state => state[headType]?.renderingTimestamp);
+    const canUngroup = renderingTimestamp !== undefined && (modelGroup?.canUngroup?.() ?? false);
+    const canGroup = renderingTimestamp !== undefined && (modelGroup?.canGroup?.() ?? false);
     leftItems.push(
         {
             title: canUngroup

@@ -1000,6 +1000,7 @@ export const actions = {
         // the full group (all children), so the group behaves as an
         // atomic unit.
         let modelsToSelect = [model];
+        let parentGroupID: string | null = null;
         if (model && model.modelID && modelGroup.getParentGroup) {
             const enteredGroupId = modelGroup.getEnteredGroupId
                 ? modelGroup.getEnteredGroupId()
@@ -1008,13 +1009,16 @@ export const actions = {
                 const parentGroup = modelGroup.getParentGroup(model.modelID);
                 if (parentGroup) {
                     modelsToSelect = parentGroup.children.slice();
-                    modelGroup.selectedGroupID = parentGroup.modelID;
+                    parentGroupID = parentGroup.modelID;
                 }
             }
         }
 
-        // remove all selected model
+        // remove all selected model (this clears selectedGroupID)
         dispatch(actions.clearSelection(headType));
+
+        // Re-set selectedGroupID after clearSelection wiped it
+        modelGroup.selectedGroupID = parentGroupID;
 
         const isRotate = workpiece.shape === WorkpieceShape.Cylinder;
 
