@@ -72,7 +72,7 @@ class CncParameters extends PureComponent {
             gcodeDefinition[key].isGcodeConfig = true;
         });
         const newSettings = {};
-        Object.entries(cloneDeep(this.props.activeToolDefinition?.settings)).forEach(([key, value]) => {
+        Object.entries(cloneDeep(this.props.activeToolDefinition?.settings || {})).forEach(([key, value]) => {
             newSettings[toHump(key)] = value;
         });
 
