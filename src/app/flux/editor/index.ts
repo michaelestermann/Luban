@@ -2116,6 +2116,15 @@ export const actions = {
     },
 
     /**
+     * Resize group elements (multiple elements scaled as a unit).
+     */
+    resizeGroupElements: (headType, elements, options) => (dispatch, getState) => {
+        const { SVGActions } = getState()[headType];
+
+        SVGActions.resizeGroupElements(elements, options);
+    },
+
+    /**
      * Resize elements finish.
      */
     resizeElementsFinish: (headType, elements, options) => async (dispatch, getState) => {

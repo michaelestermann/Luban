@@ -89,6 +89,43 @@ export default class SvgGroup {
     }
 
     // ------------------------------------------------------------------
+    // Transform sync (called after SVG DOM is manipulated by the canvas)
+    // ------------------------------------------------------------------
+
+    /**
+     * Read the current transform state from the group's `<g>` element and
+     * sync it back into the in-memory `transformation` object.  This is
+     * the group-level equivalent of `SvgModel.onTransform()`.
+     */
+    public onTransform(): void {
+        if (!this.elem) return;
+
+        // SvgModel.getElementTransform reads [T][R][S][T] from the
+        // transform list.  Import it lazily to avoid circular deps.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const SvgModel = require('./SvgModel').default;
+        const t = SvgModel.getElementTransform(this.elem);
+
+        // Workspace size (centre offset) — all children share the same
+        // value, grab it from the first child.
+        const size = this.children.length > 0 ? this.children[0].size : { x: 0, y: 0 };
+
+        this.transformation = {
+            ...this.transformation,
+            positionX: t.x - size.x,
+            positionY: -t.y + size.y,
+            scaleX: t.scaleX,
+            scaleY: t.scaleY,
+            scaleZ: 1,
+            rotationX: 0,
+            rotationY: 0,
+            rotationZ: -t.angle / 180 * Math.PI,
+            width: t.width * Math.abs(t.scaleX),
+            height: t.height * Math.abs(t.scaleY),
+        };
+    }
+
+    // ------------------------------------------------------------------
     // SVG DOM integration
     // ------------------------------------------------------------------
 

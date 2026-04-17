@@ -907,6 +907,7 @@ const mapDispatchToProps = (dispatch) => {
             moveElementsFinish: (elements, options) => dispatch(editorActions.moveElementsFinish('laser', elements, options)),
             resizeElementsStart: (elements, options) => dispatch(editorActions.resizeElementsStart('laser', elements, options)),
             resizeElements: (elements, options) => dispatch(editorActions.resizeElements('laser', elements, options)),
+            resizeGroupElements: (elements, options) => dispatch(editorActions.resizeGroupElements('laser', elements, options)),
             resizeElementsFinish: (elements, options) => dispatch(editorActions.resizeElementsFinish('laser', elements, options)),
             rotateElementsStart: (elements, options) => dispatch(editorActions.rotateElementsStart('laser', elements, options)),
             rotateElements: (elements, options) => dispatch(editorActions.rotateElements('laser', elements, options)),

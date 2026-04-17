@@ -1126,15 +1126,44 @@ class SVGActionsFactory {
      *
      * @param elements
      */
+    /**
+     * Resize a group of elements by applying scale to each child element
+     * individually, repositioning them relative to the group center.
+     */
+    resizeGroupElements(elements, { scaleX, scaleY, centerX, centerY, elemStartTransforms, groupCenter }) {
+        for (let i = 0; i < elements.length; i++) {
+            const element = elements[i];
+            const start = elemStartTransforms[i];
+
+            // Scale each child's own scale factor
+            const transformList = getTransformList(element);
+            const scale = transformList.getItem(2);
+            scale.setScale(start.scaleX * Math.abs(scaleX), start.scaleY * Math.abs(scaleY));
+
+            // Reposition: offset from group center scaled by the resize ratio
+            const dx = start.centerX - groupCenter.x;
+            const dy = start.centerY - groupCenter.y;
+            const newCenterX = centerX + dx * scaleX;
+            const newCenterY = centerY + dy * scaleY;
+            const translate = transformList.getItem(0);
+            translate.setTranslate(newCenterX, newCenterY);
+        }
+
+        this.svgContentGroup.resizeSelector(elements, { scaleX, scaleY, centerX, centerY });
+    }
+
     resizeElementsFinish(elements) {
-        if (elements.length !== 1) {
+        if (elements.length === 0) {
             return;
         }
 
-        const element = elements[0];
-
-        SvgModel.completeElementTransform(element);
-        this.getSVGModelByElement(element).onTransform();
+        for (const element of elements) {
+            SvgModel.completeElementTransform(element);
+            const model = this.getSVGModelByElement(element);
+            if (model) {
+                model.onTransform();
+            }
+        }
 
         // update selector
         this.svgContentGroup.resizeSelectorFinish(elements);

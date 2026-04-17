@@ -125,6 +125,7 @@ interface VisualizerProps {
         moveElementsFinish: (elements, options) => void;
         resizeElementsStart: (elements, options) => void;
         resizeElements: (elements, options) => void;
+        resizeGroupElements: (elements, options) => void;
         resizeElementsFinish: (elements, options) => void;
         rotateElementsStart: (elements, options) => void;
         rotateElements: (elements, options) => void;
@@ -951,6 +952,7 @@ const mapDispatchToProps = (dispatch) => {
             moveElementsFinish: (elements, options) => dispatch(editorActions.moveElementsFinish('cnc', elements, options)),
             resizeElementsStart: (elements, options) => dispatch(editorActions.resizeElementsStart('cnc', elements, options)),
             resizeElements: (elements, options) => dispatch(editorActions.resizeElements('cnc', elements, options)),
+            resizeGroupElements: (elements, options) => dispatch(editorActions.resizeGroupElements('cnc', elements, options)),
             resizeElementsFinish: (elements, options) => dispatch(editorActions.resizeElementsFinish('cnc', elements, options)),
             rotateElementsStart: (elements, options) => dispatch(editorActions.rotateElementsStart('cnc', elements, options)),
             rotateElements: (elements, options) => dispatch(editorActions.rotateElements('cnc', elements, options)),

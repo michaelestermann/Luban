@@ -383,7 +383,8 @@ class OperatorPoints {
                 const grip = this.operatorGrips[dir];
                 grip.setAttribute('cx', coords[0]);
                 grip.setAttribute('cy', coords[1]);
-                grip.setAttribute('display', ((elements.length === 1 && !this.isStraightLine(elements[0])) ? 'inline' : 'none'));
+                const showGrip = elements.length >= 1 && (elements.length > 1 || !this.isStraightLine(elements[0]));
+                grip.setAttribute('display', (showGrip ? 'inline' : 'none'));
             });
         }
 

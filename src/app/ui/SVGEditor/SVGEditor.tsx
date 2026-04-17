@@ -59,6 +59,7 @@ type SVGEditorProps = {
         moveElementsFinish: (elements, options) => void;
         resizeElementsStart: (elements, options) => void;
         resizeElements: (elements, options) => void;
+        resizeGroupElements: (elements, options) => void;
         resizeElementsFinish: (elements, options) => void;
         rotateElementsStart: (elements, options) => void;
         rotateElements: (elements, options) => void;
