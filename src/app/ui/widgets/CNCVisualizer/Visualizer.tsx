@@ -276,6 +276,18 @@ class Visualizer extends React.Component<VisualizerProps> {
         cut: () => {
             this.props.cut();
         },
+        groupSelectedModels: () => {
+            this.props.groupSelectedModels();
+        },
+        ungroupSelectedGroup: () => {
+            this.props.ungroupSelectedGroup();
+        },
+        enterGroup: (groupID) => {
+            this.props.enterGroup(groupID);
+        },
+        exitGroup: () => {
+            this.props.exitGroup();
+        },
         onChangeFile: async (event) => {
             const file = event.target.files[0];
             const extname = path.extname(file.name).toLowerCase();
@@ -618,6 +630,7 @@ class Visualizer extends React.Component<VisualizerProps> {
                         onClearSelection={this.props.onClearSelection}
                         elementActions={this.props.elementActions}
                         editorActions={this.actions}
+                        modelGroup={this.props.modelGroup}
                         getSelectedElementsUniformScalingState={this.props.getSelectedElementsUniformScalingState}
                         onMoveSelectedElementsByKey={this.props.onMoveSelectedElementsByKey}
                         createText={this.props.createText}
@@ -902,6 +915,10 @@ const mapDispatchToProps = (dispatch) => {
         cut: () => dispatch(editorActions.cut('cnc')),
         copy: () => dispatch(editorActions.copy('cnc')),
         paste: () => dispatch(editorActions.paste('cnc')),
+        groupSelectedModels: () => dispatch(editorActions.groupSelectedModels('cnc')),
+        ungroupSelectedGroup: () => dispatch(editorActions.ungroupSelectedGroup('cnc')),
+        enterGroup: (groupID) => dispatch(editorActions.enterGroup('cnc', groupID)),
+        exitGroup: () => dispatch(editorActions.exitGroup('cnc')),
         onCreateElement: (element) => dispatch(editorActions.createModelFromElement('cnc', element)),
         selectAllElements: () => dispatch(editorActions.selectAllElements('cnc')),
         onSelectElements: (elements) => dispatch(editorActions.selectElements('cnc', elements)),

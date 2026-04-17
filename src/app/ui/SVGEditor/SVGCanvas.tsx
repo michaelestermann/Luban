@@ -591,6 +591,10 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                         }
                     } else {
                         draw.selectedTarget = null;
+                        // Click on empty space: exit group if entered
+                        if (this.props.modelGroup?.getEnteredGroupId?.()) {
+                            this.props.editorActions?.exitGroup?.();
+                        }
                         this.clearSelection();
                         this.svgSelector.setVisible(true, x, y);
                     }
@@ -1364,6 +1368,48 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
             return;
         }
         const { tagName } = mouseTarget;
+
+        // Double-click on a grouped element: enter the group and
+        // immediately select the clicked child element.
+        if (this.props.editorActions?.enterGroup && this.props.modelGroup) {
+            const modelGroup = this.props.modelGroup;
+            const enteredGroupId = modelGroup.getEnteredGroupId?.();
+            if (!enteredGroupId) {
+                // Use coordinate-based lookup to find the model under
+                // the cursor — event.target may be a selection grip
+                // overlay rather than the actual model element.
+                const modelElem = this.props.elementActions.getMouseTargetByCoordinate(
+                    x - this.props.size.x,
+                    this.props.size.y - y
+                );
+                const leafModels = modelGroup.getModels?.() || [];
+                const clickedModel = modelElem
+                    ? leafModels.find(m => m.elem === modelElem)
+                    : null;
+                const parentGroup = clickedModel
+                    ? modelGroup.getParentGroup?.(clickedModel.modelID)
+                    : null;
+                if (parentGroup) {
+                    // 1. Enter group mode (sets enteredGroupId on the
+                    //    modelGroup instance immediately)
+                    this.props.editorActions.enterGroup(parentGroup.modelID);
+                    // 2. Clear ALL selection state (visual + data) so the
+                    //    subsequent select starts fresh. Use SVGActions
+                    //    directly to avoid the Redux clearSelection which
+                    //    auto-exits the group we just entered.
+                    if (this.props.SVGActions) {
+                        this.props.SVGActions.clearSelection();
+                    }
+                    // 3. Select the individual child via the normal path.
+                    //    enteredGroupId is now set, so selectElements
+                    //    won't expand to the whole group.
+                    if (modelElem) {
+                        this.props.onSelectElements([modelElem]);
+                    }
+                    return;
+                }
+            }
+        }
 
         if (this.props.editable && tagName === 'text' && this.mode !== 'textedit') {
             this.textActions.select(mouseTarget, x, y);

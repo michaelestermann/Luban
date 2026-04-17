@@ -65,6 +65,7 @@ import { baseActions } from './actions-base';
 
 /* eslint-disable-next-line import/no-cycle */
 import { processActions } from './actions-process';
+import { groupActions } from './actions-group';
 /* eslint-disable-next-line import/no-cycle */
 import { actions as operationHistoryActions } from '../operation-history';
 /* eslint-disable-next-line import/no-cycle */
@@ -276,6 +277,8 @@ export const actions = {
     ...baseActions,
 
     ...processActions,
+
+    ...groupActions,
 
     _init: headType => (dispatch, getState) => {
         const { modelGroup, toolPathGroup, initFlag } = getState()[headType];
@@ -958,24 +961,23 @@ export const actions = {
 
     getMouseTargetByCoordinate: (headType, x, y) => (dispatch, getState) => {
         const { modelGroup } = getState()[headType];
-        const models = modelGroup.models;
+        const models = modelGroup.getModels();
         if (models.length > 0) {
-            const svgDateElem = models[0].elem?.parentElement;
-            const svgDateElemChilds = svgDateElem?.children ? Array.from(svgDateElem?.children) : [];
-            if (svgDateElem && svgDateElemChilds) {
-                const arr = models
-                    .filter(model => {
-                        return model.visible;
-                    })
-                    .sort((a, b) => {
-                        return svgDateElemChilds.findIndex(elem => elem === b.elem) - svgDateElemChilds.findIndex(elem => elem === a.elem);
-                    });
-                const index = arr.findIndex(model => {
-                    return isInside([x, y], model.vertexPoints);
+            const arr = models
+                .filter(model => {
+                    return model.visible;
                 });
-                return index === -1 ? null : arr[index]?.elem;
-            }
-            return null;
+            // Sort by z-order: use the model's positionZ (transformation)
+            // as a stable sort key that works regardless of DOM nesting.
+            arr.sort((a, b) => {
+                const zA = a.transformation?.positionZ ?? 0;
+                const zB = b.transformation?.positionZ ?? 0;
+                return zB - zA;
+            });
+            const index = arr.findIndex(model => {
+                return isInside([x, y], model.vertexPoints);
+            });
+            return index === -1 ? null : arr[index]?.elem;
         }
         return null;
     },
@@ -989,22 +991,50 @@ export const actions = {
         let selected = modelGroup.getSelectedModelArray();
         selected = [...selected];
 
+        // Always clear selectedGroupID when the user clicks — it will
+        // be re-set below only if a group child is clicked.
+        modelGroup.selectedGroupID = null;
+
+        // Group-aware routing: if the clicked model lives inside a
+        // group and we're not in enter-mode, promote the selection to
+        // the full group (all children), so the group behaves as an
+        // atomic unit.
+        let modelsToSelect = [model];
+        if (model && model.modelID && modelGroup.getParentGroup) {
+            const enteredGroupId = modelGroup.getEnteredGroupId
+                ? modelGroup.getEnteredGroupId()
+                : null;
+            if (!enteredGroupId) {
+                const parentGroup = modelGroup.getParentGroup(model.modelID);
+                if (parentGroup) {
+                    modelsToSelect = parentGroup.children.slice();
+                    modelGroup.selectedGroupID = parentGroup.modelID;
+                }
+            }
+        }
+
         // remove all selected model
         dispatch(actions.clearSelection(headType));
 
         const isRotate = workpiece.shape === WorkpieceShape.Cylinder;
 
         if (!isMultiSelect) {
-            SVGActions.addSelectedSvgModelsByModels([model], isRotate);
+            SVGActions.addSelectedSvgModelsByModels(modelsToSelect, isRotate);
         } else {
             // if already selected, then unselect it
-            if (selected.find(item => item === model)) {
-                const selectedModels = selected.filter(item => item !== model);
+            const alreadySelected = modelsToSelect.every(m => selected.includes(m));
+            if (alreadySelected) {
+                const remaining = selected.filter(item => !modelsToSelect.includes(item));
                 modelGroup.emptySelectedModelArray();
-                SVGActions.addSelectedSvgModelsByModels(selectedModels, isRotate);
+                SVGActions.addSelectedSvgModelsByModels(remaining, isRotate);
+                modelGroup.selectedGroupID = null;
             } else {
-                // add model to selection
-                SVGActions.addSelectedSvgModelsByModels([...selected, model], isRotate);
+                // add models to selection
+                const merged = [...selected];
+                for (const m of modelsToSelect) {
+                    if (!merged.includes(m)) merged.push(m);
+                }
+                SVGActions.addSelectedSvgModelsByModels(merged, isRotate);
             }
         }
 
@@ -1894,9 +1924,36 @@ export const actions = {
      * Select models.
      */
     selectElements: (headType, elements) => (dispatch, getState) => {
-        const { SVGActions, materials } = getState()[headType];
+        const { SVGActions, materials, modelGroup } = getState()[headType];
         const isRotate = materials.isRotate;
-        SVGActions.selectElements(elements, isRotate);
+
+        // Group-aware routing: if any clicked element belongs to a
+        // grouped model, expand the selection to all elements of that
+        // group so the group behaves as an atomic unit.
+        const enteredGroupId = modelGroup.getEnteredGroupId
+            ? modelGroup.getEnteredGroupId()
+            : null;
+        let expandedElements = elements;
+        modelGroup.selectedGroupID = null;
+
+        if (!enteredGroupId && modelGroup.getParentGroup) {
+            const leafModels = modelGroup.getModels();
+            const clickedModels = leafModels.filter(m => elements.includes(m.elem));
+
+            for (const clickedModel of clickedModels) {
+                const parentGroup = modelGroup.getParentGroup(clickedModel.modelID);
+                if (parentGroup) {
+                    // Expand to all children of the group
+                    expandedElements = parentGroup.children
+                        .map(child => child.elem)
+                        .filter(Boolean);
+                    modelGroup.selectedGroupID = parentGroup.modelID;
+                    break;
+                }
+            }
+        }
+
+        SVGActions.selectElements(expandedElements, isRotate);
 
         dispatch(baseActions.render(headType));
     },
@@ -1905,13 +1962,16 @@ export const actions = {
      * Clear selection of models.
      */
     clearSelection: headType => (dispatch, getState) => {
-        const { SVGActions } = getState()[headType];
+        const { SVGActions, modelGroup } = getState()[headType];
 
         if (SVGActions.svgContentGroup.drawGroup.mode) {
             SVGActions.svgContentGroup.exitModelEditing(true);
             return;
         }
         SVGActions.clearSelection();
+        if (modelGroup) {
+            modelGroup.selectedGroupID = null;
+        }
         dispatch(baseActions.render(headType));
     },
 
@@ -3004,7 +3064,7 @@ export const actions = {
         const { modelGroup, SVGActions } = getState()[headType];
         const { size } = getState().machine;
 
-        const models = modelGroup.models;
+        const models = modelGroup.getModels();
         workerManager.boxSelect(
             {
                 bbox,
@@ -3022,12 +3082,30 @@ export const actions = {
             },
             indexs => {
                 if (indexs.length > 0) {
-                    let selectedEles = [];
-                    const selectedModels = indexs.map(index => {
-                        selectedEles = [...selectedEles, models[index].elem];
-                        dispatch(actions.bringSelectedModelToFront(headType, models[index]));
-                        return models[index];
-                    });
+                    let selectedModels = indexs.map(index => models[index]);
+
+                    // Group-aware: if any selected model belongs to a
+                    // group, include ALL members of that group.
+                    const enteredGroupId = modelGroup.getEnteredGroupId
+                        ? modelGroup.getEnteredGroupId()
+                        : null;
+                    if (!enteredGroupId && modelGroup.getParentGroup) {
+                        const seen = new Set();
+                        const expanded = [];
+                        for (const m of selectedModels) {
+                            const parent = modelGroup.getParentGroup(m.modelID);
+                            if (parent && !seen.has(parent.modelID)) {
+                                seen.add(parent.modelID);
+                                expanded.push(...parent.children);
+                            } else if (!parent) {
+                                expanded.push(m);
+                            }
+                        }
+                        selectedModels = expanded;
+                    }
+                    for (const m of selectedModels) {
+                        dispatch(actions.bringSelectedModelToFront(headType, m));
+                    }
                     SVGActions.setSelectedSvgModelsByModels(selectedModels);
                 } else {
                     dispatch(actions.clearSelection(headType));

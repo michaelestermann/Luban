@@ -99,6 +99,9 @@ class SvgModel extends BaseModel {
     public isToolPathSelect: boolean;
     public vertexPoints: TVertexPoint[] = [];
     public geometry: THREE.PlaneGeometry;
+    // Back-reference to the parent SvgGroup if this model is grouped; null otherwise.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    public parent: any = null;
 
     public constructor(modelInfo: ModelInfo, modelGroup2D: ModelGroup2D) {
         super(modelInfo, modelGroup2D);

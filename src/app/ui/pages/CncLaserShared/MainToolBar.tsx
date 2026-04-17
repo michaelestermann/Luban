@@ -247,6 +247,27 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
         },
     );
 
+    // Group / Ungroup
+    const canUngroup = modelGroup?.canUngroup?.() ?? false;
+    const canGroup = modelGroup?.canGroup?.() ?? false;
+    leftItems.push(
+        {
+            title: canUngroup
+                ? i18n._('key-CncLaser/MainToolBar-Ungroup')
+                : i18n._('key-CncLaser/MainToolBar-Group'),
+            type: 'button',
+            disabled: !canGroup && !canUngroup,
+            name: canUngroup ? 'MainToolbarUngroup' : 'MainToolbarGroup',
+            action: () => {
+                if (canUngroup) {
+                    dispatch(editorActions.ungroupSelectedGroup(headType));
+                } else if (canGroup) {
+                    dispatch(editorActions.groupSelectedModels(headType));
+                }
+            }
+        },
+    );
+
     // Laser specific tools
     if (headType === HEAD_LASER && !isRotate) {
         const cameraCaptureEnabled = (() => {
