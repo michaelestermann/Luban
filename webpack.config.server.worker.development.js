@@ -76,10 +76,10 @@ module.exports = {
             'threads/dist/master/pool-types': path.resolve(__dirname, 'node_modules/threads/dist/master/pool-types.js')
         },
         fallback: {
-            "path": require.resolve('path-browserify'),
-            "fs": require.resolve('browserify-fs'),
-            "timers": require.resolve('timers-browserify'),
-            "stream": require.resolve('stream-browserify')
+            'path': require.resolve('path-browserify'),
+            'fs': require.resolve('browserify-fs'),
+            'timers': require.resolve('timers-browserify'),
+            'stream': require.resolve('stream-browserify')
         }
     },
     resolveLoader: {
