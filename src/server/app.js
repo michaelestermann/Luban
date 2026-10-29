@@ -27,6 +27,7 @@ import settings from './config/settings';
 import { ERR_FORBIDDEN, ERR_UNAUTHORIZED, IP_WHITELIST } from './constants';
 import DataStorage from './DataStorage';
 import logger from './lib/logger';
+import optionsFallthrough from './lib/middleware/options-fallthrough';
 import urljoin from './lib/urljoin';
 import { registerApis } from './services';
 import config from './services/configstore';
@@ -248,11 +249,7 @@ const createApplication = () => {
     registerApis(app);
 
     // Also see "src/app/app.js"
-    app.use((req, res) => {
-        if (req.method === 'OPTIONS') {
-            res.sendStatus(200);
-        }
-    });
+    app.use(optionsFallthrough);
     // page
     app.get(urljoin(settings.route, '/'), renderPage(DEFAULT_FILE, (req) => {
         const webroot = settings.assets.app.routes[0] || ''; // with trailing slash
