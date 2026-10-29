@@ -4,6 +4,7 @@ import { throttle } from 'lodash';
 import { generateRandomPathName } from '../../../../shared/lib/random-utils';
 import { SOURCE_TYPE_RASTER, TOOLPATH_TYPE_VECTOR } from '../../../constants';
 import slice from '../../../slicer/call-engine';
+import { generateDrillToolPathFiles } from '../../../lib/ToolPathGenerator/DrillToolPathGenerator';
 import logger from '../../../lib/logger';
 import sendMessage from '../utils/sendMessage';
 
@@ -46,6 +47,12 @@ const generateLaserToolPathFromEngine = async (allTasks, onProgress) => {
 
             // FIXME: Hardcoded for ray
             modelInfo.laserPointOnMode = task.identifier === 'Ray' ? 'inline_mode' : 'switch_mode';
+        }
+
+        // LunarTPP has no drilling mode, drill toolpaths are generated in JS
+        if (modelInfos[0].headType === 'cnc' && modelInfos[0].gcodeConfig?.pathType === 'drill') {
+            const filenames = await generateDrillToolPathFiles(modelInfos);
+            return { taskId, filenames };
         }
 
         const sliceParams = {

@@ -5,7 +5,9 @@
  * here and written in the engine's toolpath JSON format. Downstream G-code generation
  * consumes them unchanged.
  */
-import { flip, rotate, scale } from '../../../shared/lib/SVGParser';
+import fs from 'fs';
+
+import SVGParser, { flip, rotate, scale } from '../../../shared/lib/SVGParser';
 
 const DUPLICATE_TOLERANCE = 0.01; // mm
 
@@ -107,4 +109,73 @@ export function buildDrillMoves(points, gcodeConfig) {
     }
     data.push({ G: 0, Z: stopHeight });
     return data;
+}
+
+/**
+ * Estimated duration in seconds; speeds are mm/min.
+ */
+const estimateTime = (data, gcodeConfig) => {
+    const { jogSpeed, plungeSpeed } = gcodeConfig;
+    let seconds = 0;
+    let current = { X: 0, Y: 0, Z: 0 };
+    for (const cmd of data) {
+        if (cmd.G !== 0 && cmd.G !== 1) {
+            continue;
+        }
+        const next = { ...current, ...('X' in cmd ? { X: cmd.X } : {}), ...('Y' in cmd ? { Y: cmd.Y } : {}), ...('Z' in cmd ? { Z: cmd.Z } : {}) };
+        const length = Math.hypot(next.X - current.X, next.Y - current.Y, next.Z - current.Z);
+        const speed = cmd.G === 1 ? plungeSpeed : jogSpeed;
+        seconds += speed > 0 ? length / speed * 60 : 0;
+        current = next;
+    }
+    return seconds;
+};
+
+/**
+ * Drill toolpath object in the LunarTPP toolpath JSON format.
+ */
+export function generateDrillToolPathObj(svg, modelInfo) {
+    const { mode, transformation, gcodeConfig } = modelInfo;
+    const points = orderPoints(getDrillPoints(svg, modelInfo));
+    if (points.length === 0) {
+        throw new Error(`Drill: no closed shapes found in ${modelInfo.originalName || modelInfo.uploadName}`);
+    }
+    const data = buildDrillMoves(points, gcodeConfig);
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
+
+    return {
+        from: 'LubanJS-Drill',
+        headType: 'cnc',
+        mode,
+        isRotate: false,
+        diameter: 0,
+        positionX: transformation.positionX,
+        positionY: transformation.positionY,
+        positionZ: transformation.positionZ,
+        rotationB: 0,
+        estimatedTime: estimateTime(data, gcodeConfig),
+        boundingBox: {
+            min: { x: Math.min(...xs), y: Math.min(...ys), z: -gcodeConfig.targetDepth, b: 0 },
+            max: { x: Math.max(...xs), y: Math.max(...ys), z: Math.max(gcodeConfig.safetyHeight, gcodeConfig.stopHeight), b: 0 }
+        },
+        data
+    };
+}
+
+/**
+ * Generate and write one drill toolpath file per model. Resolves the toolpath file names.
+ */
+export async function generateDrillToolPathFiles(modelInfos) {
+    const filenames = [];
+    for (const modelInfo of modelInfos) {
+        if (modelInfo.materials?.isRotate) {
+            throw new Error('Drill: rotary mode is not supported');
+        }
+        const svg = await new SVGParser().parseFile(`${process.env.Tmpdir}/${modelInfo.uploadName}`);
+        const toolPathObj = generateDrillToolPathObj(svg, modelInfo);
+        fs.writeFileSync(`${process.env.Tmpdir}/${modelInfo.toolpathFileName}`, JSON.stringify(toolPathObj));
+        filenames.push(modelInfo.toolpathFileName);
+    }
+    return filenames;
 }

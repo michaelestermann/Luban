@@ -1,8 +1,13 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import test from 'tape';
 import SVGParser from '../src/shared/lib/SVGParser';
 import GcodeGenerator from '../src/server/lib/GcodeGenerator/GcodeGenerator';
 import {
     buildDrillMoves,
+    generateDrillToolPathFiles,
+    generateDrillToolPathObj,
     getDrillPoints,
     orderPoints
 } from '../src/server/lib/ToolPathGenerator/DrillToolPathGenerator';
@@ -152,5 +157,70 @@ test('Drill moves: sub-micron depth terminates', (t) => {
 test('Drill moves: tiny step down terminates', (t) => {
     const depths = plunges(buildDrillMoves(ONE_POINT, config({ targetDepth: 0.01, stepDown: 0.0001 })));
     t.equal(depths[depths.length - 1], -0.01, 'reaches target depth');
+    t.end();
+});
+
+const drillModelInfo = (extra = {}) => ({
+    ...info(),
+    mode: 'vector',
+    transformation: { ...info().transformation, positionX: 100, positionY: 50, positionZ: 0 },
+    gcodeConfig: { targetDepth: 2, stepDown: 1, safetyHeight: 5, stopHeight: 20, jogSpeed: 1500, plungeSpeed: 300 },
+    ...extra
+});
+
+test('Drill toolpath: toolpath object', async (t) => {
+    const obj = generateDrillToolPathObj(await parse(CIRCLE), drillModelInfo());
+    t.equal(obj.headType, 'cnc', 'headType');
+    t.equal(obj.positionX, 100, 'positionX');
+    t.equal(obj.boundingBox.min.z, -2, 'bounding box reaches target depth');
+    t.ok(obj.estimatedTime > 0, 'estimated time');
+    t.ok(obj.data.length > 0, 'data');
+    t.end();
+});
+
+test('Drill toolpath: no closed shapes', async (t) => {
+    const svg = await parse('<path d="M0 0 L10 10" stroke="black"/>');
+    t.throws(() => generateDrillToolPathObj(svg, drillModelInfo({ originalName: 'lines.svg' })), /Drill: no closed shapes found in lines\.svg/);
+    t.end();
+});
+
+const withTmpdir = async (fn) => {
+    const previous = process.env.Tmpdir;
+    process.env.Tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'drill-'));
+    try {
+        await fn(process.env.Tmpdir);
+    } finally {
+        process.env.Tmpdir = previous;
+    }
+};
+
+const SVG_FILE = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50" viewBox="0 0 100 50">${CIRCLE}</svg>`;
+
+test('Drill toolpath: one file per model', async (t) => {
+    await withTmpdir(async (dir) => {
+        fs.writeFileSync(path.join(dir, 'a.svg'), SVG_FILE);
+        fs.writeFileSync(path.join(dir, 'b.svg'), SVG_FILE);
+        const a = drillModelInfo({ uploadName: 'a.svg', toolpathFileName: 'a.json' });
+        const b = drillModelInfo({ uploadName: 'b.svg', toolpathFileName: 'b.json' });
+        b.transformation = { ...b.transformation, positionX: 150 };
+        const filenames = await generateDrillToolPathFiles([a, b]);
+        t.deepEqual(filenames, ['a.json', 'b.json'], 'filenames');
+        t.equal(JSON.parse(fs.readFileSync(path.join(dir, 'a.json'), 'utf8')).positionX, 100, 'first model position');
+        t.equal(JSON.parse(fs.readFileSync(path.join(dir, 'b.json'), 'utf8')).positionX, 150, 'second model position');
+    });
+    t.end();
+});
+
+test('Drill toolpath: rotary rejected', async (t) => {
+    await withTmpdir(async (dir) => {
+        fs.writeFileSync(path.join(dir, 'a.svg'), SVG_FILE);
+        const rotary = drillModelInfo({ uploadName: 'a.svg', toolpathFileName: 'a.json', materials: { isRotate: true } });
+        try {
+            await generateDrillToolPathFiles([rotary]);
+            t.fail('should reject');
+        } catch (err) {
+            t.ok(/rotary mode is not supported/.test(err.message), 'rotary error');
+        }
+    });
     t.end();
 });
