@@ -10,6 +10,7 @@ export default class DeleteOperation2D extends Operation {
             svgActions: null, // SVGActionsFactory instance
             toolPathGroup: null, // keep a reference for undo & redo manipulate
             toolPaths: [], // save object related toolPaths, which may includes one or more object
+            parentGroup: null, // SvgGroup the model belonged to (if any)
             ...state
         };
     }
@@ -33,7 +34,9 @@ export default class DeleteOperation2D extends Operation {
             }
         }
         svgActions.svgContentGroup.deleteElement(model.elem);
+        // removeModel handles detaching from parent group and cleaning up empty groups
         modelGroup.removeModel(model);
+        modelGroup.selectedGroupID = null;
         svgActions.clearSelection();
     }
 
@@ -59,7 +62,19 @@ export default class DeleteOperation2D extends Operation {
         model.setPreSelection(svgActions.svgContentGroup.preSelectionGroup);
         modelGroup.object.add(model.meshObject);
         model.meshObject.addEventListener('update', modelGroup.onModelUpdate);
-        modelGroup.models.push(model);
+
+        // Restore group membership if the model belonged to a group
+        const parentGroup = this.state.parentGroup;
+        if (parentGroup) {
+            parentGroup.addChild(model);
+            // Re-add the group to models[] if it was removed
+            if (!modelGroup.models.includes(parentGroup)) {
+                modelGroup.models.push(parentGroup);
+            }
+        } else {
+            modelGroup.models.push(model);
+        }
+
         modelGroup.models = [...modelGroup.models]; // trigger <ModelItem> component to show the unselected model
         modelGroup.updateModelNameMap(model.modelName, model.baseName, 'add');
         modelGroup.modelChanged();

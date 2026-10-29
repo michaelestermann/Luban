@@ -10,17 +10,21 @@ function ensureDirSync(dir) {
 
 (function main() {
   const srcPkg = path.resolve(__dirname, '../src/package.json');
-  const destDir = path.resolve(__dirname, '../dist/Luban/src');
-  const destPkg = path.join(destDir, 'package.json');
+  const distDir = path.resolve(__dirname, '../dist/Luban');
+  const distSrcDir = path.join(distDir, 'src');
 
-  ensureDirSync(destDir);
-  fs.copyFileSync(srcPkg, destPkg);
-  console.log(`Copied ${srcPkg} -> ${destPkg}`);
+  // 1) dist/Luban/package.json — used by electron-builder as the app package
+  //    (also keeps installing app deps inside dist/Luban from walking up to the
+  //    root package.json and triggering its postinstall scripts)
+  // 2) dist/Luban/src/package.json — imported by main.js via `./package.json`
+  ensureDirSync(distDir);
+  ensureDirSync(distSrcDir);
 
-  // Also copy to dist/Luban/package.json so that `npm install --omit=dev`
-  // inside dist/Luban uses the right package.json and doesn't walk up to the
-  // root, which would wrongly trigger the root postinstall scripts.
-  const distLubanPkg = path.resolve(__dirname, '../dist/Luban/package.json');
-  fs.copyFileSync(srcPkg, distLubanPkg);
-  console.log(`Copied ${srcPkg} -> ${distLubanPkg}`);
+  const rootDest = path.join(distDir, 'package.json');
+  const srcDest = path.join(distSrcDir, 'package.json');
+  fs.copyFileSync(srcPkg, rootDest);
+  fs.copyFileSync(srcPkg, srcDest);
+
+  console.log(`Copied ${srcPkg} -> ${rootDest}`);
+  console.log(`Copied ${srcPkg} -> ${srcDest}`);
 })();

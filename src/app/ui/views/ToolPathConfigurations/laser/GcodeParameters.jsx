@@ -51,7 +51,7 @@ class GcodeParameters extends PureComponent {
             allDefinition[key].isGcodeConfig = false;
         });
 
-        Object.entries(cloneDeep(activeToolDefinition?.settings)).forEach(([key, value]) => {
+        Object.entries(cloneDeep(activeToolDefinition?.settings || {})).forEach(([key, value]) => {
             if (!allDefinition[toHump(key)]) {
                 allDefinition[toHump(key)] = {};
             }

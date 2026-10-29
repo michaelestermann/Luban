@@ -5,6 +5,7 @@ module.exports = {
             useBuiltIns: 'entry',
             corejs: '3.6.5',
         }],
+        '@babel/preset-typescript',
     ],
     plugins: [
         // Plugins sorted by stage

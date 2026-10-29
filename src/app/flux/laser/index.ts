@@ -46,6 +46,10 @@ import { SVGClippingOperation, SVGClippingType } from '../../constants/clipping'
 import { createSVGElement } from '../../ui/SVGEditor/element-utils';
 
 const initModelGroup = new ModelGroup2D('laser');
+const initToolPathGroup = new ToolPathGroup(initModelGroup, 'laser');
+// Wire the tool-path-group back-reference so ModelGroup2D.group() can
+// enforce the "Model leaves Tool Path" rule on grouped children.
+initModelGroup.setToolPathGroupRef(initToolPathGroup);
 const operationHistory = new OperationHistory();
 
 const initialWorkpiece: Workpiece = {
@@ -100,7 +104,8 @@ const INITIAL_STATE = {
     },
 
     displayedType: DISPLAYED_TYPE_MODEL,
-    toolPathGroup: new ToolPathGroup(initModelGroup, 'laser'),
+    toolPathGroup: initToolPathGroup,
+    enteredGroupId: null as string | null,
     showToolPath: false,
     showSimulation: false,
 

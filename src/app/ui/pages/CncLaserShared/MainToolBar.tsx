@@ -247,6 +247,29 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
         },
     );
 
+    // Group / Ungroup — renderingTimestamp forces re-evaluation when
+    // the selection changes (modelGroup is mutable, its ref never changes).
+    const renderingTimestamp = useSelector(state => state[headType]?.renderingTimestamp);
+    const canUngroup = renderingTimestamp !== undefined && (modelGroup?.canUngroup?.() ?? false);
+    const canGroup = renderingTimestamp !== undefined && (modelGroup?.canGroup?.() ?? false);
+    leftItems.push(
+        {
+            title: canUngroup
+                ? i18n._('key-CncLaser/MainToolBar-Ungroup')
+                : i18n._('key-CncLaser/MainToolBar-Group'),
+            type: 'button',
+            disabled: !canGroup && !canUngroup,
+            name: canUngroup ? 'MainToolbarUngroup' : 'MainToolbarGroup',
+            action: () => {
+                if (canUngroup) {
+                    dispatch(editorActions.ungroupSelectedGroup(headType));
+                } else if (canGroup) {
+                    dispatch(editorActions.groupSelectedModels(headType));
+                }
+            }
+        },
+    );
+
     // Laser specific tools
     if (headType === HEAD_LASER && !isRotate) {
         const cameraCaptureEnabled = (() => {

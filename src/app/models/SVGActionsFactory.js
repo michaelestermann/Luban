@@ -190,6 +190,12 @@ class SVGActionsFactory {
 
     init(svgContentGroup) {
         this.svgContentGroup = svgContentGroup;
+        // Give the ModelGroup direct access to the `#svg-data` `<g>` so
+        // SvgGroup.group() / ungroup() / rehydrateGroup() can reparent
+        // DOM nodes.
+        if (this.modelGroup && typeof this.modelGroup.setSvgDataContainer === 'function') {
+            this.modelGroup.setSvgDataContainer(svgContentGroup.group);
+        }
     }
 
     updateSize(size) {
@@ -204,7 +210,7 @@ class SVGActionsFactory {
             ...size
         };
 
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             svgModel.updateSize(this.size);
         }
         if (this.svgContentGroup) {
@@ -406,7 +412,7 @@ class SVGActionsFactory {
     // }
 
     getSVGModelByElement(elem) {
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             if (svgModel.elem === elem) {
                 return svgModel;
             }
@@ -416,7 +422,7 @@ class SVGActionsFactory {
 
     getModelsByElements(elems) {
         const svgModels = [];
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             if (elems.includes(svgModel.elem)) {
                 svgModels.push(svgModel);
             }
@@ -660,7 +666,7 @@ class SVGActionsFactory {
      */
     selectElements(elements, isRotate = false) {
         const svgModels = [];
-        for (const svgModel of this.modelGroup.models) {
+        for (const svgModel of this.modelGroup.getModels()) {
             if (elements.includes(svgModel.elem)) {
                 this.selectedSvgModels.push(svgModel);
                 // todo, not modelGroup here, use flux/editor
@@ -690,7 +696,7 @@ class SVGActionsFactory {
      */
     getAllModelElements() {
         const elements = [];
-        for (const model of this.modelGroup.models) {
+        for (const model of this.modelGroup.getModels()) {
             elements.push(model.elem);
         }
         return elements;
@@ -1120,15 +1126,44 @@ class SVGActionsFactory {
      *
      * @param elements
      */
+    /**
+     * Resize a group of elements by applying scale to each child element
+     * individually, repositioning them relative to the group center.
+     */
+    resizeGroupElements(elements, { scaleX, scaleY, centerX, centerY, elemStartTransforms, groupCenter }) {
+        for (let i = 0; i < elements.length; i++) {
+            const element = elements[i];
+            const start = elemStartTransforms[i];
+
+            // Scale each child's own scale factor
+            const transformList = getTransformList(element);
+            const scale = transformList.getItem(2);
+            scale.setScale(start.scaleX * Math.abs(scaleX), start.scaleY * Math.abs(scaleY));
+
+            // Reposition: offset from group center scaled by the resize ratio
+            const dx = start.centerX - groupCenter.x;
+            const dy = start.centerY - groupCenter.y;
+            const newCenterX = centerX + dx * scaleX;
+            const newCenterY = centerY + dy * scaleY;
+            const translate = transformList.getItem(0);
+            translate.setTranslate(newCenterX, newCenterY);
+        }
+
+        this.svgContentGroup.resizeSelector(elements, { scaleX, scaleY, centerX, centerY });
+    }
+
     resizeElementsFinish(elements) {
-        if (elements.length !== 1) {
+        if (elements.length === 0) {
             return;
         }
 
-        const element = elements[0];
-
-        SvgModel.completeElementTransform(element);
-        this.getSVGModelByElement(element).onTransform();
+        for (const element of elements) {
+            SvgModel.completeElementTransform(element);
+            const model = this.getSVGModelByElement(element);
+            if (model) {
+                model.onTransform();
+            }
+        }
 
         // update selector
         this.svgContentGroup.resizeSelectorFinish(elements);

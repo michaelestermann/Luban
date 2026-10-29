@@ -35,11 +35,11 @@ module.exports = {
         modules: ['node_modules'],
         extensions: ['.js', '.json', '.jsx', '.ts'],
         fallback: {
-            "path": require.resolve('path-browserify'),
-            "fs": require.resolve('browserify-fs'),
-            "timers": require.resolve('timers-browserify'),
-            "stream": require.resolve('stream-browserify')
-          }
+            'path': require.resolve('path-browserify'),
+            'fs': require.resolve('browserify-fs'),
+            'timers': require.resolve('timers-browserify'),
+            'stream': require.resolve('stream-browserify')
+        }
     },
     entry: {
         index: './index.js'

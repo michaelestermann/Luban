@@ -107,7 +107,11 @@ export const actions = {
         const editorState = getState()[headType];
         const { initState } = getState().project[headType];
         const { modelGroup } = editorState;
-        const models = modelGroup.getModels();
+        // Use getAllEntities() so groups are included in the save
+        // payload (getModels() now flattens groups to their children).
+        const models = typeof modelGroup.getAllEntities === 'function'
+            ? modelGroup.getAllEntities()
+            : modelGroup.getModels();
 
         if (!models.length && initState && !isSaveEditor) return;
 
@@ -151,8 +155,38 @@ export const actions = {
             envObj.models.push(modelGroup.primeTower.getSerializableConfig());
         }
 
-        // Save models
+        // Save models (groups are handled separately below)
+        envObj.groups = [];
         for (const model of models) {
+            if (model && (model as { type?: string }).type === '2d-group') {
+                const g = model as unknown as {
+                    modelID: string;
+                    name: string;
+                    baseName: string;
+                    visible: boolean;
+                    transformation: Record<string, unknown>;
+                    children: Array<{ modelID: string }>;
+                };
+                envObj.groups.push({
+                    groupID: g.modelID,
+                    name: g.name,
+                    baseName: g.baseName,
+                    visible: g.visible,
+                    transformation: g.transformation,
+                    childModelIDs: g.children.map((c) => c.modelID),
+                });
+                // Also flush the leaf children under envObj.models so
+                // they are restored on load before groups are rebuilt.
+                for (const child of g.children) {
+                    const asModel = child as unknown as {
+                        getSerializableConfig?: () => unknown;
+                    };
+                    if (asModel.getSerializableConfig) {
+                        envObj.models.push(asModel.getSerializableConfig());
+                    }
+                }
+                continue;
+            }
             if (model instanceof ThreeModel) {
                 await dispatch(synchronizeMeshFile(model));
             }
@@ -372,6 +406,33 @@ export const actions = {
         }
         const promiseArray = [];
         dispatch(actions.recoverModels(promiseArray, modActions, models, envHeadType, isGuideTours));
+
+        // Rehydrate SvgGroup entries once the leaf models have been
+        // recovered (laser/cnc only; envObj.groups may be absent on
+        // old projects, which is fine).
+        if (envHeadType === HEAD_CNC || envHeadType === HEAD_LASER) {
+            const groupsSnapshot = (envObj as unknown as {
+                groups?: Array<{
+                    groupID: string;
+                    name: string;
+                    baseName: string;
+                    visible?: boolean;
+                    transformation?: Record<string, unknown>;
+                    childModelIDs: string[];
+                }>;
+            }).groups;
+            if (Array.isArray(groupsSnapshot) && groupsSnapshot.length) {
+                const rehydrate = async () => {
+                    await Promise.all(promiseArray);
+                    for (const snapshot of groupsSnapshot) {
+                        if (typeof modelGroup.rehydrateGroup === 'function') {
+                            modelGroup.rehydrateGroup(snapshot);
+                        }
+                    }
+                };
+                promiseArray.push(rehydrate());
+            }
+        }
 
         // Create tool paths
         const { toolPathGroup } = modState;

@@ -17,7 +17,7 @@ jobs:
             -   name: Checkout Code
                 uses: actions/checkout@v4
                 with:
-                    token: ${{ secrets.SACP_TOKEN }}
+                    token: ${{ github.token }}
                     submodules: 'true'
 
             -   name: Checkout submodules
@@ -89,7 +89,7 @@ jobs:
            -   name: Checkout Code
                uses: actions/checkout@v4
                with:
-                   token: ${{ secrets.SACP_TOKEN }}
+                   token: ${{ github.token }}
                    submodules: 'true'
 
            -   name: Checkout submodules
@@ -216,7 +216,7 @@ jobs:
             -   name: Checkout Code
                 uses: actions/checkout@v4
                 with:
-                    token: ${{ secrets.SACP_TOKEN }}
+                    token: ${{ github.token }}
                     submodules: 'true'
 
             -   name: Checkout submodules

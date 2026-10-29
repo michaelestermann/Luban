@@ -61,7 +61,6 @@ function patchFont(font, displayName = '') {
 }
 
 class FontManager {
-
     constructor() {
         this.fontDir = null;
         this.fonts = [];

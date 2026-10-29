@@ -16,6 +16,7 @@ import ThreeUtils from '../scene/three-extensions/ThreeUtils';
 import { emitUpdateScaleEvent } from '../ui/components/SMCanvas/TransformControls';
 import { ModelInfo as SVGModelInfo, TMode } from './BaseModel';
 import SvgModel from './SvgModel';
+import SvgGroup from './SvgGroup';
 import { ModelInfo, ModelTransformation } from './ThreeBaseModel';
 import { ModelEvents } from './events';
 
@@ -30,9 +31,9 @@ export const PLANE_MAX_HEIGHT = 999;
 
 export const CLIPPING_LINE_COLOR = '#3B83F6';
 
-type TModel = SvgModel
+type TModel = SvgModel | SvgGroup
 
-export type Model3D = Exclude<TModel, SvgModel>;
+export type Model3D = Exclude<TModel, SvgModel | SvgGroup>;
 
 export type TDisplayedType = 'model' | 'gcode'
 
@@ -72,6 +73,25 @@ class ModelGroup2D extends EventEmitter {
         x: number;
         y: number;
     }[];
+
+    // DOM container (`<g id="svg-data">`) set by the SVG editor after the
+    // SVGContentGroup is constructed so group(), ungroup() and
+    // rehydrateGroup() can reparent the child `<g>` wrappers.
+    private svgDataContainer: SVGElement | null = null;
+    // Current "entered" group modelID (Inkscape-style enter-mode). null
+    // means the UI is at top level.
+    private enteredGroupId: string | null = null;
+    // When a group is selected at top-level, selectedGroupID is the
+    // group's modelID and selectedModelArray holds all of its children
+    // (so existing transform / tool path paths that iterate leaf models
+    // keep working). null means the current selection is "free" models.
+    public selectedGroupID: string | null = null;
+    // Optional back-reference to the ToolPathGroup so `group()` can
+    // apply the "Model leaves Tool Path" rule to every grouped child.
+    // Typed structurally to avoid a cyclic runtime import.
+    private toolPathGroupRef: {
+        removeModelFromToolPaths(id: string): { deletedToolPathIDs: string[] };
+    } | null = null;
 
 
     public constructor(headType: THeadType) {
@@ -146,7 +166,17 @@ class ModelGroup2D extends EventEmitter {
     }
 
     public getModel(modelID: string) {
-        return this.models.find((d) => d.modelID === modelID);
+        // Search top-level entities first (includes SvgGroup)
+        const direct = this.models.find((d) => d.modelID === modelID);
+        if (direct) return direct;
+        // Also search inside groups for child SvgModels
+        for (const entity of this.models) {
+            if (entity instanceof SvgGroup) {
+                const child = entity.children.find((c) => c.modelID === modelID);
+                if (child) return child;
+            }
+        }
+        return null;
     }
 
     public getModelByModelName(modelName: string, models: TModel[] = this.models) {
@@ -183,12 +213,263 @@ class ModelGroup2D extends EventEmitter {
     public setModelVisibility(models: TModel[], visible: boolean) {
         models.forEach((model) => {
             model.visible = visible;
-            model.meshObject.visible = visible;
+            if (model instanceof SvgModel) {
+                model.meshObject.visible = visible;
+            } else if (model instanceof SvgGroup) {
+                // Propagate visibility to every child of the group
+                for (const child of model.children) {
+                    child.visible = visible;
+                    if (child.meshObject) {
+                        child.meshObject.visible = visible;
+                    }
+                }
+            }
         });
 
         // Make the reference of 'models' change to re-render
         this.models = [...this.models];
         return this.getState();
+    }
+
+    // ---------------------------------------------------------------------
+    // Group / Ungroup
+    // ---------------------------------------------------------------------
+
+    public canGroup(): boolean {
+        if (this.enteredGroupId !== null) {
+            return false;
+        }
+        // We can group if there are ≥ 2 selected leaf models OR the
+        // selection contains at least one currently-selected group
+        // (represented by selectedGroupID) plus at least one free model.
+        return this.selectedModelArray.length >= 2;
+    }
+
+    public canUngroup(): boolean {
+        if (this.enteredGroupId !== null) {
+            return false;
+        }
+        return this.selectedGroupID !== null;
+    }
+
+    private _createGroupName(): { name: string; baseName: string } {
+        const baseName = 'group';
+        const entry = this.namesMap.get(baseName) ?? { number: 0, count: 0 };
+        entry.number += 1;
+        entry.count += 1;
+        this.namesMap.set(baseName, entry);
+        return { name: `Group ${entry.number}`, baseName };
+    }
+
+    /**
+     * Group the currently selected entities into a new SvgGroup. Pre-existing
+     * groups in the selection are flattened (their children are pulled out)
+     * because we do not support nested groups.
+     */
+    public group(): { newGroup: SvgGroup | null } {
+        if (!this.canGroup()) {
+            return { newGroup: null };
+        }
+
+        const selected = this.selectedModelArray.slice();
+
+        // The selection is already flat SvgModels (even when a group is
+        // selected at top-level, selectedModelArray holds its children).
+        // Before grouping, detach any that currently belong to another
+        // group so we don't accidentally nest.
+        const childModels: SvgModel[] = [];
+        for (const entity of selected) {
+            if (entity instanceof SvgModel) {
+                const parent = this.getParentGroup(entity.modelID);
+                if (parent) {
+                    parent.removeChild(entity);
+                }
+                childModels.push(entity);
+            }
+        }
+
+        if (childModels.length < 2) {
+            return { newGroup: null };
+        }
+
+        // Any top-level SvgGroup whose children have all just been
+        // stripped out is now empty → remove it from models[].
+        const emptyGroups = this.models.filter(
+            (m) => m instanceof SvgGroup && (m as SvgGroup).children.length === 0,
+        );
+        this.models = this.models.filter((m) => !emptyGroups.includes(m));
+
+        // Insertion index = min index of any selected child in models[]
+        const indexes = childModels
+            .map((entity) => this.models.indexOf(entity))
+            .filter((idx) => idx !== -1);
+        const insertIndex = indexes.length ? Math.min(...indexes) : this.models.length;
+
+        // Drop grouped children from models[] (they become group-owned)
+        this.models = this.models.filter((entity) => !childModels.includes(entity as SvgModel));
+
+        // Build the new group and attach children
+        const { name, baseName } = this._createGroupName();
+        const newGroup = new SvgGroup(
+            { name, baseName, headType: this.headType as 'laser' | 'cnc' },
+            this,
+        );
+        for (const child of childModels) {
+            newGroup.addChild(child);
+        }
+
+        // NOTE: We intentionally do NOT move child SVG elements into a
+        // DOM <g> container. The SVG editor infrastructure (selection,
+        // hit-testing, grips, transforms) assumes all elements are
+        // direct children of #svg-data. Reparenting them breaks the
+        // entire editor. Groups are a purely logical construct tracked
+        // in the data model only.
+
+        // Insert new group into models[] at the computed index
+        this.models.splice(insertIndex, 0, newGroup);
+
+        // Apply "Model leaves Tool Path" rule: each freshly grouped
+        // child is removed from any tool path it belonged to. Tool
+        // paths that go empty are deleted.
+        if (this.toolPathGroupRef) {
+            for (const child of newGroup.children) {
+                this.toolPathGroupRef.removeModelFromToolPaths(child.modelID);
+            }
+        }
+
+        // Select the new group at top level: the children stay in
+        // selectedModelArray (so transform/tool-path code sees leaf
+        // models), and selectedGroupID tags that the conceptual
+        // selection is the group as a whole.
+        this.selectedModelArray = newGroup.children.slice() as SvgModel[];
+        this.selectedGroupID = newGroup.modelID;
+
+        this.modelChanged();
+        this.childrenChanged();
+
+        return { newGroup };
+    }
+
+    /**
+     * Dissolve every SvgGroup in the current selection, releasing its
+     * children back to top level. Non-group entities in the selection are
+     * left untouched.
+     */
+    public ungroup(): void {
+        if (this.selectedGroupID === null) {
+            return;
+        }
+        const grp = this.models.find(
+            (m): m is SvgGroup => m instanceof SvgGroup && m.modelID === this.selectedGroupID,
+        );
+        if (!grp) {
+            this.selectedGroupID = null;
+            return;
+        }
+
+        const index = this.models.indexOf(grp);
+        const children = grp.children.slice();
+
+        // No DOM manipulation needed — elements stay in #svg-data.
+
+        for (const child of children) {
+            grp.removeChild(child);
+        }
+
+        // Splice children back into models[] at the group's old position
+        this.models.splice(index, 1, ...children);
+
+        this.selectedModelArray = children;
+        this.selectedGroupID = null;
+
+        this.modelChanged();
+        this.childrenChanged();
+    }
+
+    public getParentGroup(modelID: string): SvgGroup | null {
+        for (const entity of this.models) {
+            if (entity instanceof SvgGroup) {
+                if (entity.children.some((child) => child.modelID === modelID)) {
+                    return entity;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Called by the SVG editor after the SVGContentGroup has been
+     * constructed, so we can reparent child `<g>` wrappers into / out of
+     * group `<g>` containers.
+     */
+    public setSvgDataContainer(elem: SVGElement | null): void {
+        this.svgDataContainer = elem;
+    }
+
+    public getSvgDataContainer(): SVGElement | null {
+        return this.svgDataContainer;
+    }
+
+    public setEnteredGroupId(id: string | null): void {
+        this.enteredGroupId = id;
+    }
+
+    public getEnteredGroupId(): string | null {
+        return this.enteredGroupId;
+    }
+
+    public setToolPathGroupRef(
+        ref: { removeModelFromToolPaths(id: string): { deletedToolPathIDs: string[] } } | null,
+    ): void {
+        this.toolPathGroupRef = ref;
+    }
+
+    /**
+     * Rebuild an `SvgGroup` from a serialised snapshot produced by the
+     * project save path. Called by the project loader after all
+     * standalone SvgModels have already been loaded back into models[].
+     */
+    public rehydrateGroup(state: {
+        groupID: string;
+        name: string;
+        baseName: string;
+        visible?: boolean;
+        transformation?: Record<string, unknown>;
+        childModelIDs: string[];
+    }): SvgGroup | null {
+        const children = state.childModelIDs
+            .map((id) => this.getModel(id) as unknown as SvgModel | undefined)
+            .filter((m): m is SvgModel => !!m);
+        if (children.length < 2) return null;
+
+        const newGroup = new SvgGroup(
+            {
+                modelID: state.groupID,
+                name: state.name,
+                baseName: state.baseName,
+                headType: this.headType as 'laser' | 'cnc',
+                visible: state.visible ?? true,
+                transformation: (state.transformation ?? {}) as never,
+            },
+            this,
+        );
+
+        // Detach children from the flat models[] and hand them to the
+        // group, then splice the group back at the first child's old
+        // position.
+        const firstIdx = this.models.indexOf(children[0]);
+        const insertIndex = firstIdx === -1 ? this.models.length : firstIdx;
+        this.models = this.models.filter((m) => !children.includes(m as SvgModel));
+        for (const child of children) {
+            newGroup.addChild(child);
+        }
+        this.models.splice(insertIndex, 0, newGroup);
+
+        // No DOM manipulation — groups are logical only.
+
+        this.modelChanged();
+        this.childrenChanged();
+        return newGroup;
     }
 
     public hideSelectedModel(targetModels: TModel[] = null) {
@@ -216,10 +497,22 @@ class ModelGroup2D extends EventEmitter {
 
             ThreeUtils.dispose(model.modelObject3D);
             ThreeUtils.dispose(model.processObject3D);
+            model.meshObject.removeEventListener('update', this.onModelUpdate);
+
+            // If the model belongs to a group, detach it
+            const parentGroup = this.getParentGroup(model.modelID);
+            if (parentGroup) {
+                parentGroup.removeChild(model);
+                // Remove the group if it's now empty
+                if (parentGroup.children.length === 0) {
+                    this.models = this.models.filter((item) => item !== parentGroup);
+                }
+            }
         }
-        model.meshObject.removeEventListener('update', this.onModelUpdate);
         this.models = this.models.filter((item) => item !== model);
-        this.updateModelNameMap(model.modelName, model.baseName, 'minus');
+        if (model instanceof SvgModel) {
+            this.updateModelNameMap(model.modelName, model.baseName, 'minus');
+        }
         this.modelChanged();
         this.selectedModelArray = this.selectedModelArray.filter((item) => item !== model);
         this.childrenChanged();
@@ -427,9 +720,24 @@ class ModelGroup2D extends EventEmitter {
         return this.getState();
     }
 
+    /**
+     * Return leaf models only (SvgModel instances). SvgGroups are
+     * excluded so existing code that assumes meshObject / elem / etc.
+     * never sees a group entity. Use `getAllEntities()` when you need
+     * both groups and leaf models.
+     */
     public getModels<T>(filterKey = '') {
         const models = [];
         for (const model of this.models) {
+            // Skip SvgGroup containers — return their children instead
+            if (model instanceof SvgGroup) {
+                for (const child of model.children) {
+                    if (child.type !== filterKey) {
+                        models.push(child);
+                    }
+                }
+                continue;
+            }
             if (model.type === filterKey) {
                 continue;
             } else {
@@ -439,18 +747,23 @@ class ModelGroup2D extends EventEmitter {
         return models as T[];
     }
 
+    /**
+     * Return all top-level entities including SvgGroup instances.
+     * Used by the object list, save/load, and group-aware code.
+     */
+    public getAllEntities(): (SvgModel | SvgGroup)[] {
+        return this.models;
+    }
+
     public getVisibleValidModels() {
-        return _.filter(this.models, (modelItem) => {
+        return _.filter(this.getModels(), (modelItem) => {
             return modelItem?.visible;
         });
     }
 
     public getVisibleModels() {
-        return this.models.filter(model => {
-            if (!model.visible) {
-                return false;
-            }
-            return true;
+        return this.getModels().filter(model => {
+            return model?.visible;
         });
     }
 
