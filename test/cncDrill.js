@@ -8,6 +8,7 @@ import {
     buildDrillMoves,
     generateDrillToolPathFiles,
     generateDrillToolPathObj,
+    generateDrillViewPathObj,
     getDrillPoints,
     orderPoints
 } from '../src/server/lib/ToolPathGenerator/DrillToolPathGenerator';
@@ -222,5 +223,17 @@ test('Drill toolpath: rotary rejected', async (t) => {
             t.ok(/rotary mode is not supported/.test(err.message), 'rotary error');
         }
     });
+    t.end();
+});
+
+test('Drill view path: marks holes', async (t) => {
+    const view = generateDrillViewPathObj(await parse(CIRCLE), drillModelInfo({ toolParams: { toolDiameter: 2 } }));
+    t.equal(view.width, 100, 'width');
+    t.equal(view.height, 50, 'height');
+    // like CncToolPathGenerator: rows are reversed, so data[0] is the top row; 10 cells per mm
+    const cell = (x, y) => view.data[Math.round(view.height * 10 / 2 - y * 10)][Math.round(x * 10 + view.width * 10 / 2)];
+    t.equal(cell(-30, 15).y, -2, 'hole center at target depth');
+    t.equal(cell(-25, 15).y, 0, '5 mm away untouched');
+    t.equal(view.isRotate, false, 'flat');
     t.end();
 });

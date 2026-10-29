@@ -179,3 +179,64 @@ export async function generateDrillToolPathFiles(modelInfos) {
     }
     return filenames;
 }
+
+const VIEW_PATH_DENSITY = 10; // cells per mm, as in CncToolPathGenerator
+
+/**
+ * Preview height map in the CncToolPathGenerator view path format: a tool-sized disc
+ * at target depth at each drill point, untouched material elsewhere.
+ */
+export function generateDrillViewPathObj(svg, modelInfo) {
+    const { sourceType, mode, transformation, gcodeConfig, toolParams } = modelInfo;
+    const { targetDepth } = gcodeConfig;
+    const { positionX, positionY, positionZ } = transformation;
+    const points = getDrillPoints(svg, modelInfo);
+
+    const width = Math.round(Math.abs(svg.viewBox[2]) * VIEW_PATH_DENSITY);
+    const height = Math.round(Math.abs(svg.viewBox[3]) * VIEW_PATH_DENSITY);
+    const radius = toolParams.toolDiameter / 2;
+
+    const data = [];
+    for (let j = 0; j <= height; j++) {
+        data.push([]);
+        for (let i = 0; i <= width; i++) {
+            data[j][i] = { x: (i - width / 2) / VIEW_PATH_DENSITY, y: 0 };
+        }
+    }
+    // Stamp a disc around each hole, only visiting the cells of its bounding square
+    for (const p of points) {
+        const ci = Math.round(p.x * VIEW_PATH_DENSITY + width / 2);
+        const cj = Math.round(p.y * VIEW_PATH_DENSITY + height / 2);
+        const r = Math.ceil(radius * VIEW_PATH_DENSITY);
+        for (let j = Math.max(0, cj - r); j <= Math.min(height, cj + r); j++) {
+            for (let i = Math.max(0, ci - r); i <= Math.min(width, ci + r); i++) {
+                const x = (i - width / 2) / VIEW_PATH_DENSITY;
+                const y = (j - height / 2) / VIEW_PATH_DENSITY;
+                if (Math.hypot(p.x - x, p.y - y) <= radius) {
+                    data[j][i].y = -targetDepth;
+                }
+            }
+        }
+    }
+    data.reverse();
+
+    return {
+        sourceType,
+        mode,
+        width: width / VIEW_PATH_DENSITY,
+        height: height / VIEW_PATH_DENSITY,
+        positionX,
+        positionY,
+        positionZ,
+        rotationB: 0,
+        targetDepth,
+        boundingBox: {
+            min: { x: positionX - width / 2 / VIEW_PATH_DENSITY, y: positionY - height / 2 / VIEW_PATH_DENSITY, z: -targetDepth },
+            max: { x: positionX + width / 2 / VIEW_PATH_DENSITY, y: positionY + height / 2 / VIEW_PATH_DENSITY, z: 0 },
+            length: { x: width / VIEW_PATH_DENSITY, y: height / VIEW_PATH_DENSITY, z: targetDepth }
+        },
+        isRotate: false,
+        diameter: 0,
+        data
+    };
+}
