@@ -22,6 +22,7 @@ import { convertFileToSTL } from '../../lib/model-to-stl';
 import { parseLubanGcodeHeader } from '../../lib/parseGcodeHeader';
 import { pathWithRandomSuffix } from '../../lib/random-utils';
 import { textSerialChannel } from '../machine/channels/TextSerialChannel';
+import serializeByKey from '../../lib/serialize-by-key';
 
 const log = logger('api:file');
 
@@ -371,6 +372,71 @@ export const getEnv = async (req, res) => {
     }
 };
 
+const writeEnv = async (config, content) => {
+    const { activePresetIds } = config;
+
+    const machineInfo = config?.machineInfo;
+    const headType = machineInfo?.headType;
+    const envDir = `${DataStorage.envDir}/${headType}`;
+    // TODO: not just remove the category but only change the file when model changed
+    rmDir(envDir, false);
+
+    const configDir = getConfigDir(machineInfo);
+
+    const result = await new Promise((resolve, reject) => {
+        const targetPath = `${envDir}/config.json`;
+        fs.writeFile(targetPath, content, (err) => {
+            if (err) {
+                log.error(err);
+                reject(err);
+            } else {
+                resolve({
+                    targetPath
+                });
+            }
+        });
+    });
+    traverse(config.models, (model) => {
+        // why copy all not just 'uploadName'
+        const { uploadName } = model;
+        if (uploadName) {
+            if (/\.svg$/.test(uploadName) && !(/parsed\.svg$/.test(uploadName))) {
+                const parseName = uploadName.replace(/\.svg$/, 'parsed.svg');
+                copyFileSync(`${DataStorage.tmpDir}/${parseName}`, `${envDir}/${parseName}`);
+            }
+            copyFileSync(`${DataStorage.tmpDir}/${uploadName}`, `${envDir}/${uploadName}`);
+        }
+    });
+
+    if (config.defaultMaterialId && /^material.([0-9_]+)$/.test(config.defaultMaterialId)) {
+        copyFileSync(`${configDir}/${config.defaultMaterialId}.def.json`, `${envDir}/${config.defaultMaterialId}.def.json`);
+    }
+    const isDual = isDualExtruder(machineInfo?.toolHead?.printingToolhead);
+    if (isDual && config.defaultMaterialIdRight && /^material.([0-9_]+)$/.test(config.defaultMaterialIdRight)) {
+        copyFileSync(`${configDir}/${config.defaultMaterialIdRight}.def.json`, `${envDir}/${config.defaultMaterialIdRight}.def.json`);
+    }
+
+    if (activePresetIds) {
+        for (const stackId of [LEFT_EXTRUDER, RIGHT_EXTRUDER]) {
+            const presetId = activePresetIds[stackId];
+            if (presetId && /^quality.([0-9_]+)$/.test(presetId)) {
+                copyFileSync(`${configDir}/${presetId}.def.json`, `${envDir}/${presetId}.def.json`);
+            }
+        }
+    }
+    if (machineInfo?.headType === HEAD_CNC || machineInfo?.headType === HEAD_LASER) {
+        !!config.toolpaths?.length && config.toolpaths.forEach(toolpath => {
+            if (toolpath.toolParams?.definitionId && /^tool.([0-9_]+)$/.test(toolpath.toolParams.definitionId)) {
+                copyFileSync(`${configDir}/${toolpath.toolParams.definitionId}.def.json`, `${envDir}/${toolpath.toolParams.definitionId}.def.json`);
+            }
+        });
+    }
+    return result;
+};
+
+// Autosaves can overlap; each one clears and rewrites the same folder (EPERM on Windows)
+const envWriteQueue = serializeByKey();
+
 /**
  * save editor environment as files, and copy related resource files
  */
@@ -378,64 +444,7 @@ export const saveEnv = async (req, res) => {
     const { content } = req.body;
     try {
         const config = JSON.parse(content);
-        const { activePresetIds } = config;
-
-        const machineInfo = config?.machineInfo;
-        const headType = machineInfo?.headType;
-        const envDir = `${DataStorage.envDir}/${headType}`;
-        // TODO: not just remove the category but only change the file when model changed
-        rmDir(envDir, false);
-
-        const configDir = getConfigDir(machineInfo);
-
-        const result = await new Promise((resolve, reject) => {
-            const targetPath = `${envDir}/config.json`;
-            fs.writeFile(targetPath, content, (err) => {
-                if (err) {
-                    log.error(err);
-                    reject(err);
-                } else {
-                    resolve({
-                        targetPath
-                    });
-                }
-            });
-        });
-        traverse(config.models, (model) => {
-            // why copy all not just 'uploadName'
-            const { uploadName } = model;
-            if (uploadName) {
-                if (/\.svg$/.test(uploadName) && !(/parsed\.svg$/.test(uploadName))) {
-                    const parseName = uploadName.replace(/\.svg$/, 'parsed.svg');
-                    copyFileSync(`${DataStorage.tmpDir}/${parseName}`, `${envDir}/${parseName}`);
-                }
-                copyFileSync(`${DataStorage.tmpDir}/${uploadName}`, `${envDir}/${uploadName}`);
-            }
-        });
-
-        if (config.defaultMaterialId && /^material.([0-9_]+)$/.test(config.defaultMaterialId)) {
-            copyFileSync(`${configDir}/${config.defaultMaterialId}.def.json`, `${envDir}/${config.defaultMaterialId}.def.json`);
-        }
-        const isDual = isDualExtruder(machineInfo?.toolHead?.printingToolhead);
-        if (isDual && config.defaultMaterialIdRight && /^material.([0-9_]+)$/.test(config.defaultMaterialIdRight)) {
-            copyFileSync(`${configDir}/${config.defaultMaterialIdRight}.def.json`, `${envDir}/${config.defaultMaterialIdRight}.def.json`);
-        }
-
-        if (activePresetIds) {
-            for (const stackId of [LEFT_EXTRUDER, RIGHT_EXTRUDER]) {
-                const presetId = activePresetIds[stackId];
-                if (presetId && /^quality.([0-9_]+)$/.test(presetId)) {
-                    copyFileSync(`${configDir}/${presetId}.def.json`, `${envDir}/${presetId}.def.json`);
-                }
-            }
-        }
-        if (machineInfo?.headType === HEAD_CNC || machineInfo?.headType === HEAD_LASER) {
-            !!config.toolpaths?.length && config.toolpaths.forEach(toolpath => {
-                if (toolpath.toolParams?.definitionId && /^tool.([0-9_]+)$/.test(toolpath.toolParams.definitionId)) {
-                    copyFileSync(`${configDir}/${toolpath.toolParams.definitionId}.def.json`, `${envDir}/${toolpath.toolParams.definitionId}.def.json`);
-                }
-            });
-        }
+        const result = await envWriteQueue(config?.machineInfo?.headType, () => writeEnv(config, content));
         res.send(result);
         res.end();
     } catch (e) {
