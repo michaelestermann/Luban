@@ -19,6 +19,7 @@ import * as Sentry from '@sentry/electron/main';
 import DataStorage from './DataStorage';
 import MenuBuilder, { addRecentFile, cleanAllRecentFiles } from './electron-app/Menu';
 import { configureWindow } from './electron-app/window';
+import installShowOnReady from './electron-app/window-show-fallback';
 import pkg from './package.json';
 
 
@@ -405,22 +406,13 @@ const showMainWindow = async () => {
                 console.log('err', err.message);
             });
         window.setBackgroundColor('#f5f5f7');
-        if (process.platform === 'win32') {
-            window.show();
-        } else {
-            window.on('ready-to-show', () => {
-                window.show();
-            });
-        }
         // serverData = await launchServer();
+    }
+
+    if (process.platform === 'win32') {
+        window.show();
     } else {
-        if (process.platform === 'win32') {
-            window.show();
-        } else {
-            window.on('ready-to-show', () => {
-                window.show();
-            });
-        }
+        installShowOnReady(window);
     }
 
     window.on('close', (e) => {
