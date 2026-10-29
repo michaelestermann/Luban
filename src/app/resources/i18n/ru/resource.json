@@ -1249,6 +1249,7 @@
     "key-CncLaser/G-codeAction-Close Preview": "Close Preview",
     "key-CncLaser/G-codeAction-Export": "Export",
     "key-CncLaser/G-codeAction-Export G-code to File": "Export G-code to File",
+    "key-CncLaser/G-codeAction-G-code files (change tool between files)": "G-code files (change tool between files)",
     "key-CncLaser/G-codeAction-Failed to preview": "Failed to preview",
     "key-CncLaser/G-codeAction-Failed to preview, please modify parameters and try again.": "Failed to preview, please modify parameters and try again.",
     "key-CncLaser/G-codeAction-Generate G-code and Preview": "Generate G-code and Preview",

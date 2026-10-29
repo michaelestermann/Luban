@@ -46,6 +46,8 @@ const Output: React.FC<OutputViewProps> = (props) => {
 
     const displayedType = useSelector((state: RootState) => state[headType]?.displayedType);
     const gcodeFile = useSelector(state => state[headType]?.gcodeFile);
+    // CNC jobs with several tools: one file per tool, in milling order
+    const gcodeFiles = useSelector(state => state[headType]?.gcodeFiles) || [];
     const needToPreview = useSelector(state => state[headType]?.needToPreview);
     const page = useSelector(state => state[headType]?.page);
     const previewFailed = useSelector(state => state[headType]?.previewFailed);
@@ -124,14 +126,18 @@ const Output: React.FC<OutputViewProps> = (props) => {
 
         logGcodeExport(headType, 'workspace', materials.isRotate);
 
-        // workspace render G-code
-        await dispatch(gcodeActions.renderGcodeFile(gcodeFile, true, loadGcodeOptions?.renderImmediately || false));
+        // workspace render G-code; with several files load the last first so file 1 ends on top and active
+        const files = gcodeFiles.length > 1 ? gcodeFiles : [gcodeFile];
+        for (let i = files.length - 1; i >= 0; i--) {
+            await dispatch(gcodeActions.renderGcodeFile(files[i], true, i === 0 && (loadGcodeOptions?.renderImmediately || false)));
+        }
 
         // open workspace
         setShowWorkspace(true);
         window.scrollTo(0, 0);
     }, [
         gcodeFile,
+        gcodeFiles,
         materials.isRotate,
         loadGcodeOptions?.renderImmediately,
     ]);
@@ -252,6 +258,18 @@ const Output: React.FC<OutputViewProps> = (props) => {
                     >
                         {i18n._('key-CncLaser/G-codeAction-Preview')}
                     </Button>
+                )}
+                {!isEditor && !needToPreview && gcodeFiles.length > 1 && (
+                    <div className="margin-top-10">
+                        <div className="font-weight-bold">
+                            {i18n._('key-CncLaser/G-codeAction-G-code files (change tool between files)')}
+                        </div>
+                        {gcodeFiles.map(file => (
+                            <div key={file.uploadName} className="margin-top-4" title={file.renderGcodeFileName}>
+                                {`${file.index}. ${file.toolName} – ${file.toolPathNames.join(', ')} (${Math.ceil(file.estimatedTime / 60)} min)`}
+                            </div>
+                        ))}
+                    </div>
                 )}
                 {!isEditor && !needToPreview && (
                     <div

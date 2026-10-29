@@ -1249,6 +1249,7 @@
     "key-CncLaser/G-codeAction-Close Preview": "Закрити передперегляд",
     "key-CncLaser/G-codeAction-Export": "Експорт",
     "key-CncLaser/G-codeAction-Export G-code to File": "Експортувати G-код у файл",
+    "key-CncLaser/G-codeAction-G-code files (change tool between files)": "G-code files (change tool between files)",
     "key-CncLaser/G-codeAction-Failed to preview": "Помилка попереднього перегляду",
     "key-CncLaser/G-codeAction-Failed to preview, please modify parameters and try again.": "Помилка попереднього перегляду, змініть параметри та повторіть спробу.",
     "key-CncLaser/G-codeAction-Generate G-code and Preview": "Створити G-код та Переглянути",

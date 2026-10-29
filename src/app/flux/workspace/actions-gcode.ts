@@ -22,6 +22,7 @@ import { MachineAgent } from './MachineAgent';
 import baseActions from './actions-base';
 import { ConnectionType, WORKSPACE_STAGE } from './state';
 import { GCodeFileMetadata } from './types';
+import { mergeGcodeFileList } from './gcode-file-list';
 
 
 /**
@@ -106,21 +107,9 @@ const uploadGcodeFile = (file: File) => {
 const addGCodeFile = (fileInfo: GCodeFileMetadata) => (dispatch, getState) => {
     const { gcodeFiles } = getState().workspace;
 
-    const files = [];
     fileInfo.isRenaming = false;
     fileInfo.newName = fileInfo.name;
-    files.push(fileInfo);
-
-    let added = 1, i = 0;
-    while (added < 5 && i < gcodeFiles.length) {
-        const gcodeFile = gcodeFiles[i];
-        // G-code file with the same uploadName will be replaced with current one
-        if (gcodeFile.uploadName !== fileInfo.uploadName) {
-            files.push(gcodeFile);
-            added++;
-        }
-        i++;
-    }
+    const files = mergeGcodeFileList(gcodeFiles, fileInfo);
 
     dispatch(
         baseActions.updateState({

@@ -1249,6 +1249,7 @@
     "key-CncLaser/G-codeAction-Close Preview": "미리보기 닫기",
     "key-CncLaser/G-codeAction-Export": "내보내기",
     "key-CncLaser/G-codeAction-Export G-code to File": "G-코드를 파일로 내보내기",
+    "key-CncLaser/G-codeAction-G-code files (change tool between files)": "G-code files (change tool between files)",
     "key-CncLaser/G-codeAction-Failed to preview": "미리보기 실패",
     "key-CncLaser/G-codeAction-Failed to preview, please modify parameters and try again.": "미리보기에 실패했습니다. 파라미터를 수정하고 다시 시도하십시오.",
     "key-CncLaser/G-codeAction-Generate G-code and Preview": "G-코드 생성 및 미리보기",

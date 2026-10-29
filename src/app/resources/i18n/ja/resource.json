@@ -1249,6 +1249,7 @@
     "key-CncLaser/G-codeAction-Close Preview": "プレビューを閉じる",
     "key-CncLaser/G-codeAction-Export": "エクスポート",
     "key-CncLaser/G-codeAction-Export G-code to File": "Gコードをファイルにエクスポート",
+    "key-CncLaser/G-codeAction-G-code files (change tool between files)": "G-code files (change tool between files)",
     "key-CncLaser/G-codeAction-Failed to preview": "プレビューに失敗",
     "key-CncLaser/G-codeAction-Failed to preview, please modify parameters and try again.": "プレビューに失敗しました。パラメータを修正して再度お試しください。",
     "key-CncLaser/G-codeAction-Generate G-code and Preview": "Gコードを生成し、プレビュー",

@@ -1249,6 +1249,7 @@
     "key-CncLaser/G-codeAction-Close Preview": "关闭预览",
     "key-CncLaser/G-codeAction-Export": "导出",
     "key-CncLaser/G-codeAction-Export G-code to File": "将 G 代码导出到文件",
+    "key-CncLaser/G-codeAction-G-code files (change tool between files)": "G-code files (change tool between files)",
     "key-CncLaser/G-codeAction-Failed to preview": "预览失败",
     "key-CncLaser/G-codeAction-Failed to preview, please modify parameters and try again.": "预览失败，请修改参数后重试。",
     "key-CncLaser/G-codeAction-Generate G-code and Preview": "生成 G 代码并预览",
