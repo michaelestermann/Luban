@@ -102,6 +102,7 @@ const INITIAL_STATE = {
     isGcodeGenerating: false,
     isChangedAfterGcodeGenerating: true,
     gcodeFile: null,
+    gcodeFiles: [],
 
     // model: null,
     selectedModelID: null,

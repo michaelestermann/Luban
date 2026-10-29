@@ -1,7 +1,6 @@
 import { Machine } from '@snapmaker/luban-platform';
 import _ from 'lodash';
 import { v4 as uuid } from 'uuid';
-import { Box3, Vector3 } from 'three';
 
 import { timestamp } from '../../../shared/lib/random-utils';
 import api from '../../api';
@@ -26,6 +25,7 @@ import { actions as operationHistoryActions } from '../operation-history';
 import { actions as projectActions } from '../project';
 import { SnapmakerRayMachine } from '../../machines';
 import { buildGenerateToolPathTasks } from '../../toolpaths/generate-tasks';
+import { describeGcodeFiles, projectBaseName, toGcodeFileState } from '../../toolpaths/gcode-file-state';
 
 let toastId;
 export const processActions = {
@@ -487,46 +487,26 @@ export const processActions = {
         modelGroup.estimatedTime = gcodeFile.estimatedTime;
         toolPathGroup.showSimulationObject(false);
 
-        const boundingBox = new Box3(
-            new Vector3(gcodeFile.boundingBox.min.x, gcodeFile.boundingBox.min.y, gcodeFile.boundingBox.min.z),
-            new Vector3(gcodeFile.boundingBox.max.x, gcodeFile.boundingBox.max.y, gcodeFile.boundingBox.max.z),
-        );
+        // CNC: one file per tool run, named <Project>_<Nr>_<Tool>_<Toolpaths>
+        let gcodeFiles;
+        if (headType === HEAD_CNC && taskResult.gcodeFiles?.length) {
+            const project = projectBaseName(getState().project[headType].openedFile, currentModelName);
+            gcodeFiles = describeGcodeFiles(taskResult.gcodeFiles, toolPaths, project, suffix)
+                .map(file => ({
+                    ...toGcodeFileState(file, file.renderGcodeFileName),
+                    index: file.index,
+                    toolName: file.toolName,
+                    toolPathNames: file.toolPathNames
+                }));
+            modelGroup.estimatedTime = gcodeFiles.reduce((sum, file) => sum + file.estimatedTime, 0);
+        } else {
+            gcodeFiles = [toGcodeFileState(gcodeFile, renderGcodeFileName)];
+        }
 
         dispatch(baseActions.updateState(headType, {
             isChangedAfterGcodeGenerating: false,
-            gcodeFile: {
-                name: gcodeFile.name,
-                uploadName: gcodeFile.name,
-                size: gcodeFile.size,
-                lastModified: gcodeFile.lastModified,
-                boundingBox: boundingBox,
-                estimatedTime: gcodeFile.estimatedTime,
-                thumbnail: gcodeFile.thumbnail,
-                renderGcodeFileName: renderGcodeFileName,
-                type: gcodeFile.header[';header_type'],
-                work_speed: gcodeFile.header[';work_speed(mm/minute)'],
-                estimated_time: gcodeFile.header[';estimated_time(s)'],
-
-                // cnc
-                jog_speed: gcodeFile.header[';jog_speed(mm/minute)'],
-                power: gcodeFile.header[';power(%)'],
-                is_rotate: gcodeFile.header[';is_rotate'] === 'true',
-                gcodeAxisWorkRange: {
-                    max: {
-                        x: gcodeFile.header[';max_x(mm)'],
-                        y: gcodeFile.header[';max_y(mm)'],
-                        z: gcodeFile.header[';max_z(mm)'],
-                        b: gcodeFile.header[';max_b(mm)']
-                    },
-                    min: {
-                        x: gcodeFile.header[';min_x(mm)'],
-                        y: gcodeFile.header[';min_y(mm)'],
-                        z: gcodeFile.header[';min_z(mm)'],
-                        b: gcodeFile.header[';min_b(mm)']
-                    }
-                },
-                motorMode: gcodeFile.header[';motorMode']
-            },
+            gcodeFile: gcodeFiles[0],
+            gcodeFiles,
             stage: STEP_STAGE.CNC_LASER_GENERATING_GCODE,
             isGcodeGenerating: false,
             progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_GENERATING_GCODE, 1)
@@ -617,7 +597,8 @@ export const processActions = {
     clearGcodeFile: headType => dispatch => {
         dispatch(
             baseActions.updateState(headType, {
-                gcodeFile: null
+                gcodeFile: null,
+                gcodeFiles: []
             })
         );
         dispatch(baseActions.render(headType));
