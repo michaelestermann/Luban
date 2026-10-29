@@ -33,3 +33,9 @@ test('project base name: opened file wins, else first model name without image e
     t.equal(projectBaseName(undefined, undefined), 'Luban');
     t.end();
 });
+
+test('describe files: every file carries the job name of its project', (t) => {
+    const files = describeGcodeFiles([{ toolPathIds: ['t1'] }, { toolPathIds: ['t3'] }], toolPaths, 'Layout', '.cnc');
+    t.deepEqual(files.map(f => f.jobName), ['Layout', 'Layout']);
+    t.end();
+});

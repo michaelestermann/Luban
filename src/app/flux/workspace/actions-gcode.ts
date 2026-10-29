@@ -22,7 +22,7 @@ import { MachineAgent } from './MachineAgent';
 import baseActions from './actions-base';
 import { ConnectionType, WORKSPACE_STAGE } from './state';
 import { GCodeFileMetadata } from './types';
-import { mergeGcodeFileList } from './gcode-file-list';
+import { mergeGcodeFileList, removeJobFiles } from './gcode-file-list';
 
 
 /**
@@ -130,6 +130,14 @@ const addGCodeFile = (fileInfo: GCodeFileMetadata) => (dispatch, getState) => {
     }
 };
 
+
+/**
+ * Remove the files of an earlier generation of the same job from the G-code list.
+ */
+const removeGcodeFilesOfJob = (jobName: string | undefined) => (dispatch, getState) => {
+    const { gcodeFiles } = getState().workspace;
+    dispatch(baseActions.updateState({ gcodeFiles: removeJobFiles(gcodeFiles, jobName) }));
+};
 
 const render = () => {
     return (dispatch) => {
@@ -412,6 +420,7 @@ const renderGcodeFile = (
 export default {
     uploadGcodeFile,
     addGCodeFile,
+    removeGcodeFilesOfJob,
 
     // G-code render
     render,

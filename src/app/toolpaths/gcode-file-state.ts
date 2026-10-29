@@ -31,6 +31,8 @@ export const describeGcodeFiles = <T extends { toolPathIds?: string[] }>(
         return {
             ...file,
             index: i + 1,
+            // groups the files of one job, so a regeneration can replace all of them
+            jobName: project,
             toolName,
             toolPathNames,
             renderGcodeFileName: buildGcodeFileName({ project, index: i + 1, toolName, toolPathNames, suffix })

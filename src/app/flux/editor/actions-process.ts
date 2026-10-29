@@ -495,6 +495,7 @@ export const processActions = {
                 .map(file => ({
                     ...toGcodeFileState(file, file.renderGcodeFileName),
                     index: file.index,
+                    jobName: file.jobName,
                     toolName: file.toolName,
                     toolPathNames: file.toolPathNames
                 }));

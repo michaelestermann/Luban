@@ -13,3 +13,21 @@ export const mergeGcodeFileList = <T extends GcodeFileEntry>(existing: T[], file
     const added = { ...fileInfo, isRenaming: false, newName: fileInfo.name };
     return [added, ...existing.filter(file => !isReplaced(file))].slice(0, cap);
 };
+
+/**
+ * Loading the files of a multi-tool job: only file 1 is previewed and becomes the active
+ * file; the others only go into the list (last first, so file 1 ends on top). Previewing
+ * all of them in parallel would leave whichever finished last as the active, runnable file.
+ */
+export const planWorkspaceLoad = <T>(files: T[]): { listOnly: T[], active: T } => ({
+    listOnly: files.slice(1).reverse(),
+    active: files[0]
+});
+
+/** Drop files of an earlier generation of the same job, so no stale file can be run. */
+export const removeJobFiles = <T extends { jobName?: string }>(files: T[], jobName: string | undefined): T[] => {
+    if (!jobName) {
+        return files;
+    }
+    return files.filter(file => file.jobName !== jobName);
+};

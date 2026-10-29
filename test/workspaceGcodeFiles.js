@@ -1,5 +1,5 @@
 import test from 'tape';
-import { mergeGcodeFileList } from '../src/app/flux/workspace/gcode-file-list';
+import { mergeGcodeFileList, planWorkspaceLoad, removeJobFiles } from '../src/app/flux/workspace/gcode-file-list';
 
 test('mergeGcodeFileList: replaces same display name', (t) => {
     const files = mergeGcodeFileList(
@@ -28,5 +28,24 @@ test('mergeGcodeFileList: rename fields reset on the new file', (t) => {
     const [file] = mergeGcodeFileList([], { uploadName: 'u', name: 'n.cnc', renderGcodeFileName: 'n.cnc', isRenaming: true });
     t.equal(file.isRenaming, false);
     t.equal(file.newName, 'n.cnc');
+    t.end();
+});
+
+test('planWorkspaceLoad: only file 1 is previewed and becomes active, the others only go into the list', (t) => {
+    const f = (n) => ({ uploadName: `u${n}` });
+    const plan = planWorkspaceLoad([f(1), f(2), f(3)]);
+    t.deepEqual(plan.listOnly.map(x => x.uploadName), ['u3', 'u2'], 'added last-first so file 1 ends on top');
+    t.equal(plan.active.uploadName, 'u1', 'file 1 is active');
+    t.deepEqual(planWorkspaceLoad([f(1)]).listOnly, [], 'single file: nothing list-only');
+    t.end();
+});
+
+test('removeJobFiles: files of an earlier generation of the same job are removed', (t) => {
+    const kept = removeJobFiles(
+        [{ uploadName: 'a', jobName: 'PCB' }, { uploadName: 'b', jobName: 'Other' }, { uploadName: 'c' }],
+        'PCB'
+    );
+    t.deepEqual(kept.map(x => x.uploadName), ['b', 'c'], 'old PCB_3_... gone, other jobs and imported files kept');
+    t.deepEqual(removeJobFiles([{ uploadName: 'c' }], undefined).map(x => x.uploadName), ['c'], 'no job name: nothing removed');
     t.end();
 });

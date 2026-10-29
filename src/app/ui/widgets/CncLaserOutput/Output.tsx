@@ -27,6 +27,7 @@ import { LaserWorkspaceRay } from '../../pages/laser-workspace-ray';
 import { renderPopup } from '../../utils';
 import Thumbnail from '../CncLaserShared/Thumbnail';
 import styles from './styles.styl';
+import { planWorkspaceLoad } from '../../../flux/workspace/gcode-file-list';
 
 export type LoadGcodeOptions = {
     renderImmediately?: boolean;
@@ -126,11 +127,13 @@ const Output: React.FC<OutputViewProps> = (props) => {
 
         logGcodeExport(headType, 'workspace', materials.isRotate);
 
-        // workspace render G-code; with several files load the last first so file 1 ends on top and active
-        const files = gcodeFiles.length > 1 ? gcodeFiles : [gcodeFile];
-        for (let i = files.length - 1; i >= 0; i--) {
-            await dispatch(gcodeActions.renderGcodeFile(files[i], true, i === 0 && (loadGcodeOptions?.renderImmediately || false)));
-        }
+        // workspace render G-code. CNC jobs with several tools: replace the job's earlier files,
+        // list all files with file 1 on top, and preview/activate only file 1
+        const files = gcodeFiles.length > 0 ? gcodeFiles : [gcodeFile];
+        dispatch(gcodeActions.removeGcodeFilesOfJob(files[0].jobName));
+        const { listOnly, active } = planWorkspaceLoad(files);
+        listOnly.forEach(file => dispatch(gcodeActions.addGCodeFile(file)));
+        await dispatch(gcodeActions.renderGcodeFile(active, true, loadGcodeOptions?.renderImmediately || false));
 
         // open workspace
         setShowWorkspace(true);
