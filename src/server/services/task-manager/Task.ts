@@ -44,6 +44,9 @@ class Task {
 
     public gcodeFile: TGcodeFile = {} as TGcodeFile;
 
+    // CNC jobs with several tools produce one file per tool run
+    public gcodeFiles: TGcodeFile[] = [];
+
     public viewPathFile = '';
 
     public filename = '';

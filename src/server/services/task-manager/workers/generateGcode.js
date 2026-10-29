@@ -7,6 +7,7 @@ import { isNull } from '../../../../shared/lib/utils';
 import { GcodeGenerator } from '../../../lib/GcodeGenerator';
 import logger from '../../../lib/logger';
 import sendMessage from '../utils/sendMessage';
+import { splitToolPathsByTool } from '../../../../shared/lib/gcode-runs';
 import settings from '../../../config/settings';
 import { JobOffsetMode } from '../../../../app/constants/coordinate';
 import { SnapmakerA150Machine, SnapmakerA250Machine, SnapmakerA350Machine, SnapmakerArtisanMachine, SnapmakerRayMachine } from '../../../../app/machines';
@@ -83,18 +84,10 @@ const checkoutBoundingBoxIsNull = (boundingBox) => {
     }
 };
 
-// eslint-disable-next-line consistent-return
-const generateGcode = ({ toolPaths, size, toolHead, origin, jobOffsetMode, series, metadata, motorMode }) => {
-    if (!toolPaths && !_.isArray(toolPaths) && toolPaths.length === 0) {
-        return sendMessage({ status: 'fail', value: 'modelInfo is empty.' });
-    }
-    sendMessage({ status: 'progress', value: 0.05 });
-
-    const { headType } = toolPaths[0];
-    if (!_.includes(['laser', 'cnc'], headType)) {
-        return sendMessage({ status: 'fail', value: `Unsupported type: ${headType}` });
-    }
-
+/**
+ * Write the toolpaths into one G-code file with its own header.
+ */
+export const writeGcodeFile = (toolPaths, { size, toolHead, origin, jobOffsetMode, series, metadata, motorMode, headType, thumbnail, onProgress = () => {} }) => {
     const suffix = headType === 'laser' ? '.nc' : '.cnc';
 
     let fileTotalLines = 0;
@@ -186,10 +179,10 @@ const generateGcode = ({ toolPaths, size, toolHead, origin, jobOffsetMode, serie
             checkoutBoundingBoxIsNull(boundingBox);
         }
 
-        sendMessage({ status: 'progress', value: (i + 1) / toolPathFiles.length });
+        onProgress((i + 1) / toolPaths.length);
     }
 
-    const { gcodeConfig, thumbnail } = toolPaths[0];
+    const { gcodeConfig } = toolPaths[0];
     const renderMethod = gcodeConfig.movementMode === 'greyscale-dot' ? 'point' : 'line';
     const maxPowerNumber = metadata?.gcodeFlavor === 'grbl' ? 1000 : 255;
     const maxPower = (gcodeConfig.fixedPowerEnabled ? gcodeConfig.fixedPower : 100) / 100 * maxPowerNumber;
@@ -274,19 +267,55 @@ const generateGcode = ({ toolPaths, size, toolHead, origin, jobOffsetMode, serie
     writeStream.end();
 
     return new Promise((resolve, reject) => {
-        writeStream.on('close', async () => {
-            addHeaderToFile(headerStart, outputFilename, outputFilePathTmp, outputFilePath, thumbnail, estimatedTime, boundingBox).then((res) => {
-                resolve(
-                    sendMessage({ status: 'complete', value: res })
-                );
-            });
+        writeStream.on('close', () => {
+            addHeaderToFile(headerStart, outputFilename, outputFilePathTmp, outputFilePath, thumbnail, estimatedTime, boundingBox)
+                .then(resolve, reject);
         });
-        writeStream.on('error', (err) => {
-            reject(
-                sendMessage({ status: 'fail', value: err })
-            );
-        });
+        writeStream.on('error', reject);
     });
+};
+
+/**
+ * CNC: one file per run of consecutive toolpaths with the same tool (no tool changer).
+ * Laser: one file for all toolpaths.
+ */
+export const generateGcodeFiles = async ({ toolPaths, ...params }, onProgress = () => {}) => {
+    const { headType, thumbnail } = toolPaths[0];
+    const runs = headType === 'cnc' ? splitToolPathsByTool(toolPaths) : [toolPaths];
+    const files = [];
+    for (let k = 0; k < runs.length; k++) {
+        const run = runs[k];
+        const result = await writeGcodeFile(run, {
+            ...params,
+            headType,
+            thumbnail,
+            onProgress: (p) => onProgress((k + p) / runs.length)
+        });
+        files.push({ ...result, toolPathIds: run.map(toolPath => toolPath.id) });
+    }
+    return { files };
+};
+
+const generateGcode = async (params) => {
+    const { toolPaths } = params;
+    if (!toolPaths || !_.isArray(toolPaths) || toolPaths.length === 0) {
+        return sendMessage({ status: 'fail', value: 'modelInfo is empty.' });
+    }
+    sendMessage({ status: 'progress', value: 0.05 });
+
+    const { headType } = toolPaths[0];
+    if (!_.includes(['laser', 'cnc'], headType)) {
+        return sendMessage({ status: 'fail', value: `Unsupported type: ${headType}` });
+    }
+
+    try {
+        const { files } = await generateGcodeFiles(params, (p) => sendMessage({ status: 'progress', value: p }));
+        // first file stays the primary result for existing consumers
+        return sendMessage({ status: 'complete', value: { ...files[0], files } });
+    } catch (err) {
+        log.error(err);
+        return sendMessage({ status: 'fail', value: err instanceof Error ? err.message : err });
+    }
 };
 
 export default generateGcode;

@@ -6,6 +6,7 @@ import { parseLubanGcodeHeader } from '../../lib/parseGcodeHeader';
 import Task, { TGcodeFile } from './Task';
 import workerManager, { IWorkerManager } from './workerManager';
 import { taskErrorMessage } from './utils/taskErrorMessage';
+import { taskGcodeFiles } from './utils/taskGcodeFiles';
 
 const log = logger('service:TaskManager');
 
@@ -32,17 +33,6 @@ const TASK_TYPE_RUNNER_MAP = {
     [TASK_TYPE_CUT_MODEL]: 'cutModel',
     [TASK_TYPE_CLIPPING_SVG]: 'svgClipping',
 };
-
-type TPayload = {
-    gcodeFile: {
-        estimatedTime: string;
-        boundingBox: string;
-        name: string;
-        size: string;
-        lastModified: string;
-        thumbnail: string;
-    }
-}
 
 class TaskManager {
     private workerManager: IWorkerManager = workerManager;
@@ -75,9 +65,9 @@ class TaskManager {
         if (task.taskType === TASK_TYPE_GENERATE_TOOLPATH) {
             task.filenames = res as string;
         } else if (task.taskType === TASK_TYPE_GENERATE_GCODE) {
-            const gcodeHeader = parseLubanGcodeHeader((res as { filePath: string }).filePath);
-            const gcodeFile = { ...(res as TPayload).gcodeFile, header: gcodeHeader };
-            task.gcodeFile = gcodeFile as TGcodeFile;
+            const { gcodeFile, gcodeFiles } = taskGcodeFiles(res as Parameters<typeof taskGcodeFiles>[0], parseLubanGcodeHeader);
+            task.gcodeFile = gcodeFile as unknown as TGcodeFile;
+            task.gcodeFiles = gcodeFiles as unknown as TGcodeFile[];
         } else if (task.taskType === TASK_TYPE_GENERATE_VIEWPATH) {
             task.viewPathFile = (res as { viewPathFile: string }).viewPathFile;
         } else if (task.taskType === TASK_TYPE_PROCESS_IMAGE) {
