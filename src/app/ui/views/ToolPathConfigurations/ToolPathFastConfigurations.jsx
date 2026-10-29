@@ -21,6 +21,7 @@ import {
     HEAD_LASER
 } from '../../../constants';
 import PresentSelector from './laser/PresentSelector';
+import { cncFastEditKeys, cncPathTypeOptions, withDrillDefaults } from '../../../toolpaths/cnc-drill';
 
 function ifDefinitionModified(activeToolListDefinition, currentToolDefinition) {
     return activeToolListDefinition?.settings && !Object.entries(activeToolListDefinition.settings).every(([key, setting]) => {
@@ -36,9 +37,9 @@ function getFastEditSettingsKeys(toolPath) {
 
     if (headType === HEAD_CNC) {
         if (toolPathType === 'vector') {
-            return [
+            return cncFastEditKeys([
                 'pathType', 'targetDepth', 'workSpeed', 'plungeSpeed', 'stepDown', 'stepOver'
-            ];
+            ], gcodeConfig);
         }
         if (toolPathType === 'image') {
             return [
@@ -265,6 +266,9 @@ function ToolPathFastConfigurations({ setEditingToolpath, headType, toolpath }) 
         // only used in setting item
         // option has only one pair (key, value)
         updateGcodeConfig: (option) => {
+            if (headType === HEAD_CNC) {
+                option = withDrillDefaults(option);
+            }
             if (headType === HEAD_LASER) {
                 // Movement Mode
                 if (option.movementMode === 'greyscale-dot') {
@@ -338,6 +342,7 @@ function ToolPathFastConfigurations({ setEditingToolpath, headType, toolpath }) 
         let allDefinition = {};
         if (headType === HEAD_CNC && activeToolListDefinition) {
             allDefinition = cloneDeep(CNC_DEFAULT_GCODE_PARAMETERS_DEFINITION);
+            allDefinition.pathType.options = cncPathTypeOptions(allDefinition.pathType.options, toolPath.materials?.isRotate);
         }
         if (headType === HEAD_LASER && activeToolListDefinition) {
             allDefinition = cloneDeep(LASER_DEFAULT_GCODE_PARAMETERS_DEFINITION);

@@ -5,6 +5,7 @@ import { parseLubanGcodeHeader } from '../../lib/parseGcodeHeader';
 
 import Task, { TGcodeFile } from './Task';
 import workerManager, { IWorkerManager } from './workerManager';
+import { taskErrorMessage } from './utils/taskErrorMessage';
 
 const log = logger('service:TaskManager');
 
@@ -111,6 +112,7 @@ class TaskManager {
         if (task.taskStatus !== TASK_STATUS_DEPRECATED) {
             task.taskStatus = TASK_STATUS_FAILED;
             task.finishTime = new Date().getTime();
+            task.errorMessage = taskErrorMessage(res);
 
             task.socket.emit(`taskCompleted:${task.taskType}`, task.getData());
         }

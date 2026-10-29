@@ -40,6 +40,8 @@ class Task {
 
     public filenames = '';
 
+    public errorMessage = '';
+
     public gcodeFile: TGcodeFile = {} as TGcodeFile;
 
     public viewPathFile = '';

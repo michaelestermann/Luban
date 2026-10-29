@@ -3,6 +3,8 @@ import os from 'os';
 import path from 'path';
 import test from 'tape';
 import SVGParser from '../src/shared/lib/SVGParser';
+import { taskErrorMessage } from '../src/server/services/task-manager/utils/taskErrorMessage';
+import { cncFastEditKeys, cncPathTypeOptions, drillFailureMessage, withDrillDefaults } from '../src/app/toolpaths/cnc-drill';
 import GcodeGenerator from '../src/server/lib/GcodeGenerator/GcodeGenerator';
 import {
     buildDrillMoves,
@@ -138,7 +140,7 @@ test('Drill moves: sequence', (t) => {
     const p2 = has({ G: 0, X: 30, Y: -15, F: 'jogSpeed' }, up1);
     const up2 = has({ G: 0, Z: 5 }, p2);
     t.ok([g90, g21, jog, spindle, p1, up1, p2, up2].every(i => i >= 0), 'commands in order');
-    t.deepEqual(data[data.length - 1], { G: 0, Z: 20 }, 'ends at stop height');
+    t.deepEqual(data.slice(-3), [{ M: 5 }, { G: 0, Z: 20 }, { G: 0, X: 0, Y: 0 }], 'ends like the engine: spindle off, stop height, model origin');
     t.end();
 });
 
@@ -235,5 +237,41 @@ test('Drill view path: marks holes', async (t) => {
     t.equal(cell(-30, 15).y, -2, 'hole center at target depth');
     t.equal(cell(-25, 15).y, 0, '5 mm away untouched');
     t.equal(view.isRotate, false, 'flat');
+    t.end();
+});
+
+test('Drill errors: task error message from worker failure value', (t) => {
+    t.equal(taskErrorMessage(new Error('Drill: rotary mode is not supported')), 'Drill: rotary mode is not supported', 'Error object');
+    t.equal(taskErrorMessage('Drill: no closed shapes found in a.svg'), 'Drill: no closed shapes found in a.svg', 'string');
+    t.equal(taskErrorMessage({ message: 'Drill: x' }), 'Drill: x', 'serialized error');
+    t.equal(taskErrorMessage(undefined), '', 'nothing');
+    t.end();
+});
+
+test('Drill errors: only drill failures are surfaced', (t) => {
+    t.equal(drillFailureMessage({ taskStatus: 'failed', errorMessage: 'Drill: rotary mode is not supported' }), 'Drill: rotary mode is not supported');
+    t.equal(drillFailureMessage({ taskStatus: 'failed', errorMessage: 'Slice Error' }), null, 'engine failures keep the generic message');
+    t.equal(drillFailureMessage({ taskStatus: 'failed' }), null, 'no message');
+    t.end();
+});
+
+test('Drill UI: quick-edit keys without work speed and step over', (t) => {
+    const keys = ['pathType', 'targetDepth', 'workSpeed', 'plungeSpeed', 'stepDown', 'stepOver'];
+    t.deepEqual(cncFastEditKeys(keys, { pathType: 'drill' }), ['pathType', 'targetDepth', 'plungeSpeed', 'stepDown']);
+    t.deepEqual(cncFastEditKeys(keys, { pathType: 'path' }), keys, 'other methods unchanged');
+    t.end();
+});
+
+test('Drill UI: no drill option on rotary material', (t) => {
+    const options = { path: 'On the Path', outline: 'Outline', pocket: 'Fill', drill: 'Drill' };
+    t.deepEqual(Object.keys(cncPathTypeOptions(options, true)), ['path', 'outline', 'pocket']);
+    t.deepEqual(cncPathTypeOptions(options, false), options);
+    t.end();
+});
+
+test('Drill UI: choosing drill disables tabs', (t) => {
+    t.deepEqual(withDrillDefaults({ pathType: 'drill' }), { pathType: 'drill', enableTab: false });
+    t.deepEqual(withDrillDefaults({ pathType: 'path' }), { pathType: 'path' });
+    t.deepEqual(withDrillDefaults({ targetDepth: 2 }), { targetDepth: 2 });
     t.end();
 });

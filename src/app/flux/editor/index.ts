@@ -77,6 +77,7 @@ import { actions as appGlobalActions } from '../app-global';
 import UpdateHrefOperation2D from '../operation-history/UpdateHrefOperation2D';
 import { toast } from '../../ui/components/Toast';
 import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
+import { drillFailureMessage } from '../../toolpaths/cnc-drill';
 import AddMaterialTestGenerate from '../operation-history/AddMaterialTestGenerate';
 
 
@@ -409,6 +410,10 @@ export const actions = {
 
                 // Failure
                 if (headType !== toolPathTaskResult.headType || toolPathTaskResult.taskStatus === 'failed') {
+                    const drillMessage = headType === toolPathTaskResult.headType && drillFailureMessage(toolPathTaskResult);
+                    if (drillMessage) {
+                        toast(makeSceneToast('warning', drillMessage));
+                    }
                     dispatch(
                         baseActions.updateState(headType, {
                             stage: STEP_STAGE.CNC_LASER_GENERATE_TOOLPATH_FAILED,

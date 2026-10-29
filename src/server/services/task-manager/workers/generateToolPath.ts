@@ -104,7 +104,8 @@ const generateToolPath = async (allTasks) => {
 
         return true;
     } catch (err) {
-        return sendMessage({ status: 'fail', value: err });
+        // Error objects lose their message when posted to the main thread
+        return sendMessage({ status: 'fail', value: err instanceof Error ? err.message : err });
     }
 };
 

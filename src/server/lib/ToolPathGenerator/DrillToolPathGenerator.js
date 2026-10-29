@@ -107,7 +107,10 @@ export function buildDrillMoves(points, gcodeConfig) {
         }
         data.push({ G: 0, Z: safetyHeight });
     }
+    // End like the engine: spindle off, stop height, back to the model origin
+    data.push({ M: 5 });
     data.push({ G: 0, Z: stopHeight });
+    data.push({ G: 0, X: 0, Y: 0 });
     return data;
 }
 
