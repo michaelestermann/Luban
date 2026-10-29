@@ -2,4 +2,5 @@
 // can be imported directly in tape test files.
 require('@babel/register')({
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
+    ignore: [/node_modules/],
 });
