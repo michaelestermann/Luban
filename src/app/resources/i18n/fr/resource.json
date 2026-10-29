@@ -1209,6 +1209,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "Saisissez la largeur des onglets.",
     "key-Cnc/ToolpathParameters-Fill": "Remplir",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "Sculpte la zone intérieure de l'objet.",
+    "key-Cnc/ToolpathParameters-Drill": "Drill",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Plunges at the center of each closed shape.",
     "key-Cnc/ToolpathParameters-Jog": "Rafraîchissement",
     "key-Cnc/ToolpathParameters-Jog Height": "Hauteur de rafraîchissement",
     "key-Cnc/ToolpathParameters-Linkage": "Lien",

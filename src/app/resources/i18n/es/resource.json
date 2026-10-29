@@ -1209,6 +1209,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "Ingrese el ancho de las pestañas.",
     "key-Cnc/ToolpathParameters-Fill": "Llenar",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "Talla el área interna del objeto.",
+    "key-Cnc/ToolpathParameters-Drill": "Drill",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Plunges at the center of each closed shape.",
     "key-Cnc/ToolpathParameters-Jog": "Desplazamiento lento",
     "key-Cnc/ToolpathParameters-Jog Height": "Altura de desplazamiento lento",
     "key-Cnc/ToolpathParameters-Linkage": "Enlace",

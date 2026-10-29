@@ -64,6 +64,7 @@ class CncParameters extends PureComponent {
         const isSVG = type === TOOLPATH_TYPE_VECTOR;
         const isImage = type === TOOLPATH_TYPE_IMAGE;
         const isSculpt = type === TOOLPATH_TYPE_SCULPT;
+        const isDrill = isSVG && pathType === 'drill';
 
         const gcodeDefinition = CNC_DEFAULT_GCODE_PARAMETERS_DEFINITION;
         Object.keys(gcodeDefinition).forEach((key) => {
@@ -85,7 +86,7 @@ class CncParameters extends PureComponent {
         if (isSVG || isImage || isSculpt && !isRotate && type !== TOOLPATH_TYPE_VECTOR) {
             toolDefinitionFirstKeys.push('targetDepth');
         }
-        if (type !== TOOLPATH_TYPE_VECTOR || sliceMode === CNC_MESH_SLICE_MODE_ROTATION || sliceMode === CNC_MESH_SLICE_MODE_LINKAGE) {
+        if (!isDrill && (type !== TOOLPATH_TYPE_VECTOR || sliceMode === CNC_MESH_SLICE_MODE_ROTATION || sliceMode === CNC_MESH_SLICE_MODE_LINKAGE)) {
             toolDefinitionFirstKeys.push('allowance');
         }
         const toolDefinitionFirst = {};
@@ -96,9 +97,13 @@ class CncParameters extends PureComponent {
         });
 
         // Session Tool
-        const toolDefinitionToolKeys = (type === TOOLPATH_TYPE_VECTOR || isRotate) ? [
+        let toolDefinitionToolKeys = (type === TOOLPATH_TYPE_VECTOR || isRotate) ? [
             'workSpeed', 'plungeSpeed', 'stepDown', 'stepOver'
         ] : ['workSpeed', 'plungeSpeed', 'stepDown', 'stepOver', 'toolExtensionEnabled'];
+        if (isDrill) {
+            // Drilling only plunges: no work speed or step over
+            toolDefinitionToolKeys = ['plungeSpeed', 'stepDown'];
+        }
         const toolDefinitionTool = {};
         toolDefinitionToolKeys.forEach((key) => {
             if (allDefinition[key]) {
@@ -178,6 +183,9 @@ class CncParameters extends PureComponent {
                                                 <li><b>{i18n._('key-Cnc/ToolpathParameters-On the Path')}</b>: {i18n._('key-Cnc/ToolpathParameters-Onthepath_Carves along the shape of the object.')}</li>
                                                 <li><b>{i18n._('key-Cnc/ToolpathParameters-Outline')}</b>: {i18n._('key-Cnc/ToolpathParameters-Outline_Carves along the outline of the object.')}</li>
                                                 <li><b>{i18n._('key-Cnc/ToolpathParameters-Fill')}</b>: {i18n._('key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.')}</li>
+                                                {!isRotate && (
+                                                    <li><b>{i18n._('key-Cnc/ToolpathParameters-Drill')}</b>: {i18n._('key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.')}</li>
+                                                )}
                                             </ul>
                                         </div>
                                     )}
@@ -208,13 +216,17 @@ class CncParameters extends PureComponent {
                                                 {
                                                     label: i18n._('key-Cnc/ToolpathParameters-Fill'),
                                                     value: 'pocket'
-                                                }
+                                                },
+                                                ...(isRotate ? [] : [{
+                                                    label: i18n._('key-Cnc/ToolpathParameters-Drill'),
+                                                    value: 'drill'
+                                                }])
                                             ]}
                                             placeholder={i18n._('key-Cnc/ToolpathParameters-Methodtips_Choose carving path')}
                                             value={pathType}
                                             onChange={(option) => {
                                                 const param = { pathType: option.value };
-                                                if (option.value === 'pocket') {
+                                                if (option.value === 'pocket' || option.value === 'drill') {
                                                     param.enableTab = false;
                                                 }
                                                 this.props.updateGcodeConfig(param);

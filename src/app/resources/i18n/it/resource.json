@@ -1209,6 +1209,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "Inserisci la larghezza delle schede.",
     "key-Cnc/ToolpathParameters-Fill": "Riempire",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "Intaglia l'area interna dell'oggetto.",
+    "key-Cnc/ToolpathParameters-Drill": "Drill",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Plunges at the center of each closed shape.",
     "key-Cnc/ToolpathParameters-Jog": "Jog",
     "key-Cnc/ToolpathParameters-Jog Height": "Altezza Jog",
     "key-Cnc/ToolpathParameters-Linkage": "Collegamento",

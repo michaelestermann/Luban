@@ -1209,6 +1209,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "タブの幅を入力。",
     "key-Cnc/ToolpathParameters-Fill": "充填",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "オブジェクトの内部領域から離れて加工します。",
+    "key-Cnc/ToolpathParameters-Drill": "Drill",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Plunges at the center of each closed shape.",
     "key-Cnc/ToolpathParameters-Jog": "ジョグ",
     "key-Cnc/ToolpathParameters-Jog Height": "ジョグの高さ",
     "key-Cnc/ToolpathParameters-Linkage": "リンケージ",

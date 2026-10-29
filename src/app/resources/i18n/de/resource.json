@@ -1219,6 +1219,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "Geben Sie die Breite der Reiter an.",
     "key-Cnc/ToolpathParameters-Fill": "Füllen",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "Graviert den inneren Bereich des Objekts weg.",
+    "key-Cnc/ToolpathParameters-Drill": "Bohren",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Bohrt in der Mitte jeder geschlossenen Form.",
     "key-Cnc/ToolpathParameters-Jog": "Joggen",
     "key-Cnc/ToolpathParameters-Jog Height": "Jog-Höhe",
     "key-Cnc/ToolpathParameters-Linkage": "Kopplung",

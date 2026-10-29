@@ -1209,6 +1209,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "输入夹持凸台的宽度。",
     "key-Cnc/ToolpathParameters-Fill": "填充",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "刨除对象的内部区域。",
+    "key-Cnc/ToolpathParameters-Drill": "Drill",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Plunges at the center of each closed shape.",
     "key-Cnc/ToolpathParameters-Jog": "点动",
     "key-Cnc/ToolpathParameters-Jog Height": "点动高度",
     "key-Cnc/ToolpathParameters-Linkage": "联动",

@@ -1209,6 +1209,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "탭의 너비를 입력하십시오.",
     "key-Cnc/ToolpathParameters-Fill": "채우기",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "개체의 내부 영역을 잘라냅니다.",
+    "key-Cnc/ToolpathParameters-Drill": "Drill",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Plunges at the center of each closed shape.",
     "key-Cnc/ToolpathParameters-Jog": "조그",
     "key-Cnc/ToolpathParameters-Jog Height": "조그 높이",
     "key-Cnc/ToolpathParameters-Linkage": "연결",

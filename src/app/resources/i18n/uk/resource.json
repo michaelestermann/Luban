@@ -1209,6 +1209,8 @@
     "key-Cnc/ToolpathParameters-Enter the width of the tabs.": "Вкажіть ширину перемичок.",
     "key-Cnc/ToolpathParameters-Fill": "Заповнення",
     "key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.": "Вирізає внутрішню частину обʼєкта.",
+    "key-Cnc/ToolpathParameters-Drill": "Drill",
+    "key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.": "Plunges at the center of each closed shape.",
     "key-Cnc/ToolpathParameters-Jog": "Пересування",
     "key-Cnc/ToolpathParameters-Jog Height": "Висота пересування",
     "key-Cnc/ToolpathParameters-Linkage": "Лінкування",
