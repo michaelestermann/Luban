@@ -25,6 +25,7 @@ import { actions as operationHistoryActions } from '../operation-history';
 /* eslint-disable-next-line import/no-cycle */
 import { actions as projectActions } from '../project';
 import { SnapmakerRayMachine } from '../../machines';
+import { buildGenerateToolPathTasks } from '../../toolpaths/generate-tasks';
 
 let toastId;
 export const processActions = {
@@ -47,14 +48,11 @@ export const processActions = {
         toolPathGroup.computeReferenceBox();
 
         // start generate toolpath
-        const toolPathTasks = toolPathGroup.toolPaths
-            .filter(toolPath => toolPath.visible)
-            .map(toolPath => {
-                return toolPathGroup.getGenerateToolPathTask(toolPath.id);
-            });
-
-        // TODO: This hardcode is used for backward compatibility of Snapmaker Original, remove this later.
-        toolPathTasks.forEach(task => { task.identifier = activeMachine?.identifier; });
+        const toolPathTasks = buildGenerateToolPathTasks(
+            toolPathGroup.toolPaths,
+            (toolPathId) => toolPathGroup.getGenerateToolPathTask(toolPathId),
+            activeMachine?.identifier
+        );
 
         controller.commitToolPathTaskArray(toolPathTasks);
     },
