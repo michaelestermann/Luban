@@ -8,15 +8,13 @@ import { includes } from 'lodash';
 import i18n from '../../../lib/i18n';
 import { toFixed, toFixedNumber, convertSVGPointToLogicalPoint } from '../../../lib/numeric-utils';
 import TipTrigger from '../../components/TipTrigger';
-import SvgIcon from '../../components/SvgIcon';
 import { NumberInput as Input } from '../../components/Input';
 import { anchorOffset, DEFAULT_ANCHOR } from '../../../lib/anchor';
 import FramePicker from './FramePicker';
-import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 
 import { actions as editorActions } from '../../../flux/editor';
 
-import styles from './styles.styl';
+import ps from './properties.styl';
 import { HEAD_CNC, SVG_NODE_NAME_TEXT } from '../../../constants';
 
 /**
@@ -91,7 +89,6 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
     const canRotate = selectedModelArray.length === 1;
     const selectedNotHide = (selectedModelArray.length === 1) && selectedModelArray[0].visible || selectedModelArray.length > 1;
     const canFlip = (selectedModelArray.length === 1 && !selectedModelArray[0].isStraightLine());
-    const selectedMultipleVisibleElements = selectedModelArray.filter((item) => item.visible).length <= 1;
 
     const SVGCanvasMode = useSelector(state => state[headType]?.SVGCanvasMode);
     const SVGCanvasExt = useSelector(state => state[headType]?.SVGCanvasExt);
@@ -178,14 +175,6 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
             dispatch(editorActions.flipElementsHorizontally(headType, elements));
         },
 
-        onAlignVertical: (align) => {
-            alignElementsVertical(dispatch, headType, selectedElements, align);
-        },
-
-        onAlignHorizontal: (align) => {
-            alignElementsHorizontal(dispatch, headType, selectedElements, align);
-        },
-
         onFlipVertically: () => {
             const elements = selectedElements;
             dispatch(editorActions.flipElementsVertically(headType, elements));
@@ -196,240 +185,149 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
         }
     };
 
+    const moveDisabled = disabled || !selectedNotHide || drawing;
+    const sizeDisabled = disabled || !selectedNotHide || canResize === false || drawing;
+    const rotateDisabled = disabled || !selectedNotHide || !canRotate || drawing || isCNC4AxisImage3d;
+
+    const renderField = (prefix, fieldDisabled, input) => (
+        <div className={classNames(ps.field, { [ps.disabled]: fieldDisabled })}>
+            <span className={ps.prefix}>{prefix}</span>
+            {input}
+        </div>
+    );
+
     return (
-        <div className="margin-vertical-8">
-            <React.Fragment>
-                <TipTrigger
-                    title={i18n._('key-CncLaser/TransformationSection-Move')}
-                    content={i18n._('key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.')}
-                >
-                    <div className="sm-flex height-32 margin-vertical-8 ">
-                        <span className="sm-flex-auto sm-flex-order-negative width-64 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-Move')}</span>
-                        <span className="sm-flex-width sm-flex justify-space-between">
-                            <div className="position-re sm-flex align-flex-start">
-                                <span className="width-16 height-32 display-inline unit-text align-c">
-                                    X
-                                </span>
-                                <span>
-                                    <Input
-                                        suffix="mm"
-                                        className="margin-horizontal-2"
-                                        disabled={disabled || !selectedNotHide || drawing}
-                                        value={transform.x(logicalX)}
-                                        size="small"
-                                        min={-size.x}
-                                        max={size.x}
-                                        onChange={(value) => {
-                                            actions.onChangeLogicalX(value);
-                                        }}
-                                    />
-                                </span>
-                            </div>
-                            <div className="position-re sm-flex align-flex-start">
-                                <span className="width-16 height-32 display-inline unit-text align-c">
-                                    Y
-                                </span>
-                                <span>
-                                    <Input
-                                        suffix="mm"
-                                        disabled={disabled || !selectedNotHide || drawing}
-                                        className="margin-horizontal-2"
-                                        value={transform.y(logicalY)}
-                                        size="small"
-                                        min={-size.y}
-                                        max={size.y}
-                                        onChange={(value) => {
-                                            actions.onChangeLogicalY(value);
-                                        }}
-                                    />
-                                </span>
-                            </div>
-                        </span>
-                    </div>
-                </TipTrigger>
-                <TipTrigger
-                    title={i18n._('key-CncLaser/TransformationSection-AnchorPoint')}
-                    content={i18n._('key-CncLaser/TransformationSection-Set the reference point for aligning the object. Adjust the objects position based on the selected anchor point.')}
-                >
-                    <div className="margin-vertical-8">
-                        <FramePicker
-                            anchor={anchor}
-                            onChange={actions.onAnchorChanged}
-                            imageHref={pickerImage.imageHref}
-                            items={pickerImage.items}
-                            rotation={canRotate ? logicalAngle : 0}
-                            flip={{ horizontal: scaleX < 0, vertical: scaleY < 0 }}
-                            aspect={logicalWidth / logicalHeight}
-                            disabled={disabled || !selectedNotHide || drawing}
+        <div className={ps.props}>
+            <TipTrigger
+                title={i18n._('key-CncLaser/TransformationSection-AnchorPoint')}
+                content={i18n._('key-CncLaser/TransformationSection-Set the reference point for aligning the object. Adjust the objects position based on the selected anchor point.')}
+            >
+                <FramePicker
+                    anchor={anchor}
+                    onChange={actions.onAnchorChanged}
+                    imageHref={pickerImage.imageHref}
+                    items={pickerImage.items}
+                    rotation={canRotate ? logicalAngle : 0}
+                    flip={{ horizontal: scaleX < 0, vertical: scaleY < 0 }}
+                    aspect={logicalWidth / logicalHeight}
+                    disabled={moveDisabled}
+                />
+            </TipTrigger>
+            <TipTrigger
+                title={i18n._('key-CncLaser/TransformationSection-Move')}
+                content={i18n._('key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.')}
+            >
+                <div className={ps.grid2}>
+                    {renderField('X', moveDisabled, (
+                        <Input
+                            suffix="mm"
+                            disabled={moveDisabled}
+                            value={transform.x(logicalX)}
+                            size="small"
+                            min={-size.x}
+                            max={size.x}
+                            onChange={(value) => actions.onChangeLogicalX(value)}
                         />
-                    </div>
-                </TipTrigger>
-                <TipTrigger
-                    title={i18n._('key-CncLaser/TransformationSection-Alignment')}
-                    content={i18n._('key-CncLaser/TransformationSection-Set the alignment of the selected objects.')}
-                >
-                    <div className="sm-flex margin-vertical-8">
-                        <span className="sm-flex-auto sm-flex-order-negative width-64 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-Alignment')}</span>
-                        <span className="sm-flex-width sm-flex justify-space-between">
-                            <div className="sm-flex align-flex-start">
-                                <SvgIcon
-                                    name="AlignHorizontalLeft"
-                                    className="border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing || selectedMultipleVisibleElements}
-                                    onClick={() => actions.onAlignHorizontal(HORIZONTAL_ALIGN.LEFT)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    name="AlignHorizontalCenter"
-                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing || selectedMultipleVisibleElements}
-                                    onClick={() => actions.onAlignHorizontal(HORIZONTAL_ALIGN.CENTER)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    name="AlignHorizontalRight"
-                                    className="border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing || selectedMultipleVisibleElements}
-                                    onClick={() => actions.onAlignHorizontal(HORIZONTAL_ALIGN.RIGHT)}
-                                    borderRadius={8}
-                                />
-                            </div>
-                            <div className="sm-flex align-flex-start">
-                                <SvgIcon
-                                    name="AlignVerticalTop"
-                                    className="border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing || selectedMultipleVisibleElements}
-                                    onClick={() => actions.onAlignVertical(VERTICAL_ALIGN.TOP)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    name="AlignVerticalMiddle"
-                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing || selectedMultipleVisibleElements}
-                                    onClick={() => actions.onAlignVertical(VERTICAL_ALIGN.MIDDLE)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    name="AlignVerticalBottom"
-                                    className="border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing || selectedMultipleVisibleElements}
-                                    onClick={() => actions.onAlignVertical(VERTICAL_ALIGN.BOTTOM)}
-                                    borderRadius={8}
-                                />
-                            </div>
-                        </span>
-                    </div>
-                </TipTrigger>
-                <TipTrigger
-                    title={i18n._('key-CncLaser/TransformationSection-Size')}
-                    content={i18n._('key-CncLaser/TransformationSection-Set the size of the selected object. You can also resize the object directly. The object should not exceed the work size.')}
-                >
-                    <div className="sm-flex height-32 margin-vertical-8">
-                        <span className="sm-flex-auto sm-flex-order-negative width-64 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-Size')}</span>
-                        <div className="sm-flex-width sm-flex justify-space-between">
-                            <div className="position-re sm-flex align-flex-start">
-                                <span className="width-16 height-32 display-inline unit-text align-c">
-                                    W
-                                </span>
-                                <span>
-                                    <Input
-                                        suffix="mm"
-                                        className="margin-horizontal-2"
-                                        disabled={disabled || !selectedNotHide || canResize === false || drawing}
-                                        value={toFixed(logicalWidth, 1)}
-                                        min={minSize}
-                                        size="small"
-                                        max={size.x}
-                                        onChange={(value) => {
-                                            actions.onChangeWidth(value);
-                                        }}
-                                    />
-                                </span>
-                            </div>
+                    ))}
+                    {renderField('Y', moveDisabled, (
+                        <Input
+                            suffix="mm"
+                            disabled={moveDisabled}
+                            value={transform.y(logicalY)}
+                            size="small"
+                            min={-size.y}
+                            max={size.y}
+                            onChange={(value) => actions.onChangeLogicalY(value)}
+                        />
+                    ))}
+                </div>
+            </TipTrigger>
+            <TipTrigger
+                title={i18n._('key-CncLaser/TransformationSection-Size')}
+                content={i18n._('key-CncLaser/TransformationSection-Set the size of the selected object. You can also resize the object directly. The object should not exceed the work size.')}
+            >
+                <div className={ps.grid2}>
+                    {renderField('W', sizeDisabled, (
+                        <Input
+                            suffix="mm"
+                            disabled={sizeDisabled}
+                            value={toFixed(logicalWidth, 1)}
+                            min={minSize}
+                            size="small"
+                            max={size.x}
+                            onChange={(value) => actions.onChangeWidth(value)}
+                        />
+                    ))}
+                    {renderField('H', sizeDisabled, (
+                        <Input
+                            suffix="mm"
+                            disabled={sizeDisabled}
+                            value={toFixed(logicalHeight, 1)}
+                            min={minSize}
+                            max={size.y}
+                            size="small"
+                            onChange={(value) => actions.onChangeHeight(value)}
+                        />
+                    ))}
+                </div>
+            </TipTrigger>
+            <TipTrigger
+                title={i18n._('key-CncLaser/TransformationSection-Rotate')}
+                content={i18n._('key-CncLaser/TransformationSection-Rotate the selected object to the angle you need.')}
+            >
+                <div className={ps.grid2}>
+                    {renderField('∠', rotateDisabled, (
+                        <Input
+                            suffix="°"
+                            disabled={rotateDisabled}
+                            value={toFixedNumber(logicalAngle, 1)}
+                            size="small"
+                            onChange={actions.onChangeLogicalAngle}
+                        />
+                    ))}
+                    <div className={ps.buttons}>
+                        {canFlip && (
                             <button
                                 type="button"
-                                disabled={disabled || !selectedNotHide || isCNC4AxisImage3d || drawing}
-                                className={classNames(
-                                    uniformScalingState ? styles.icon_size_lock : styles.icon_size_unlock,
-                                    'display-inline',
-                                    // 'width-30',
-                                    // 'height-30'
-                                    'square-30'
-                                )}
-                                onClick={() => {
-                                    actions.onChangeUniformScalingState(!uniformScalingState);
-                                }}
-                            />
-                            <div className="position-re sm-flex align-flex-start">
-                                <span className="width-16 height-32 display-inline unit-text align-c">
-                                    H
-                                </span>
-                                <span>
-                                    <Input
-                                        suffix="mm"
-                                        className="margin-horizontal-2"
-                                        disabled={disabled || !selectedNotHide || canResize === false || drawing}
-                                        value={toFixed(logicalHeight, 1)}
-                                        min={minSize}
-                                        max={size.y}
-                                        size="small"
-                                        onChange={(value) => {
-                                            actions.onChangeHeight(value);
-                                        }}
-                                    />
-                                </span>
-                            </div>
-                        </div>
+                                className={ps['icon-button']}
+                                aria-label={i18n._('key-CncLaser/Properties-Flip horizontal')}
+                                title={i18n._('key-CncLaser/Properties-Flip horizontal')}
+                                disabled={moveDisabled}
+                                onClick={actions.onFlipHorizontally}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 3v18M4 7l5 5-5 5zM20 7l-5 5 5 5z" /></svg>
+                            </button>
+                        )}
+                        {canFlip && (
+                            <button
+                                type="button"
+                                className={ps['icon-button']}
+                                aria-label={i18n._('key-CncLaser/Properties-Flip vertical')}
+                                title={i18n._('key-CncLaser/Properties-Flip vertical')}
+                                disabled={moveDisabled}
+                                onClick={actions.onFlipVertically}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M3 12h18M7 4l5 5 5-5zM7 20l5-5 5 5z" /></svg>
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            className={classNames(ps['icon-button'], { [ps.on]: uniformScalingState })}
+                            aria-label={i18n._('key-CncLaser/Properties-Keep ratio')}
+                            aria-pressed={!!uniformScalingState}
+                            title={i18n._('key-CncLaser/Properties-Keep ratio')}
+                            disabled={disabled || !selectedNotHide || isCNC4AxisImage3d || drawing}
+                            onClick={() => actions.onChangeUniformScalingState(!uniformScalingState)}
+                        >
+                            {uniformScalingState ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg>
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 017.5-2" /></svg>
+                            )}
+                        </button>
                     </div>
-                </TipTrigger>
-                <TipTrigger
-                    title={i18n._('key-CncLaser/TransformationSection-Rotate')}
-                    content={i18n._('key-CncLaser/TransformationSection-Rotate the selected object to the angle you need.')}
-                >
-                    <div className="sm-flex height-32 margin-vertical-8">
-                        <span className="sm-flex-auto sm-flex-order-negative width-56 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-Rotate')}</span>
-                        <div className="sm-flex-width sm-flex justify-space-between">
-                            <div className="display-inline">
-                                <SvgIcon
-                                    name="RotationAngle"
-                                    type={['static']}
-                                />
-                                <Input
-                                    suffix="°"
-                                    disabled={disabled || !selectedNotHide || !canRotate || drawing || isCNC4AxisImage3d}
-                                    value={toFixedNumber(logicalAngle, 1)}
-                                    className="margin-horizontal-2"
-                                    size="small"
-                                    onChange={actions.onChangeLogicalAngle}
-                                />
-                            </div>
-                            <div className="sm-flex width-96 justify-space-between">
-                                {canFlip && (
-                                    <SvgIcon
-                                        name="FlipLevel"
-                                        className="padding-horizontal-8 border-radius-8 border-default-grey-1"
-                                        disabled={disabled || !selectedNotHide || drawing}
-                                        onClick={actions.onFlipHorizontally}
-                                        // type={['static']}
-                                        size={26}
-                                        borderRadius={8}
-                                    />
-                                )}
-                                {canFlip && (
-                                    <SvgIcon
-                                        name="FlipVertical"
-                                        className="padding-horizontal-8 border-radius-8 border-default-grey-1"
-                                        disabled={disabled || !selectedNotHide || drawing}
-                                        onClick={actions.onFlipVertically}
-                                        size={26}
-                                        borderRadius={8}
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </TipTrigger>
-            </React.Fragment>
+                </div>
+            </TipTrigger>
         </div>
     );
 };

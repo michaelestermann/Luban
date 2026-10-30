@@ -18,6 +18,7 @@ import { LoadGcodeOptions } from '../../widgets/CncLaserOutput/Output';
 import { SnapmakerRayMachine } from '../../../machines';
 import { getEditorStep } from './editor-step';
 import PanelChrome from './PanelChrome';
+import chromeStyles from './styles/panel-chrome.styl';
 
 const allWidgets = {
     'visualizer': VisualizerWidget,
@@ -95,6 +96,7 @@ const RenderProjectRightView: React.FC<ProjectRightViewProps> = ({
             collapseLabel={i18n._('key-CncLaser/Panel-Collapse right panel')}
             expandLabel={i18n._('key-CncLaser/Panel-Expand right panel')}
             className="laser-intro-edit-panel" // for starter guide
+            bodyClassName={isDesign ? chromeStyles.properties : undefined}
         >
             <div className={classNames('sm-flex sm-flex-direction-c')}>
                 {isGcode && <JobPanel headType={headType} onOpenWorkspace={onOpenWorkspace} />}

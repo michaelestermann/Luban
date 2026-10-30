@@ -79,6 +79,8 @@ const FramePicker: React.FC<FramePickerProps> = ({
     const scaleX = flip?.horizontal ? -1 : 1;
     const scaleY = flip?.vertical ? -1 : 1;
     const imageTransform = `rotate(${-rotation}deg) scale(${scaleX}, ${scaleY})`;
+    // nothing selected: the whole picker is grey, not just faded
+    const accent = disabled ? '#b8bfcc' : '#1d4ed8';
 
     return (
         <div>
@@ -91,7 +93,8 @@ const FramePicker: React.FC<FramePickerProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    opacity: disabled ? 0.5 : 1
+                    opacity: disabled ? 0.6 : 1,
+                    filter: disabled ? 'grayscale(1)' : 'none'
                 }}
             >
                 <div style={{ position: 'relative', width: w, height: h }}>
@@ -136,7 +139,7 @@ const FramePicker: React.FC<FramePickerProps> = ({
                             )}
                         </div>
                     )}
-                    <div style={{ position: 'absolute', inset: 0, border: '1.5px dashed #1d4ed8', borderRadius: 2, pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', inset: 0, border: `1.5px dashed ${accent}`, borderRadius: 2, pointerEvents: 'none' }} />
                     <div
                         role="radiogroup"
                         aria-label={i18n._('key-FramePicker-Reference')}
@@ -169,9 +172,9 @@ const FramePicker: React.FC<FramePickerProps> = ({
                                         padding: 0,
                                         borderRadius: 4,
                                         cursor: disabled ? 'not-allowed' : 'pointer',
-                                        background: on ? '#1d4ed8' : '#fff',
-                                        border: on ? '2px solid #fff' : '1.5px solid #1d4ed8',
-                                        boxShadow: on ? '0 0 0 1.5px #1d4ed8' : 'none'
+                                        background: on ? accent : '#fff',
+                                        border: on ? '2px solid #fff' : `1.5px solid ${accent}`,
+                                        boxShadow: on ? `0 0 0 1.5px ${accent}` : 'none'
                                     }}
                                 />
                             );
@@ -179,8 +182,8 @@ const FramePicker: React.FC<FramePickerProps> = ({
                     </div>
                 </div>
             </div>
-            <div style={{ fontSize: 12, color: '#5b6170', textAlign: 'center', marginTop: 8 }}>
-                {i18n._('key-FramePicker-Hint')} · <strong style={{ color: '#1f2430' }}>{localizedAnchorName(anchor)}</strong>
+            <div style={{ fontSize: 12, color: disabled ? '#9aa1b0' : '#5b6170', textAlign: 'center', marginTop: 8 }}>
+                {i18n._('key-FramePicker-Hint')} · <strong style={{ color: disabled ? '#9aa1b0' : '#1f2430' }}>{localizedAnchorName(anchor)}</strong>
             </div>
         </div>
     );

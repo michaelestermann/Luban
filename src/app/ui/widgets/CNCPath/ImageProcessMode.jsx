@@ -7,6 +7,7 @@ import Anchor from '../../components/Anchor';
 import styles from '../CncLaserShared/styles.styl';
 import ReliefParameters from './config/ReliefParameters';
 import SvgIcon from '../../components/SvgIcon';
+import ps from '../CncLaserShared/properties.styl';
 // import Checkbox from '../../components/Checkbox';
 // import TipTrigger from '../../components/TipTrigger';
 import { PROCESS_MODE_GREYSCALE, SOURCE_TYPE } from '../../../constants';
@@ -45,28 +46,47 @@ const ImageProcessMode = ({ changeSelectedModelMode, disabled }) => {
                 </Anchor>
                 {expanded && (
                     <React.Fragment>
-                        <div className={classNames('sm-flex', 'margin-vertical-8', 'align-c', 'justify-space-between', 'width-percent-50')}>
+                        <div className={ps.modes}>
                             {!isDXF && (
-                                <div className={classNames(mode === 'greyscale' ? styles.selected : styles.unselected)}>
-                                    <Anchor
-                                        disabled={disabled}
-                                        onClick={() => actions.changeSelectedModelMode('greyscale')}
-                                    >
-                                        <i className={styles['cnc-mode__icon-greyscale']} />
-                                    </Anchor>
-                                    <span>{i18n._('key-Cnc/Edit/ImageProcessMode-RELIEF')}</span>
-                                </div>
+                                <button
+                                    type="button"
+                                    className={classNames(ps.mode, { [ps.on]: mode === 'greyscale' })}
+                                    aria-pressed={mode === 'greyscale'}
+                                    disabled={disabled}
+                                    onClick={() => actions.changeSelectedModelMode('greyscale')}
+                                >
+                                    <svg viewBox="0 0 112 64" aria-hidden="true">
+                                        <defs>
+                                            <radialGradient id="cnc-mode-relief" cx="50%" cy="45%" r="60%">
+                                                <stop offset="0" stopColor="#ffffff" />
+                                                <stop offset=".55" stopColor="#9aa3b2" />
+                                                <stop offset="1" stopColor="#3b4252" />
+                                            </radialGradient>
+                                        </defs>
+                                        <rect width="112" height="64" rx="6" fill="#3b4252" />
+                                        <ellipse cx="56" cy="32" rx="40" ry="24" fill="url(#cnc-mode-relief)" />
+                                        <path d="M30 40c8-14 18-18 26-10s18 4 26-8" fill="none" stroke="#ffffff" strokeOpacity=".5" strokeWidth="2" />
+                                    </svg>
+                                    <span>{i18n._('key-Cnc/Edit/ImageProcessMode-Relief')}</span>
+                                </button>
                             )}
                             {isSvg && (
-                                <div className={classNames(mode === 'vector' ? styles.selected : styles.unselected)}>
-                                    <Anchor
-                                        disabled={disabled}
-                                        onClick={() => actions.changeSelectedModelMode('vector')}
-                                    >
-                                        <i className={styles['cnc-mode__icon-vector']} />
-                                    </Anchor>
-                                    <span>{i18n._('key-Cnc/Edit/ImageProcessMode-VECTOR')}</span>
-                                </div>
+                                <button
+                                    type="button"
+                                    className={classNames(ps.mode, { [ps.on]: mode === 'vector' })}
+                                    aria-pressed={mode === 'vector'}
+                                    disabled={disabled}
+                                    onClick={() => actions.changeSelectedModelMode('vector')}
+                                >
+                                    <svg viewBox="0 0 112 64" aria-hidden="true">
+                                        <rect width="112" height="64" rx="6" fill="#ffffff" />
+                                        <path d="M20 46c10-26 26-30 36-14s24 12 36-12" fill="none" stroke="#1f2430" strokeWidth="2.5" />
+                                        <circle cx="20" cy="46" r="3" fill="#fff" stroke="#1d4ed8" strokeWidth="2" />
+                                        <circle cx="56" cy="32" r="3" fill="#fff" stroke="#1d4ed8" strokeWidth="2" />
+                                        <circle cx="92" cy="20" r="3" fill="#fff" stroke="#1d4ed8" strokeWidth="2" />
+                                    </svg>
+                                    <span>{i18n._('key-Cnc/Edit/ImageProcessMode-Vector')}</span>
+                                </button>
                             )}
                         </div>
                         {isGreyscale && (

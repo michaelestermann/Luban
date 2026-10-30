@@ -6,6 +6,7 @@ import i18n from '../../../lib/i18n';
 import Anchor from '../../components/Anchor';
 // import Checkbox from '../../components/Checkbox';
 import SvgIcon from '../../components/SvgIcon';
+import ps from '../CncLaserShared/properties.styl';
 import styles from '../CncLaserShared/styles.styl';
 import ConfigRasterBW from './config/ConfigRasterBW';
 import ConfigGreyscale from './config/ConfigGreyscale';
@@ -54,48 +55,52 @@ const ImageProcessMode = ({ disabled }) => {
                 </Anchor>
                 {expanded && (
                     <React.Fragment>
-                        <div className={classNames('sm-flex', 'margin-vertical-8', 'align-c', 'justify-space-between')}>
+                        <div className={classNames(ps.modes, ps.four)}>
                             {!isDXF && (
-                                <div className={classNames(mode === 'bw' ? styles.selected : styles.unselected)}>
-                                    <Anchor
-                                        disabled={disabled}
-                                        onClick={() => actions.changeSelectedModelMode('bw')}
-                                    >
-                                        <i className={styles['laser-mode__icon-bw']} />
-                                    </Anchor>
-                                    <span className="max-width-76 text-overflow-ellipsis-line-2">{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-B&W')}</span>
-                                </div>
-                            )}
-                            {!isDXF && (
-                                <div className={classNames(mode === 'greyscale' ? styles.selected : styles.unselected)}>
-                                    <Anchor
-                                        disabled={disabled}
-                                        onClick={() => actions.changeSelectedModelMode('greyscale')}
-                                    >
-                                        <i className={styles['laser-mode__icon-greyscale']} />
-                                    </Anchor>
-                                    <span className="max-width-76 text-overflow-ellipsis-line-2">{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-GREYSCALE')}</span>
-                                </div>
-                            )}
-                            <div className={classNames(mode === 'vector' ? styles.selected : styles.unselected)}>
-                                <Anchor
+                                <button
+                                    type="button"
+                                    className={classNames(ps.mode, { [ps.on]: mode === 'bw' })}
+                                    aria-pressed={mode === 'bw'}
                                     disabled={disabled}
-                                    onClick={() => actions.changeSelectedModelMode('vector')}
+                                    onClick={() => actions.changeSelectedModelMode('bw')}
                                 >
-                                    <i className={styles['laser-mode__icon-vector']} />
-                                </Anchor>
-                                <span className="max-width-76 text-overflow-ellipsis-line-2">{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-VECTOR')}</span>
-                            </div>
+                                    <i className={styles['laser-mode__icon-bw']} />
+                                    <span>{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-B&W')}</span>
+                                </button>
+                            )}
                             {!isDXF && (
-                                <div className={classNames(mode === 'halftone' ? styles.selected : styles.unselected)}>
-                                    <Anchor
-                                        disabled={disabled}
-                                        onClick={() => actions.changeSelectedModelMode('halftone')}
-                                    >
-                                        <i className={styles['laser-mode__icon-halftone']} />
-                                    </Anchor>
-                                    <span className="max-width-76 text-overflow-ellipsis-line-2">{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-HALFTONE')}</span>
-                                </div>
+                                <button
+                                    type="button"
+                                    className={classNames(ps.mode, { [ps.on]: mode === 'greyscale' })}
+                                    aria-pressed={mode === 'greyscale'}
+                                    disabled={disabled}
+                                    onClick={() => actions.changeSelectedModelMode('greyscale')}
+                                >
+                                    <i className={styles['laser-mode__icon-greyscale']} />
+                                    <span>{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-GREYSCALE')}</span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                className={classNames(ps.mode, { [ps.on]: mode === 'vector' })}
+                                aria-pressed={mode === 'vector'}
+                                disabled={disabled}
+                                onClick={() => actions.changeSelectedModelMode('vector')}
+                            >
+                                <i className={styles['laser-mode__icon-vector']} />
+                                <span>{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-VECTOR')}</span>
+                            </button>
+                            {!isDXF && (
+                                <button
+                                    type="button"
+                                    className={classNames(ps.mode, { [ps.on]: mode === 'halftone' })}
+                                    aria-pressed={mode === 'halftone'}
+                                    disabled={disabled}
+                                    onClick={() => actions.changeSelectedModelMode('halftone')}
+                                >
+                                    <i className={styles['laser-mode__icon-halftone']} />
+                                    <span>{i18n._('key-Laser/ProcessingModeSection/ImageProcessMode-HALFTONE')}</span>
+                                </button>
                             )}
                         </div>
                         {isBW && <ConfigRasterBW disabled={disabled} />}

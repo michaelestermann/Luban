@@ -35,7 +35,7 @@ const CNCPath = ({ widgetActions }) => {
 
     const dispatch = useDispatch();
     useEffect(() => {
-        widgetActions.setTitle(i18n._('key_ui/widgets/CNCPath/CNCPath_Transformation'));
+        widgetActions.setTitle(i18n._('key-CncLaser/Properties-Position & size'));
     }, []);
     useEffect(() => {
         if (page === PAGE_EDITOR) {

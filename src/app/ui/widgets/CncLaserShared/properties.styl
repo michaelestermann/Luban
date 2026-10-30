@@ -1,0 +1,189 @@
+// Properties panel of the Laser/CNC editor (redesign mockup "InteractionA" + "Position V2")
+.props {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 8px 0 4px;
+}
+
+.grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #d9dde6;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 13px;
+    color: #1f2430;
+    min-width: 0;
+
+    &:focus-within {
+        border-color: #1d4ed8;
+    }
+
+    &.disabled {
+        border-color: #e3e6ec;
+        background: #f0f2f5;
+        color: #b8bfcc;
+
+        .prefix,
+        :global(.ant-input),
+        :global(.ant-input-suffix) {
+            color: #b8bfcc !important;
+        }
+    }
+
+    // the NumberInput fills the field; the border belongs to the field
+    > span:last-child {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    :global(.ant-input-affix-wrapper),
+    :global(.ant-input) {
+        width: 100% !important;
+        height: 30px;
+        padding: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        font-size: 13px;
+        color: inherit;
+    }
+
+    :global(.ant-input-suffix) {
+        font-size: 12px;
+        color: #5b6170;
+    }
+}
+
+.prefix {
+    flex: 0 0 auto;
+    color: #5b6170;
+}
+
+.buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.icon-button {
+    width: 36px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid #d9dde6;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #2f3441;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #eef1f6;
+    }
+
+    &.on {
+        border-color: #1d4ed8;
+        background: #e8eefc;
+        color: #1d4ed8;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        border-color: #e3e6ec;
+        background: #f0f2f5;
+        color: #b8bfcc;
+    }
+}
+
+// processing mode tiles (image cards)
+.modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    border: 2px solid #e3e6ec;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #2f3441;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 0;
+
+    &.on {
+        border-color: #1d4ed8;
+        background: #e8eefc;
+        color: #1d4ed8;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: .5;
+    }
+
+    img,
+    svg {
+        width: 100%;
+        max-width: 112px;
+        height: 64px;
+        border-radius: 6px;
+        object-fit: cover;
+    }
+
+    span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+// laser: four modes in one row, existing pictures as background images
+.four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+
+    .mode {
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
+    .mode i {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+        margin: 0;
+        border-radius: 6px;
+        background-size: cover;
+        background-position: center;
+    }
+}
+
+.mode i {
+    display: block;
+    width: 100%;
+    height: 64px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+}

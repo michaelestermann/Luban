@@ -31,7 +31,7 @@ const LaserParameters = ({ widgetActions }) => {
     const showImageProcessMode = (sourceType === SOURCE_TYPE.RASTER || sourceType === SOURCE_TYPE.SVG) && config.svgNodeName === SVG_NODE_NAME_IMAGE;
 
     useEffect(() => {
-        widgetActions.setTitle(i18n._('key-Laser/TransformationSection-Transformation'));
+        widgetActions.setTitle(i18n._('key-CncLaser/Properties-Position & size'));
     }, []);
 
     useEffect(() => {
