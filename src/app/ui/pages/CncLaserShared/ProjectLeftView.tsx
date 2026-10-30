@@ -59,9 +59,10 @@ const ProjectLeftView: React.FC<ProjectLeftViewProps> = ({
     const needToPreview = useSelector(state => state[headType]?.needToPreview);
     const gcodeFile = useSelector(state => state[headType]?.gcodeFile);
     const viewingToolpaths = useSelector(state => state[headType]?.viewingToolpaths);
+    const gcodeRequested = useSelector(state => state[headType]?.gcodeRequested);
     const fileCount = useSelector(state => (state[headType]?.gcodeFiles || []).length);
     const isOnABPosition = useSelector(state => headType === HEAD_LASER && !!state[HEAD_LASER]?.isOnABPosition);
-    const step = getEditorStep({ page, needToPreview, gcodeFile, viewingToolpaths });
+    const step = getEditorStep({ page, needToPreview, gcodeFile, viewingToolpaths, gcodeRequested });
     const isDesign = page === PAGE_EDITOR;
     const isGcode = step === 'gcode';
     const operationsItem = { key: 'operations', label: operationsLabel, icon: <OperationsIcon /> };

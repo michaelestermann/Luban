@@ -43,6 +43,7 @@ const Output: React.FC<OutputViewProps> = (props) => {
     const displayedType = useSelector((state: RootState) => state[headType]?.displayedType);
     const gcodeFile = useSelector(state => state[headType]?.gcodeFile);
     const viewingToolpaths = useSelector(state => state[headType]?.viewingToolpaths);
+    const gcodeRequested = useSelector(state => state[headType]?.gcodeRequested);
     const needToPreview = useSelector(state => state[headType]?.needToPreview);
     const page = useSelector(state => state[headType]?.page);
     const previewFailed = useSelector(state => state[headType]?.previewFailed);
@@ -147,7 +148,7 @@ const Output: React.FC<OutputViewProps> = (props) => {
     const hasVisibleContent = !isEditor && !needToPreview;
     // step 3: the G-code files (left panel) and the job panel with the Export dropdown
     // (right panel, CncLaserOutput/JobPanel) take over the file list and Export
-    const isGcodeStep = getEditorStep({ page, needToPreview, gcodeFile, viewingToolpaths }) === 'gcode';
+    const isGcodeStep = getEditorStep({ page, needToPreview, gcodeFile, viewingToolpaths, gcodeRequested }) === 'gcode';
 
     return (
         <div>

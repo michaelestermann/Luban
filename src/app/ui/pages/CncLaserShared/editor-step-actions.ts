@@ -1,6 +1,6 @@
 import { PAGE_EDITOR, PAGE_PROCESS } from '../../../constants';
 import { actions as editorActions } from '../../../flux/editor';
-import { EditorStep, getEditorStep } from './editor-step';
+import { EditorStep, getEditorStep, needsGcodeRegeneration } from './editor-step';
 
 /**
  * Go to a step of the Laser/CNC editor stepper, reusing the existing page actions.
@@ -9,10 +9,12 @@ import { EditorStep, getEditorStep } from './editor-step';
  * - design:    switchToPage(editor) + showModelGroupObject (= the former "Edit" tab)
  * - toolpaths: switchToPage(process) (= the former "Next" / "Process" tab) and set the UI flag
  *              `viewingToolpaths`, so a still valid G-code file is kept but step 2 is shown
- * - gcode:     switchToPage(process) and clear `viewingToolpaths`; a valid G-code file shows
- *              step 3 again without regenerating. Without valid G-code: preview (= the former
- *              "Generate G-code and Preview"); the preview starts the progress and ends in
- *              G-code generation (shouldGenerateGcodeCounter -> Output -> commitGenerateGcode)
+ * - gcode:     switchToPage(process); an up-to-date G-code file shows step 3 again without
+ *              regenerating (clears `viewingToolpaths`). Otherwise (needs preview, no file, or the
+ *              toolpaths changed since the file was generated) set `gcodeRequested` and preview
+ *              (= the former "Generate G-code and Preview"); the preview starts the progress and
+ *              ends in G-code generation (shouldGenerateGcodeCounter -> Output -> commitGenerateGcode).
+ *              Step 3 is shown when the new file arrives (onGenerateGcode -> stateAfterNewGcode).
  */
 export const goToStep = (headType: 'laser' | 'cnc', step: EditorStep) => async (dispatch, getState) => {
     const current = getEditorStep(getState()[headType]);
@@ -36,9 +38,16 @@ export const goToStep = (headType: 'laser' | 'cnc', step: EditorStep) => async (
     }
 
     // step === 'gcode'
-    dispatch(editorActions.updateState(headType, { viewingToolpaths: false }));
-    const { needToPreview, gcodeFile, isGcodeGenerating } = getState()[headType];
-    if (needToPreview || (!gcodeFile && !isGcodeGenerating)) {
+    const state = getState()[headType];
+    if (!needsGcodeRegeneration(state) && !state.isGcodeGenerating) {
+        // the file is up to date: show it again
+        dispatch(editorActions.updateState(headType, { viewingToolpaths: false, gcodeRequested: false }));
+        return;
+    }
+    // stay on the toolpaths step until the new file arrives (stateAfterNewGcode); a failure
+    // keeps the toolpaths step (stateAfterGcodeFailure), so the old files are never shown as the result
+    dispatch(editorActions.updateState(headType, { gcodeRequested: true }));
+    if (needsGcodeRegeneration(state)) {
         await dispatch(editorActions.preview(headType));
     }
 };

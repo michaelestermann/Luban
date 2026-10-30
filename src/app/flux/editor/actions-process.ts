@@ -26,6 +26,7 @@ import { actions as projectActions } from '../project';
 import { SnapmakerRayMachine } from '../../machines';
 import { buildGenerateToolPathTasks } from '../../toolpaths/generate-tasks';
 import { describeGcodeFiles, projectBaseName, toGcodeFileState } from '../../toolpaths/gcode-file-state';
+import { stateAfterGcodeFailure, stateAfterNewGcode } from '../../ui/pages/CncLaserShared/editor-step';
 
 let toastId;
 export const processActions = {
@@ -478,7 +479,9 @@ export const processActions = {
                 baseActions.updateState(headType, {
                     stage: STEP_STAGE.CNC_LASER_GENERATE_GCODE_FAILED,
                     isGcodeGenerating: false,
-                    progress: 1
+                    progress: 1,
+                    // a failed "Generate G-code" stays on the toolpaths step
+                    ...stateAfterGcodeFailure(getState()[headType])
                 })
             );
             return;
@@ -508,8 +511,9 @@ export const processActions = {
             isChangedAfterGcodeGenerating: false,
             gcodeFile: gcodeFiles[0],
             gcodeFiles,
-            // a new G-code file shows the G-code step
-            viewingToolpaths: false,
+            // only a requested new G-code file shows the G-code step; regenerating after an
+            // edit in step 2 keeps the toolpaths step
+            ...stateAfterNewGcode(getState()[headType]),
             stage: STEP_STAGE.CNC_LASER_GENERATING_GCODE,
             isGcodeGenerating: false,
             progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_GENERATING_GCODE, 1)

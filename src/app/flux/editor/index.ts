@@ -90,6 +90,7 @@ import { actions as appGlobalActions } from '../app-global';
 import UpdateHrefOperation2D from '../operation-history/UpdateHrefOperation2D';
 import { toast } from '../../ui/components/Toast';
 import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
+import { stateAfterGcodeFailure } from '../../ui/pages/CncLaserShared/editor-step';
 import { drillFailureMessage } from '../../toolpaths/cnc-drill';
 import AddMaterialTestGenerate from '../operation-history/AddMaterialTestGenerate';
 
@@ -434,6 +435,7 @@ export const actions = {
                         baseActions.updateState(headType, {
                             stage: STEP_STAGE.CNC_LASER_GENERATE_TOOLPATH_FAILED,
                             progress: 1,
+                            ...stateAfterGcodeFailure(getState()[headType]),
                         })
                     );
                     progressStatesManager.finishProgress(false);
@@ -516,6 +518,7 @@ export const actions = {
                                             baseActions.updateState(headType, {
                                                 stage: STEP_STAGE.CNC_LASER_GENERATE_TOOLPATH_FAILED,
                                                 progress: 1,
+                                                ...stateAfterGcodeFailure(getState()[headType]),
                                             })
                                         );
                                         resolve(false);
@@ -2486,7 +2489,7 @@ export const actions = {
             return;
         }
         // switch to `page` (a page change ends the stepper's "viewing toolpaths" state)
-        dispatch(baseActions.updateState(headType, { page, viewingToolpaths: false }));
+        dispatch(baseActions.updateState(headType, { page, viewingToolpaths: false, gcodeRequested: false }));
 
         // when switching to "Process" page, we need to
         // trigger preview of all images

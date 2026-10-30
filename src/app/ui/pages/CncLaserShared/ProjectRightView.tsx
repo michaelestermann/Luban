@@ -61,7 +61,8 @@ const RenderProjectRightView: React.FC<ProjectRightViewProps> = ({
     const needToPreview = useSelector((state: RootState) => state[headType]?.needToPreview);
     const gcodeFile = useSelector((state: RootState) => state[headType]?.gcodeFile);
     const viewingToolpaths = useSelector((state: RootState) => state[headType]?.viewingToolpaths);
-    const isGcode = getEditorStep({ page, needToPreview, gcodeFile, viewingToolpaths }) === 'gcode';
+    const gcodeRequested = useSelector((state: RootState) => state[headType]?.gcodeRequested);
+    const isGcode = getEditorStep({ page, needToPreview, gcodeFile, viewingToolpaths, gcodeRequested }) === 'gcode';
     const rightWidgets = useMemo(() => (widgets || []).filter(id => !LEFT_PANEL_WIDGETS.includes(id)), [widgets]);
 
     // toolpaths are mutable: renderingTimestamp re-renders on renames
