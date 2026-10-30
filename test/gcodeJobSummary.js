@@ -32,7 +32,7 @@ test('job summary: laser single file has no tool change', (t) => {
 test('job summary: CNC single file has no tool change; empty job', (t) => {
     t.equal(summarizeGcodeJob([{ estimatedTime: 1 }], true).toolChanges, 0, 'one file: no change');
     const empty = summarizeGcodeJob([], true);
-    t.equal(empty.totalTime, 0);
+    t.equal(empty.totalTime, null, 'no files: unknown total time');
     t.equal(empty.fileCount, 0);
     t.equal(empty.toolChanges, 0);
     t.equal(empty.workArea, null, 'no files: no work area');
@@ -43,6 +43,14 @@ test('job summary: missing estimated time counts as 0, file index falls back to 
     const summary = summarizeGcodeJob([{ estimatedTime: 10 }, { estimatedTime: undefined }, { estimatedTime: NaN }], true);
     t.equal(summary.totalTime, 10);
     t.deepEqual(summary.toolChangeBeforeFiles, [2, 3]);
+    t.end();
+});
+
+test('job summary: no file with a known estimated time gives an unknown total time ("–", not "0 s")', (t) => {
+    const summary = summarizeGcodeJob([{ estimatedTime: undefined }, { estimatedTime: NaN }], true);
+    t.equal(summary.totalTime, null, 'unknown total time');
+    t.equal(formatDuration(summary.totalTime), '–', 'shown as a dash');
+    t.equal(summarizeGcodeJob([{ estimatedTime: 0 }], false).totalTime, 0, 'a known 0 s stays 0');
     t.end();
 });
 

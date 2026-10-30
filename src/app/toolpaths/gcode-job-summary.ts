@@ -14,7 +14,8 @@ export type GcodeJobFile = {
 export type WorkArea = { width: number; height: number };
 
 export type GcodeJobSummary = {
-    totalTime: number;
+    // seconds; null when no file has a known estimated time
+    totalTime: number | null;
     fileCount: number;
     toolChanges: number;
     // numbers of the files that need a tool change (and a new Z zero) before they run
@@ -64,15 +65,16 @@ export const getWorkArea = (files: GcodeJobFile[]): WorkArea | null => {
  * so every file after the first needs a tool change; laser jobs are one file.
  */
 export const summarizeGcodeJob = (files: GcodeJobFile[], isCnc: boolean): GcodeJobSummary => {
-    const totalTime = files.reduce((sum, file) => {
-        const time = Number(file.estimatedTime);
-        return Number.isFinite(time) ? sum + time : sum;
-    }, 0);
+    const times = files
+        .filter(file => file.estimatedTime !== undefined && file.estimatedTime !== null)
+        .map(file => Number(file.estimatedTime))
+        .filter(Number.isFinite);
+    const totalTime = times.length > 0 ? times.reduce((sum, time) => sum + time, 0) : null;
     const toolChangeBeforeFiles = isCnc
         ? files.slice(1).map((file, i) => file.index ?? i + 2)
         : [];
     return {
-        totalTime: round1(totalTime),
+        totalTime: totalTime === null ? null : round1(totalTime),
         fileCount: files.length,
         toolChanges: toolChangeBeforeFiles.length,
         toolChangeBeforeFiles,
