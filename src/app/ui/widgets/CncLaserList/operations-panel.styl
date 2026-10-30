@@ -187,3 +187,24 @@
         pointer-events: none;
     }
 }
+
+// drag and drop sorting
+.grip {
+    flex: 0 0 auto;
+    display: flex;
+    margin-left: -2px;
+    color: #9aa1b0;
+    cursor: grab;
+}
+
+.dragging {
+    opacity: .45;
+}
+
+.drop-before {
+    box-shadow: 0 -3px 0 #1d4ed8;
+}
+
+.drop-after {
+    box-shadow: 0 3px 0 #1d4ed8;
+}

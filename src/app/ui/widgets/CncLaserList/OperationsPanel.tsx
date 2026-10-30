@@ -15,6 +15,8 @@ import {
 } from '../../../toolpaths/operations-panel';
 import ToolPathConfigurations from '../../views/ToolPathConfigurations/ToolPathConfigurations';
 import styles from './operations-panel.styl';
+import { useCardReorder } from './use-card-reorder';
+import DragGrip from './DragGrip';
 
 interface OperationsPanelProps {
     headType: 'laser' | 'cnc';
@@ -77,6 +79,11 @@ const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) 
     const [editingToolpath, setEditingToolpath] = useState(null);
 
     const toolPaths = toolPathGroup?.getToolPaths() || [];
+    // drag and drop sorting: the order is the milling/engraving order
+    const reorder = useCardReorder((from, to) => {
+        const toolPath = toolPaths[from];
+        toolPath && dispatch(editorActions.moveToolPath(headType, toolPath.id, to));
+    }, blocked);
     const selectedModels = modelGroup?.getSelectedModelArray?.() || [];
 
     // all objects by id, group children included
@@ -121,7 +128,7 @@ const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) 
                     <span className={styles['tip-wrapper']}>{newButton}</span>
                 </Tooltip>
             </div>
-            <div className={styles.cards}>
+            <div className={styles.cards} {...reorder.containerProps}>
                 {toolPaths.length === 0 && (
                     <div className={styles.empty}>
                         {i18n._('key-CncLaser/Operations-No operations yet. Select objects and click + New.')}
@@ -136,8 +143,17 @@ const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) 
                     const subtitle = [method, toolName].filter(Boolean).join(' · ');
                     const label = `${index + 1} · ${toolPath.name}`;
                     return (
-                        <div key={toolPath.id} className={styles.card}>
+                        <div
+                            key={toolPath.id}
+                            className={classNames(styles.card, {
+                                [styles.dragging]: reorder.draggingIndex === index,
+                                [styles['drop-before']]: reorder.dropSide(index) === 'before',
+                                [styles['drop-after']]: reorder.dropSide(index) === 'after'
+                            })}
+                            {...reorder.cardProps(index)}
+                        >
                             <div className={styles['card-head']}>
+                                {!blocked && <DragGrip className={styles.grip} />}
                                 <span className={styles.dot} style={{ background: operationColor(index) }} />
                                 <strong className={styles['card-title']} title={label}>{label}</strong>
                                 {subtitle && <span className={styles['card-tool']} title={subtitle}>{subtitle}</span>}

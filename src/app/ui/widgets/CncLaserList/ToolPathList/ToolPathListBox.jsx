@@ -5,6 +5,8 @@ import classNames from 'classnames';
 // import { cloneDeep, isNull } from 'lodash';
 import SvgIcon from '../../../components/SvgIcon';
 import styles from './toolpath-cards.styl';
+import { useCardReorder } from '../use-card-reorder';
+import DragGrip from '../DragGrip';
 import { actions as editorActions } from '../../../../flux/editor';
 // import modal from '../../../lib/modal';
 import i18n from '../../../../lib/i18n';
@@ -60,7 +62,7 @@ ToolpathStatus.propTypes = {
 
 const ToolpathItem = ({
     toolPath, index, headType, needToPreview, selectedToolPathIDArray, selectToolPathId, selectOneToolPathId, selectToolPathById,
-    onClickVisible, setEditingToolpath, disabled, showContextMenu
+    onClickVisible, setEditingToolpath, disabled, showContextMenu, dragProps = {}, dragging = false, dropSide = null
 }) => {
     if (!toolPath) {
         return null;
@@ -109,9 +111,13 @@ const ToolpathItem = ({
                     styles.card,
                     {
                         [styles.selected]: selected,
-                        [styles.hidden]: !toolPath.visible
+                        [styles.hidden]: !toolPath.visible,
+                        [styles.dragging]: dragging,
+                        [styles['drop-before']]: dropSide === 'before',
+                        [styles['drop-after']]: dropSide === 'after'
                     }
                 )}
+                {...dragProps}
                 role="button"
                 tabIndex="0"
                 aria-pressed={selected}
@@ -130,6 +136,7 @@ const ToolpathItem = ({
                 }}
             >
                 <div className={styles['card-head']}>
+                    {!disabled && <DragGrip className={styles.grip} />}
                     <span className={styles.dot} style={{ background: operationColor(index) }} />
                     <strong className={styles['card-title']}>{title}</strong>
                     <ToolpathStatus status={getToolPathCardStatus(toolPath, needToPreview)} />
@@ -176,7 +183,10 @@ ToolpathItem.propTypes = {
     showContextMenu: PropTypes.func.isRequired,
 
     setEditingToolpath: PropTypes.func.isRequired,
-    disabled: PropTypes.bool.isRequired
+    disabled: PropTypes.bool.isRequired,
+    dragProps: PropTypes.object,
+    dragging: PropTypes.bool,
+    dropSide: PropTypes.string
 };
 
 
@@ -277,11 +287,17 @@ const ToolPathListBox = (props) => {
     }, [page]);
 
     const blocked = isOnABPosition || inProgress;
+    // drag and drop sorting of the cards (same order as Prioritize / Deprioritize)
+    const reorder = useCardReorder((from, to) => {
+        const toolPath = toolPaths[from];
+        toolPath && dispatch(editorActions.moveToolPath(props.headType, toolPath.id, to));
+    }, blocked);
     const canCreate = !isOnABPosition && !inProgress && selectedModelArray && selectedModelArray.length > 0;
 
     return (
         <div className={styles['toolpath-list']}>
             <div
+                {...reorder.containerProps}
                 className={styles.cards}
                 tabIndex="-1"
                 role="button"
@@ -316,6 +332,9 @@ const ToolPathListBox = (props) => {
                             setEditingToolpath={setEditingToolpath}
                             showContextMenu={actions.showContextMenu}
                             disabled={blocked}
+                            dragProps={reorder.cardProps(index)}
+                            dragging={reorder.draggingIndex === index}
+                            dropSide={reorder.dropSide(index)}
                         />
                     );
                 })}

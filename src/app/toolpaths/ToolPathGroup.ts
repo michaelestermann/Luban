@@ -7,6 +7,7 @@ import { ViewPathRenderer } from '../lib/renderer/ViewPathRenderer';
 import { generateModelDefaultConfigs } from '../models/ModelInfoUtils';
 import ThreeModel from '../models/ThreeModel';
 import ToolPath from './ToolPath';
+import { moveItem } from './reorder';
 import { SUCCESS, createToolPathNameByType, getModelsByToolPathType, getToolPathType } from './utils';
 
 class ToolPathGroup {
@@ -342,6 +343,16 @@ class ToolPathGroup {
         this.toolPaths[index] = this.toolPaths[index + 1];
         this.toolPaths[index + 1] = toolPath;
 
+        this._updated();
+    }
+
+    /** Move a toolpath to position `toIndex` (drag and drop in the operations list). */
+    public moveToolPath(toolPathId, toIndex: number) {
+        const from = this.toolPaths.findIndex(toolPath => toolPath.id === toolPathId);
+        if (from === -1 || from === toIndex) {
+            return;
+        }
+        this.toolPaths = moveItem(this.toolPaths, from, toIndex);
         this._updated();
     }
 

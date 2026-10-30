@@ -322,6 +322,17 @@ export const processActions = {
         dispatch(projectActions.autoSaveEnvironment(headType));
     },
 
+    moveToolPath: (headType, toolPathId, toIndex) => (dispatch, getState) => {
+        const { toolPathGroup } = getState()[headType];
+        toolPathGroup.moveToolPath(toolPathId, toIndex);
+        dispatch(
+            baseActions.updateState(headType, {
+                isChangedAfterGcodeGenerating: true
+            })
+        );
+        dispatch(projectActions.autoSaveEnvironment(headType));
+    },
+
     toolPathToTop: (headType, toolPathId) => (dispatch, getState) => {
         const { toolPathGroup } = getState()[headType];
         toolPathGroup.toolPathToTop(toolPathId);
