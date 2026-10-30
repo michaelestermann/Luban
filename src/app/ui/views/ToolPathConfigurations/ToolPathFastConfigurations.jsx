@@ -18,10 +18,13 @@ import {
     CNC_DEFAULT_GCODE_PARAMETERS_DEFINITION,
     LASER_DEFAULT_GCODE_PARAMETERS_DEFINITION,
     HEAD_CNC,
-    HEAD_LASER
+    HEAD_LASER,
+    TOOLPATH_TYPE_VECTOR
 } from '../../../constants';
 import PresentSelector from './laser/PresentSelector';
 import { cncFastEditKeys, cncPathTypeOptions, withDrillDefaults } from '../../../toolpaths/cnc-drill';
+import CncMethodTiles from './cnc/CncMethodTiles';
+import styles from './fast-configurations.styl';
 
 function ifDefinitionModified(activeToolListDefinition, currentToolDefinition) {
     return activeToolListDefinition?.settings && !Object.entries(activeToolListDefinition.settings).every(([key, setting]) => {
@@ -359,6 +362,10 @@ function ToolPathFastConfigurations({ setEditingToolpath, headType, toolpath }) 
         });
         const fastEditSettingsKeys = getFastEditSettingsKeys(toolPath);
         fastEditSettingsKeys.forEach((key) => {
+            // the CNC method is shown as image tiles above the parameters
+            if (key === 'pathType' && headType === HEAD_CNC) {
+                return;
+            }
             if (allDefinition[key]) {
                 fastEditSettings[key] = allDefinition[key];
             }
@@ -366,19 +373,23 @@ function ToolPathFastConfigurations({ setEditingToolpath, headType, toolpath }) 
     }
     const isModifiedDefinition = actions.checkIfDefinitionModified();
 
+    const showMethodTiles = headType === HEAD_CNC && toolPath.type === TOOLPATH_TYPE_VECTOR;
+
     return (
         <React.Fragment>
-            <div className={classNames(
-                'border-default-grey-1',
-                'margin-top-16',
-                'border-radius-8',
-                'clearfix'
-            )}
-            >
-                <div className="sm-flex height-40 border-bottom-normal padding-horizontal-16">
-                    <span className="sm-flex-width main-text-normal">{i18n._('key-unused-General Parameters')}</span>
-                </div>
-                <div className="padding-horizontal-16">
+            <div className={styles['fast-configurations']}>
+                {showMethodTiles && (
+                    <section className={styles.section}>
+                        <span className={styles.label}>{i18n._('key-Cnc/ToolpathParameters-Method')}</span>
+                        <CncMethodTiles
+                            value={toolPath.gcodeConfig?.pathType}
+                            isRotate={!!toolPath.materials?.isRotate}
+                            onChange={(value) => actions.updateGcodeConfig({ pathType: value })}
+                        />
+                    </section>
+                )}
+                <section className={classNames(styles.parameters, 'clearfix')}>
+                    <span className={styles.label}>{i18n._('key-unused-General Parameters')}</span>
                     {toolPath.headType === HEAD_CNC && currentToolDefinition && (
                         <ToolSelector
                             toolDefinition={currentToolDefinition}
@@ -418,7 +429,7 @@ function ToolPathFastConfigurations({ setEditingToolpath, headType, toolpath }) 
                     >
                         {`${i18n._('key-unused-More')} >`}
                     </Anchor>
-                </div>
+                </section>
             </div>
         </React.Fragment>
     );

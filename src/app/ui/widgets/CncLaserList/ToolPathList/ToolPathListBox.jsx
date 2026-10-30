@@ -4,17 +4,16 @@ import { useSelector, useDispatch, shallowEqual } from 'react-redux';
 import classNames from 'classnames';
 // import { cloneDeep, isNull } from 'lodash';
 import SvgIcon from '../../../components/SvgIcon';
-import Anchor from '../../../components/Anchor';
-import { Button } from '../../../components/Buttons';
-import styles from '../styles.styl';
+import styles from './toolpath-cards.styl';
 import { actions as editorActions } from '../../../../flux/editor';
 // import modal from '../../../lib/modal';
 import i18n from '../../../../lib/i18n';
 // import { toHump } from '../../../../../shared/lib/utils';
-import { normalizeNameDisplay } from '../../../../lib/normalize-range';
 import TipTrigger from '../../../components/TipTrigger';
 import ToolPathConfigurations from '../../../views/ToolPathConfigurations/ToolPathConfigurations';
-import ToolPathFastConfigurations from '../../../views/ToolPathConfigurations/ToolPathFastConfigurations';
+import { getOperationMethodId, operationColor } from '../../../../toolpaths/operations-panel';
+import { getToolPathCardStatus } from '../../../../toolpaths/toolpath-step';
+import { methodLabel } from '../OperationsPanel';
 
 import {
     PAGE_EDITOR,
@@ -24,8 +23,43 @@ import {
 import ContextMenu from '../../../components/ContextMenu';
 
 
+const CheckIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+        <path d="M5 12l5 5 9-10" />
+    </svg>
+);
+
+/**
+ * Status of a toolpath card: up to date (check), needs preview, generating, failed.
+ * Hidden toolpaths show no status (they are not generated).
+ */
+const ToolpathStatus = ({ status }) => {
+    if (status === 'up-to-date') {
+        const label = i18n._('key-CncLaser/ToolPathList-Preview up to date');
+        return (
+            <span className={classNames(styles.status, styles['status-ok'])} role="img" aria-label={label} title={label}>
+                <CheckIcon />
+            </span>
+        );
+    }
+    const labels = {
+        'needs-preview': i18n._('key-CncLaser/ToolPathList-needs preview'),
+        'generating': i18n._('key-CncLaser/ToolPathList-generating'),
+        'failed': i18n._('key-CncLaser/ToolPathList-failed')
+    };
+    if (!labels[status]) {
+        return null;
+    }
+    return (
+        <span className={classNames(styles.status, styles[`status-${status}`])} title={labels[status]}>{labels[status]}</span>
+    );
+};
+ToolpathStatus.propTypes = {
+    status: PropTypes.string.isRequired
+};
+
 const ToolpathItem = ({
-    toolPath, selectedToolPathIDArray, selectToolPathId, selectOneToolPathId, selectToolPathById,
+    toolPath, index, headType, needToPreview, selectedToolPathIDArray, selectToolPathId, selectOneToolPathId, selectToolPathById,
     onClickVisible, setEditingToolpath, disabled, showContextMenu
 }) => {
     if (!toolPath) {
@@ -47,12 +81,22 @@ const ToolpathItem = ({
             selectOneToolPathId(toolPath.id);
         }
     }
+    function handleOnKeyDown(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            selectOneToolPathId(toolPath.id);
+        }
+    }
     function handleOnClickVisible(e) {
         e.stopPropagation();
         onClickVisible(toolPath.id, toolPath.visible, toolPath.check);
     }
-    const suffixLength = 6;
-    const { prefixName, suffixName } = normalizeNameDisplay(toolPath.name, suffixLength);
+    const title = `${index + 1} · ${toolPath.name}`;
+    const method = methodLabel(getOperationMethodId(toolPath, headType), headType);
+    const toolName = toolPath.toolParams?.definitionName ? i18n._(toolPath.toolParams.definitionName) : null;
+    const subtitle = [method, toolName].filter(Boolean).join(' · ');
+    const selected = selectedToolPathIDArray.includes(toolPath.id);
 
     return (
         <TipTrigger
@@ -62,13 +106,18 @@ const ToolpathItem = ({
         >
             <div
                 className={classNames(
-                    styles['object-list-item'],
-                    'sm-flex',
-                    'justify-space-between',
-                    selectedToolPathIDArray.includes(toolPath.id) ? styles.selected : null
+                    styles.card,
+                    {
+                        [styles.selected]: selected,
+                        [styles.hidden]: !toolPath.visible
+                    }
                 )}
                 role="button"
                 tabIndex="0"
+                aria-pressed={selected}
+                onClick={handleOnClick}
+                onDoubleClick={handleOnDoubleClick}
+                onKeyDown={handleOnKeyDown}
                 onMouseUp={(e) => {
                     if (e.button === 2) { // right click
                         // item is selected, do not select again
@@ -80,60 +129,45 @@ const ToolpathItem = ({
                     }
                 }}
             >
-                <Anchor
-                    className={classNames(
-                        'height-24',
-                        'width-254',
-                        'align-l',
-                        'sm-flex',
-                        'sm-flex-width',
-                        'margin-left-16',
-                        'margin-right-16',
-                    )}
-                    onDoubleClick={handleOnDoubleClick}
-                    onClick={handleOnClick}
-                >
-                    <span className={classNames(styles['prefix-name'])}>
-                        {prefixName}
-                    </span>
-                    <span className={classNames(styles['suffix-name'])}>
-                        {suffixName}
-                    </span>
-                </Anchor>
-                <div className={classNames('sm-flex', 'height-24', 'margin-right-16')}>
-                    <i
-                        className={classNames(
-                            // ...getIconStatus(toolPath.status)
+                <div className={styles['card-head']}>
+                    <span className={styles.dot} style={{ background: operationColor(index) }} />
+                    <strong className={styles['card-title']}>{title}</strong>
+                    <ToolpathStatus status={getToolPathCardStatus(toolPath, needToPreview)} />
+                    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+                    <span className={styles.eye} onDoubleClick={(e) => e.stopPropagation()}>
+                        {!toolPath.visible && (
+                            <SvgIcon
+                                size={24}
+                                color="#BFBFBF"
+                                name="HideNormal"
+                                type={['static']}
+                                title={i18n._('key-CncLaser/ToolPathList/Button/-Hide')}
+                                onClick={handleOnClickVisible}
+                                disabled={disabled}
+                            />
                         )}
-                    />
-                    {!toolPath.visible && (
-                        <SvgIcon
-                            size={24}
-                            color="#BFBFBF"
-                            name="HideNormal"
-                            type={['static']}
-                            title={i18n._('key-CncLaser/ToolPathList/Button/-Hide')}
-                            onClick={handleOnClickVisible}
-                            disabled={disabled}
-                        />
-                    )}
-                    {toolPath.visible && (
-                        <SvgIcon
-                            type={['static']}
-                            size={24}
-                            name="ShowNormal"
-                            title={i18n._('key-CncLaser/ToolPathList/Button/-Show')}
-                            onClick={handleOnClickVisible}
-                            disabled={disabled}
-                        />
-                    )}
+                        {toolPath.visible && (
+                            <SvgIcon
+                                type={['static']}
+                                size={24}
+                                name="ShowNormal"
+                                title={i18n._('key-CncLaser/ToolPathList/Button/-Show')}
+                                onClick={handleOnClickVisible}
+                                disabled={disabled}
+                            />
+                        )}
+                    </span>
                 </div>
+                {subtitle && <span className={styles['card-sub']}>{subtitle}</span>}
             </div>
         </TipTrigger>
     );
 };
 ToolpathItem.propTypes = {
     toolPath: PropTypes.object.isRequired,
+    index: PropTypes.number.isRequired,
+    headType: PropTypes.string.isRequired,
+    needToPreview: PropTypes.bool,
     selectedToolPathIDArray: PropTypes.array.isRequired,
     selectToolPathId: PropTypes.func.isRequired,
     selectOneToolPathId: PropTypes.func.isRequired,
@@ -154,6 +188,9 @@ const ToolPathListBox = (props) => {
     const inProgress = useSelector(state => state[props.headType]?.inProgress);
     const displayedType = useSelector(state => state[props.headType]?.displayedType);
     const selectedModelArray = useSelector(state => state[props.headType]?.modelGroup?.getSelectedModelArray());
+    const needToPreview = useSelector(state => !!state[props.headType]?.needToPreview);
+    // toolpaths are mutable (status, name, config): renderingTimestamp re-renders on every change
+    useSelector(state => state[props.headType]?.renderingTimestamp);
     const dispatch = useDispatch();
 
     const contextMenuDisabled = (selectedToolPathIDArray.length !== 1);
@@ -227,140 +264,98 @@ const ToolPathListBox = (props) => {
             }, 0);
         }
     };
+    // only set when rendered as a widget (the left panel renders the list directly)
     useEffect(() => {
-        props.widgetActions.setTitle(i18n._('key-CncLaser/ToolPathList/Button/-Toolpath List'));
+        props.widgetActions?.setTitle(i18n._('key-CncLaser/ToolPathList/Button/-Toolpath List'));
     }, []);
     useEffect(() => {
         if (page === PAGE_EDITOR) {
-            props.widgetActions.setDisplay(false);
+            props.widgetActions?.setDisplay(false);
         } else if (page === PAGE_PROCESS) {
-            props.widgetActions.setDisplay(true);
+            props.widgetActions?.setDisplay(true);
         }
     }, [page]);
 
-    return (
-        <div className="clearfix">
-            <div className={classNames(
-                'border-default-grey-1',
-                'border-radius-8',
-                'margin-top-8'
-            )}
-            >
-                <div
-                    className={classNames(
-                        'height-184',
-                        'position-re',
-                        // // 'align-c',
-                        'padding-vertical-4'
-                    )}
-                    tabIndex="-1"
-                    role="button"
-                    onKeyDown={() => { }}
-                    onClick={() => {
-                        actions.selectToolPathById();
-                    }}
-                >
-                    {toolPaths.length === 0 && (
-                        <div className={classNames(
-                            // 'font-roboto',
-                            'padding-horizontal-16',
-                            'sm-flex',
-                            'position-absolute',
-                            'top-50-percent',
-                            'width-percent-100',
-                            'justify-center'
-                        )}
-                        >
-                            <SvgIcon
-                                name="WarningTipsTips"
-                                type={['static']}
-                                color="#1890ff"
-                            />
-                            {/* <SvgIcon
-                                name="WarningTipsTips"
-                                type={['static']}
-                                color="#1890ff"
-                            /> */}
-                            <span className={classNames('display-inline')}>{i18n._('key-CncLaser/ToolPathList/Button/-Select object to create toolpath')}</span>
-                        </div>
-                    )}
+    const blocked = isOnABPosition || inProgress;
+    const canCreate = !isOnABPosition && !inProgress && selectedModelArray && selectedModelArray.length > 0;
 
-                    <div className={styles['object-list-box']}>
-                        {toolPaths && toolPaths.map((toolPath) => {
-                            return (
-                                <ToolpathItem
-                                    toolPath={toolPath}
-                                    key={toolPath.id}
-                                    selectedToolPathIDArray={selectedToolPathIDArray}
-                                    selectOneToolPathId={actions.selectOneToolPathId}
-                                    selectToolPathId={actions.selectToolPathId}
-                                    selectToolPathById={actions.selectToolPathById}
-                                    onClickVisible={actions.onClickVisible}
-                                    setEditingToolpath={setEditingToolpath}
-                                    showContextMenu={actions.showContextMenu}
-                                    disabled={isOnABPosition || inProgress}
-                                />
-                            );
-                        })}
+    return (
+        <div className={styles['toolpath-list']}>
+            <div
+                className={styles.cards}
+                tabIndex="-1"
+                role="button"
+                onKeyDown={() => { }}
+                onClick={() => {
+                    actions.selectToolPathById();
+                }}
+            >
+                {toolPaths.length === 0 && (
+                    <div className={styles.empty}>
+                        <SvgIcon
+                            name="WarningTipsTips"
+                            type={['static']}
+                            color="#1890ff"
+                        />
+                        <span>{i18n._('key-CncLaser/ToolPathList/Button/-Select object to create toolpath')}</span>
                     </div>
-                </div>
-                <div className={classNames(
-                    'border-radius-bottom-8',
-                    'padding-horizontal-16',
-                    'module-default-shadow',
-                    'padding-bottom-16',
-                    'clearfix',
-                    // 'height-96',
-                    // 'padding-top-8'
-                    `${toolPaths.length !== 0 ? 'padding-top-8' : ''}`
                 )}
+                {toolPaths && toolPaths.map((toolPath, index) => {
+                    return (
+                        <ToolpathItem
+                            toolPath={toolPath}
+                            index={index}
+                            headType={props.headType}
+                            needToPreview={needToPreview}
+                            key={toolPath.id}
+                            selectedToolPathIDArray={selectedToolPathIDArray}
+                            selectOneToolPathId={actions.selectOneToolPathId}
+                            selectToolPathId={actions.selectToolPathId}
+                            selectToolPathById={actions.selectToolPathById}
+                            onClickVisible={actions.onClickVisible}
+                            setEditingToolpath={setEditingToolpath}
+                            showContextMenu={actions.showContextMenu}
+                            disabled={blocked}
+                        />
+                    );
+                })}
+            </div>
+            <div className={styles.actions}>
+                <SvgIcon
+                    name="Delete"
+                    disabled={isOnABPosition || selectedToolPathIDArray.length < 1}
+                    size={24}
+                    title={i18n._('key-CncLaser/ToolPathList/Button/-Delete')}
+                    onClick={() => actions.deleteToolPath(selectedFirstToolPathId)}
+                />
+                <span className={styles['actions-spacer']} />
+                <SvgIcon
+                    className={classNames(
+                        'margin-horizontal-8',
+                    )}
+                    disabled={isOnABPosition || selectedToolPathIDArray.length !== 1}
+                    title={i18n._('key-CncLaser/ToolPathList/Button/-Prioritize')}
+                    onClick={() => actions.toolPathToUp(selectedToolPathIDArray)}
+                    name="Prioritize"
+                    size={24}
+                />
+                <SvgIcon
+                    disabled={isOnABPosition || selectedToolPathIDArray.length !== 1}
+                    title={i18n._('key-CncLaser/ToolPathList/Button/-Deprioritize')}
+                    onClick={() => actions.toolPathToDown(selectedToolPathIDArray)}
+                    name="Deprioritize"
+                    size={24}
+                />
+            </div>
+            <div className={styles['create-row']}>
+                <button
+                    type="button"
+                    className={styles['create-button']}
+                    onClick={actions.createToolPath}
+                    disabled={!canCreate}
                 >
-                    <div className={classNames(
-                        'float-l',
-                        'margin-vertical-4',
-                    )}
-                    >
-                        <SvgIcon
-                            name="Delete"
-                            disabled={isOnABPosition || selectedToolPathIDArray.length < 1}
-                            size={24}
-                            title={i18n._('key-CncLaser/ToolPathList/Button/-Delete')}
-                            onClick={() => actions.deleteToolPath(selectedFirstToolPathId)}
-                        />
-                    </div>
-                    <div className={classNames(
-                        'float-r',
-                        'margin-vertical-4',
-                    )}
-                    >
-                        <SvgIcon
-                            className={classNames(
-                                'margin-horizontal-8',
-                            )}
-                            disabled={isOnABPosition || selectedToolPathIDArray.length !== 1}
-                            title={i18n._('key-CncLaser/ToolPathList/Button/-Prioritize')}
-                            onClick={() => actions.toolPathToUp(selectedToolPathIDArray)}
-                            name="Prioritize"
-                            size={24}
-                        />
-                        <SvgIcon
-                            disabled={isOnABPosition || selectedToolPathIDArray.length !== 1}
-                            title={i18n._('key-CncLaser/ToolPathList/Button/-Deprioritize')}
-                            onClick={() => actions.toolPathToDown(selectedToolPathIDArray)}
-                            name="Deprioritize"
-                            size={24}
-                        />
-                    </div>
-                    <Button
-                        type="default"
-                        priority="level-two"
-                        width="100%"
-                        onClick={actions.createToolPath}
-                        disabled={isOnABPosition || inProgress || (!selectedModelArray || selectedModelArray.length === 0)}
-                    >
-                        {i18n._('key-CncLaser/ToolPathList/Button/-Create Toolpath')}
-                    </Button>
-                </div>
+                    {`+ ${i18n._('key-CncLaser/ToolPathList/Button/-Create Toolpath')}`}
+                </button>
             </div>
             <ContextMenu
                 id="toolPathListBoxContextmenu"
@@ -422,18 +417,11 @@ const ToolPathListBox = (props) => {
                     onClose={() => setEditingToolpath(null)}
                 />
             )}
-            {!isOnABPosition && selectedFirstToolPath && (
-                <ToolPathFastConfigurations
-                    headType={props.headType}
-                    setEditingToolpath={setEditingToolpath}
-                    toolpath={selectedFirstToolPath}
-                />
-            )}
         </div>
     );
 };
 ToolPathListBox.propTypes = {
-    widgetActions: PropTypes.object.isRequired,
+    widgetActions: PropTypes.object,
     headType: PropTypes.string
 };
 export default ToolPathListBox;

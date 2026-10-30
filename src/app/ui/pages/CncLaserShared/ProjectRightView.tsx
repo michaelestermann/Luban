@@ -1,14 +1,14 @@
 import { Machine } from '@snapmaker/luban-platform';
 import classNames from 'classnames';
 import React, { useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import { shallowEqual, useSelector } from 'react-redux';
 
 import { PAGE_EDITOR } from '../../../constants';
 import { RootState } from '../../../flux/index.def';
 import i18n from '../../../lib/i18n';
 import { renderWidgetList } from '../../utils';
 import CNCPathWidget from '../../widgets/CNCPath';
-import ToolPathListBox from '../../widgets/CncLaserList/ToolPathList';
+import ToolPathSettings from '../../widgets/CncLaserList/ToolPathList/ToolPathSettings';
 import CncLaserOutputWidget from '../../widgets/CncLaserOutput';
 import LaserParamsWidget from '../../widgets/LaserParams';
 import LaserTestFocusWidget from '../../widgets/LaserTestFocus';
@@ -22,8 +22,10 @@ const allWidgets = {
     'laser-params': LaserParamsWidget,
     'laser-test-focus': LaserTestFocusWidget,
     'cnc-path': CNCPathWidget,
-    'toolpath-list': ToolPathListBox,
 };
+
+// the toolpath list moved to the left panel (step 2); its settings are rendered below
+const LEFT_PANEL_WIDGETS = ['toolpath-list'];
 
 interface ProjectRightViewProps {
     headType: 'laser' | 'cnc';
@@ -39,8 +41,9 @@ interface ProjectRightViewProps {
 /**
  * Right panel of the Laser/CNC editor. The former Edit/Process tabs are replaced by the
  * stepper (CncLaserShared/Stepper): the widgets show themselves by `page` (step 1 = Edit
- * widgets, steps 2 and 3 = Process widgets) and the Output widget stays mounted in every
- * step (G-code generation, thumbnail, export menu event).
+ * widgets), steps 2 and 3 show the settings of the selected toolpath (titled with its
+ * number and name), and the Output widget stays mounted in every step (G-code generation,
+ * thumbnail, export menu event).
  */
 const RenderProjectRightView: React.FC<ProjectRightViewProps> = ({
     headType, page, widgets, listActions, collapsed = false, onToggleCollapsed = () => undefined
@@ -48,6 +51,21 @@ const RenderProjectRightView: React.FC<ProjectRightViewProps> = ({
     const activeMachine: Machine | null = useSelector((state: RootState) => state.machine.activeMachine);
 
     const widgetProps = { headType };
+    const isDesign = page === PAGE_EDITOR;
+    const rightWidgets = useMemo(() => (widgets || []).filter(id => !LEFT_PANEL_WIDGETS.includes(id)), [widgets]);
+
+    // toolpaths are mutable: renderingTimestamp re-renders on renames
+    useSelector((state: RootState) => state[headType]?.renderingTimestamp);
+    const toolPaths = useSelector((state: RootState) => state[headType]?.toolPathGroup?.getToolPaths(), shallowEqual) || [];
+    const selectedToolPathIds: string[] = useSelector((state: RootState) => state[headType]?.toolPathGroup?.selectedToolPathArray, shallowEqual) || [];
+    const selectedIndex = selectedToolPathIds.length === 1 ? toolPaths.findIndex(toolPath => toolPath.id === selectedToolPathIds[0]) : -1;
+
+    let title = i18n._('key-CncLaser/Panel-Properties');
+    if (!isDesign) {
+        title = selectedIndex >= 0
+            ? `${selectedIndex + 1} · ${toolPaths[selectedIndex].name}`
+            : i18n._('key-CncLaser/RightSidebar-Process');
+    }
 
     const loadGcodeOptions: LoadGcodeOptions = useMemo(() => {
         return {
@@ -58,7 +76,7 @@ const RenderProjectRightView: React.FC<ProjectRightViewProps> = ({
     return (
         <PanelChrome
             side="right"
-            title={page === PAGE_EDITOR ? i18n._('key-CncLaser/Panel-Properties') : i18n._('key-CncLaser/RightSidebar-Process')}
+            title={title}
             collapsed={collapsed}
             onToggle={onToggleCollapsed}
             collapseLabel={i18n._('key-CncLaser/Panel-Collapse right panel')}
@@ -66,7 +84,8 @@ const RenderProjectRightView: React.FC<ProjectRightViewProps> = ({
             className="laser-intro-edit-panel" // for starter guide
         >
             <div className={classNames('sm-flex sm-flex-direction-c')}>
-                {renderWidgetList(headType, 'default', widgets, allWidgets, listActions, widgetProps)}
+                {!isDesign && <ToolPathSettings headType={headType} />}
+                {renderWidgetList(headType, 'default', rightWidgets, allWidgets, listActions, widgetProps)}
                 <CncLaserOutputWidget
                     headType={headType}
                     loadGcodeOptions={loadGcodeOptions}

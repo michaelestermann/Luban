@@ -62,3 +62,47 @@ $z-index-float = 500
         }
     }
 }
+
+// Toolpath / Simulation segmented control at the top centre of the canvas (steps 2/3, CNC)
+.preview-segmented {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 15;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    background: #ffffff;
+    border: 1px solid #e3e6ec;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(20, 30, 50, .08);
+}
+
+.segment {
+    height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #5b6170;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+        background: #eef1f6;
+        color: #1f2430;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #1d4ed8;
+        outline-offset: 1px;
+    }
+
+    &.active {
+        background: #e8eefc;
+        color: #1d4ed8;
+    }
+}

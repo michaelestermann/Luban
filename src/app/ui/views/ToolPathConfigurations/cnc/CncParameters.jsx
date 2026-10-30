@@ -1,6 +1,5 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
-import classNames from 'classnames';
 import { connect } from 'react-redux';
 import { cloneDeep } from 'lodash';
 import Select from '../../../components/Select';
@@ -16,6 +15,7 @@ import TipTrigger from '../../../components/TipTrigger';
 import ToolSelector from './ToolSelector';
 import { toHump } from '../../../../../shared/lib/utils';
 import SvgIcon from '../../../components/SvgIcon';
+import CncMethodTiles from './CncMethodTiles';
 
 class CncParameters extends PureComponent {
     static propTypes = {
@@ -196,42 +196,19 @@ class CncParameters extends PureComponent {
                                         >
                                             {i18n._('key-Cnc/ToolpathParameters-Method')}
                                         </span>
-                                        <Select
-                                            disabled={false}
-                                            size="large"
-                                            className={classNames(
-                                                'sm-parameter-row__select-md',
-                                            )}
-                                            clearable={false}
-                                            name="carvePath"
-                                            options={[
-                                                {
-                                                    label: i18n._('key-Cnc/ToolpathParameters-On the Path'),
-                                                    value: 'path'
-                                                },
-                                                {
-                                                    label: i18n._('key-Cnc/ToolpathParameters-Outline'),
-                                                    value: 'outline'
-                                                },
-                                                {
-                                                    label: i18n._('key-Cnc/ToolpathParameters-Fill'),
-                                                    value: 'pocket'
-                                                },
-                                                ...(isRotate ? [] : [{
-                                                    label: i18n._('key-Cnc/ToolpathParameters-Drill'),
-                                                    value: 'drill'
-                                                }])
-                                            ]}
-                                            placeholder={i18n._('key-Cnc/ToolpathParameters-Methodtips_Choose carving path')}
-                                            value={pathType}
-                                            onChange={(option) => {
-                                                const param = { pathType: option.value };
-                                                if (option.value === 'pocket' || option.value === 'drill') {
-                                                    param.enableTab = false;
-                                                }
-                                                this.props.updateGcodeConfig(param);
-                                            }}
-                                        />
+                                        <div className="margin-bottom-8">
+                                            <CncMethodTiles
+                                                value={pathType}
+                                                isRotate={!!isRotate}
+                                                onChange={(value) => {
+                                                    const param = { pathType: value };
+                                                    if (value === 'pocket' || value === 'drill') {
+                                                        param.enableTab = false;
+                                                    }
+                                                    this.props.updateGcodeConfig(param);
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 </TipTrigger>
                             </div>

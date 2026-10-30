@@ -74,6 +74,7 @@ test('+ Add selected state', (t) => {
 test('operation method id', (t) => {
     t.equal(getOperationMethodId({ type: 'vector', gcodeConfig: { pathType: 'outline' } }, 'cnc'), 'outline');
     t.equal(getOperationMethodId({ type: 'vector', gcodeConfig: { pathType: 'drill' } }, 'cnc'), 'drill');
+    t.equal(getOperationMethodId({ type: 'vector', gcodeConfig: { pathType: 'pocket' } }, 'cnc'), 'fill', 'CNC pocket is the Fill method');
     t.equal(getOperationMethodId({ type: 'image', gcodeConfig: {} }, 'cnc'), 'carve');
     t.equal(getOperationMethodId({ type: 'sculpt', gcodeConfig: { sliceMode: 'linkage' } }, 'cnc'), 'linkage');
     t.equal(getOperationMethodId({ type: 'vector', gcodeConfig: { pathType: 'fill' } }, 'laser'), 'fill');

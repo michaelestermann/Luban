@@ -2494,5 +2494,10 @@
     "key-CncLaser/Operations-No operations yet. Select objects and click + New.": "Noch keine Operationen. Objekte auswählen und auf + Neu klicken.",
     "key-CncLaser/Operations-Create an operation from the selected objects.": "Eine Operation aus den ausgewählten Objekten erstellen.",
     "key-CncLaser/SelectionBar-{{count}} objects": "{{count}} Objekte",
-    "key-CncLaser/SelectionBar-Selection actions": "Aktionen für die Auswahl"
+    "key-CncLaser/SelectionBar-Selection actions": "Aktionen für die Auswahl",
+    "key-CncLaser/ToolPathList-Preview up to date": "Vorschau aktuell",
+    "key-CncLaser/ToolPathList-needs preview": "Vorschau nötig",
+    "key-CncLaser/ToolPathList-generating": "wird berechnet",
+    "key-CncLaser/ToolPathList-failed": "fehlgeschlagen",
+    "key-CncLaser/ToolPathSettings-Select a toolpath to change its settings.": "Werkzeugweg auswählen, um seine Einstellungen zu ändern."
 }

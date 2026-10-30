@@ -1,0 +1,49 @@
+// CNC method tiles (redesign mockup StepToolpaths)
+.method-tiles {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 8px 4px;
+    border: 2px solid #e3e6ec;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #2f3441;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        border-color: #b8c5e8;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #1d4ed8;
+        outline-offset: 1px;
+    }
+
+    &:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+    &.selected {
+        border-color: #1d4ed8;
+        background: #e8eefc;
+        color: #1d4ed8;
+    }
+}
+
+.tile-label {
+    max-width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere;
+}

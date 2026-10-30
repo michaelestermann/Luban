@@ -5,7 +5,9 @@ import { HEAD_LASER, PAGE_EDITOR } from '../../../constants';
 import i18n from '../../../lib/i18n';
 import CncLaserObjectList from '../../widgets/CncLaserList/ObjectList';
 import OperationsPanel from '../../widgets/CncLaserList/OperationsPanel';
+import ToolPathListBox from '../../widgets/CncLaserList/ToolPathList';
 import PanelChrome from './PanelChrome';
+import panelStyles from './styles/panel-chrome.styl';
 
 interface ProjectLeftViewProps {
     headType: 'laser' | 'cnc';
@@ -28,9 +30,13 @@ const OperationsIcon: React.FC = () => (
 );
 
 /**
- * Left panel of the Laser/CNC editor: the object list (moved here from the bottom-left card
- * of the canvas) in every step; in step 1 (design) followed by the operations with their
- * objects. Later tasks add the toolpath list (step 2) and the G-code files (step 3).
+ * Left panel of the Laser/CNC editor.
+ * - Step 1 (design): the object list (moved here from the bottom-left card of the canvas),
+ *   then the operations with their objects.
+ * - Steps 2/3 (process page): the toolpath list as cards in milling order (moved here from
+ *   the right panel; select, show/hide, edit dialog, context menu, delete, prioritize,
+ *   create), then the object list (objects are still selected here to create a toolpath
+ *   while the canvas shows the toolpath preview).
  */
 const ProjectLeftView: React.FC<ProjectLeftViewProps> = ({ headType, collapsed, onToggleCollapsed, modeBlocked = false }) => {
     const objectsLabel = i18n._('key-CncLaser/ObjectList_Title-Object List');
@@ -38,25 +44,38 @@ const ProjectLeftView: React.FC<ProjectLeftViewProps> = ({ headType, collapsed, 
     const page = useSelector(state => state[headType]?.page);
     const isOnABPosition = useSelector(state => headType === HEAD_LASER && !!state[HEAD_LASER]?.isOnABPosition);
     const isDesign = page === PAGE_EDITOR;
-    const railItems = [{ key: 'objects', label: objectsLabel, icon: <ObjectsIcon /> }];
-    if (isDesign) {
-        railItems.push({ key: 'operations', label: operationsLabel, icon: <OperationsIcon /> });
-    }
+    const operationsItem = { key: 'operations', label: operationsLabel, icon: <OperationsIcon /> };
+    const objectsItem = { key: 'objects', label: objectsLabel, icon: <ObjectsIcon /> };
+    const railItems = isDesign ? [objectsItem, operationsItem] : [operationsItem, objectsItem];
     return (
         <PanelChrome
             side="left"
-            title={objectsLabel}
+            title={isDesign ? objectsLabel : i18n._('key-CncLaser/Operations-Operations · order')}
             collapsed={collapsed}
             onToggle={onToggleCollapsed}
             collapseLabel={i18n._('key-CncLaser/Panel-Collapse left panel')}
             expandLabel={i18n._('key-CncLaser/Panel-Expand left panel')}
             railItems={railItems}
         >
-            <div className="padding-horizontal-8">
-                <CncLaserObjectList headType={headType} fill />
-            </div>
             {isDesign && (
-                <OperationsPanel headType={headType} blocked={isOnABPosition || modeBlocked} />
+                <>
+                    <div className="padding-horizontal-8">
+                        <CncLaserObjectList headType={headType} fill />
+                    </div>
+                    <OperationsPanel headType={headType} blocked={isOnABPosition || modeBlocked} />
+                </>
+            )}
+            {!isDesign && (
+                <>
+                    {/* widget-list-intro: starter guide hook on the container holding the toolpath list */}
+                    <div className="widget-list-intro">
+                        <ToolPathListBox headType={headType} />
+                    </div>
+                    <span className={panelStyles['section-label']}>{objectsLabel}</span>
+                    <div className="padding-horizontal-8">
+                        <CncLaserObjectList headType={headType} fill />
+                    </div>
+                </>
             )}
         </PanelChrome>
     );

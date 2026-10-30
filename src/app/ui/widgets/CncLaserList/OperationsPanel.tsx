@@ -31,7 +31,7 @@ const METHOD_KEYS = {
     linkage: 'key-Cnc/ToolpathParameters-Linkage'
 };
 
-function methodLabel(methodId: string | null, headType: string): string | null {
+export function methodLabel(methodId: string | null, headType: string): string | null {
     if (!methodId) {
         return null;
     }

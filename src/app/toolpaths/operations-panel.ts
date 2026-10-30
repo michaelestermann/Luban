@@ -94,6 +94,10 @@ export function getOperationMethodId(toolPath: ToolPathLike, headType: string): 
         if (toolPath.type === 'sculpt') {
             return config.sliceMode || null;
         }
+        // the CNC Fill method is stored as pathType 'pocket'
+        if (config.pathType === 'pocket') {
+            return 'fill';
+        }
     }
     return config.pathType || null;
 }

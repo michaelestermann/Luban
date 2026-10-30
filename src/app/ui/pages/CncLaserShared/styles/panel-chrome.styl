@@ -45,11 +45,15 @@
 }
 
 .label {
+    min-width: 0;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: .06em;
     text-transform: uppercase;
     color: #5b6170;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .body {
@@ -119,4 +123,16 @@
 .right .body :global(.widget-list-intro > .widget-list-intro) {
     width: 100%;
     min-height: 0;
+}
+
+// section header inside a panel body (step 2: object list below the toolpaths)
+.section-label {
+    display: block;
+    padding: 12px 14px 6px;
+    border-top: 1px solid #e3e6ec;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #5b6170;
 }

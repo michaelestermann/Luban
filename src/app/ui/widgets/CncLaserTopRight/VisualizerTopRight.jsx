@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import classNames from 'classnames';
 import i18n from '../../../lib/i18n';
-import Checkbox from '../../components/Checkbox';
 
 import { HEAD_CNC, DISPLAYED_TYPE_TOOLPATH } from '../../../constants';
 import { actions as editorActions } from '../../../flux/editor';
@@ -50,48 +49,33 @@ const VisualizerTopRight = ({ headType }) => {
         }
     }, [canGenerateGcode]);
 
+    // CNC only (Laser has no simulation): Toolpath / Simulation as a segmented control at the
+    // top centre of the canvas. Each segment is an independent toggle, as the former checkboxes.
+    if (headType !== HEAD_CNC) {
+        return null;
+    }
+    const segments = [
+        { key: 'toolpath', label: i18n._('key-CncLaser/Preview-Toolpath'), pressed: !!showToolPath, onClick: actions.switchShowToolPath },
+        { key: 'simulation', label: i18n._('key-CncLaser/Preview-Simulation'), pressed: !!showSimulation, onClick: actions.switchShowSimulation }
+    ];
     return (
-        <React.Fragment>
-            <div>
-                {headType === HEAD_CNC && (
-                    <div
-                        className={classNames(
-                            styles['visualizer-top-right'],
-                            'position-absolute',
-                            'right-8',
-                            'width-200',
-                            'border-default-grey-1',
-                            'border-radius-8',
-                            'background-color-white',
-                        )}
-                    >
-                        <div className="border-bottom-normal padding-vertical-8 padding-horizontal-16 height-40">
-                            {i18n._('key-CncLaser/Preview-Preview Type')}
-                        </div>
-                        <div className="padding-vertical-16 padding-horizontal-16">
-                            <div className="sm-flex justify-space-between height-24">
-                                <span>
-                                    {i18n._('key-CncLaser/Preview-Toolpath')}
-                                </span>
-                                <Checkbox
-                                    onChange={actions.switchShowToolPath}
-                                    checked={showToolPath}
-                                />
-                            </div>
-                            <div className="sm-flex justify-space-between height-24 margin-top-16">
-                                <span>
-                                    {i18n._('key-CncLaser/Preview-Simulation')}
-                                </span>
-                                <Checkbox
-                                    onChange={actions.switchShowSimulation}
-                                    checked={showSimulation}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </React.Fragment>
+        <div
+            className={styles['preview-segmented']}
+            role="group"
+            aria-label={i18n._('key-CncLaser/Preview-Preview Type')}
+        >
+            {segments.map(segment => (
+                <button
+                    key={segment.key}
+                    type="button"
+                    aria-pressed={segment.pressed}
+                    className={classNames(styles.segment, { [styles.active]: segment.pressed })}
+                    onClick={segment.onClick}
+                >
+                    {segment.label}
+                </button>
+            ))}
+        </div>
     );
 };
 
