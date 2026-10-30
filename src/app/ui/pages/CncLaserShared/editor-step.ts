@@ -77,3 +77,27 @@ export function stateAfterGcodeFailure(state: EditorStepState): Pick<EditorStepS
     }
     return {};
 }
+
+export interface GoToGcodePlan {
+    // drop the old (stale) G-code file(s) first, so they are never shown or loaded meanwhile
+    clearGcodeFile: boolean;
+    // start the preview (toolpaths + G-code)
+    preview: boolean;
+    // set `gcodeRequested`: show step 3 once the new file arrives (else show step 3 now)
+    request: boolean;
+}
+
+/**
+ * What goToStep('gcode') does. An up-to-date file is shown again as it is. Otherwise the old
+ * file is cleared before regenerating (or before waiting for a generation that is already
+ * running), so neither the regeneration nor a failure leaves stale G-code that a later click
+ * would show as current.
+ */
+export function planGoToGcode(state: EditorStepState): GoToGcodePlan {
+    const upToDate = !!state.gcodeFile && !state.needToPreview && !state.isChangedAfterGcodeGenerating
+        && !state.isGcodeGenerating;
+    if (upToDate) {
+        return { clearGcodeFile: false, preview: false, request: false };
+    }
+    return { clearGcodeFile: true, preview: needsGcodeRegeneration(state), request: true };
+}

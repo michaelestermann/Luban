@@ -1,6 +1,6 @@
 import { test } from 'tape';
 import {
-    getEditorStep, getStepIndex, EDITOR_STEPS, needsGcodeRegeneration, stateAfterGcodeFailure, stateAfterNewGcode
+    getEditorStep, getStepIndex, EDITOR_STEPS, needsGcodeRegeneration, planGoToGcode, stateAfterGcodeFailure, stateAfterNewGcode
 } from '../src/app/ui/pages/CncLaserShared/editor-step';
 
 const gcodeFile = { uploadName: 'a.nc' };
@@ -91,5 +91,46 @@ test('needsGcodeRegeneration: stale, missing or changed G-code is regenerated', 
         'reordered / visibility toggled after generation');
     t.equal(needsGcodeRegeneration({ needToPreview: false, gcodeFile, isChangedAfterGcodeGenerating: false }), false,
         'up-to-date file');
+    t.end();
+});
+
+// applies a goToStep('gcode') plan to the state like the thunk does (preview clears needToPreview)
+const applyPlan = (state, plan) => ({
+    ...state,
+    ...(plan.clearGcodeFile ? { gcodeFile: null, gcodeFiles: [] } : {}),
+    ...(plan.request ? { gcodeRequested: true } : { viewingToolpaths: false }),
+    ...(plan.preview ? { needToPreview: false } : {}),
+});
+
+test('planGoToGcode: an up-to-date file shows step 3 without regenerating or clearing', (t) => {
+    const state = { page: 'process', needToPreview: false, gcodeFile, isChangedAfterGcodeGenerating: false, viewingToolpaths: true };
+    t.deepEqual(planGoToGcode(state), { clearGcodeFile: false, preview: false, request: false });
+    t.equal(getEditorStep(applyPlan(state, planGoToGcode(state))), 'gcode', 'step 3 with the kept file');
+    t.end();
+});
+
+test('planGoToGcode: a requested regeneration clears the stale file first', (t) => {
+    const edited = { page: 'process', needToPreview: true, gcodeFile, viewingToolpaths: true };
+    t.deepEqual(planGoToGcode(edited), { clearGcodeFile: true, preview: true, request: true }, 'needs preview');
+    const reordered = { page: 'process', needToPreview: false, gcodeFile, isChangedAfterGcodeGenerating: true };
+    t.deepEqual(planGoToGcode(reordered), { clearGcodeFile: true, preview: true, request: true }, 'changed toolpaths');
+    const running = { page: 'process', needToPreview: false, gcodeFile, isGcodeGenerating: true };
+    t.deepEqual(planGoToGcode(running), { clearGcodeFile: true, preview: false, request: true },
+        'a running generation: wait for it, the old file is not shown meanwhile');
+    const during = applyPlan(edited, planGoToGcode(edited));
+    t.equal(during.gcodeFile, null, 'no stale file during the regeneration');
+    t.equal(getEditorStep(during), 'toolpaths', 'step 2 during the regeneration');
+    t.end();
+});
+
+test('planGoToGcode: generation failed, then Generate again -> regenerates (no stale file)', (t) => {
+    const edited = { page: 'process', needToPreview: true, gcodeFile, viewingToolpaths: true };
+    const during = applyPlan(edited, planGoToGcode(edited));
+    const failed = { ...during, ...stateAfterGcodeFailure(during) };
+    t.equal(failed.gcodeFile, null, 'no stale file after the failure');
+    t.equal(getEditorStep(failed), 'toolpaths', 'still step 2');
+    const again = planGoToGcode(failed);
+    t.equal(again.preview, true, 'the next click regenerates');
+    t.equal(getEditorStep(applyPlan(failed, again)), 'toolpaths', 'and stays on step 2 until the new file arrives');
     t.end();
 });
