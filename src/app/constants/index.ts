@@ -493,12 +493,14 @@ export const CNC_DEFAULT_GCODE_PARAMETERS_DEFINITION = {
             'Set the processing method of the object.\n'
             + '- On the Path: Carves along the shape of the object. \n'
             + '- Outline: Carves along the outline of the object.\n'
+            + '- Inside: Carves inside the outline of the object, cutting it out as an opening.\n'
             + '- Fill: Carves away the inner area of the object.\n'
             + '- Drill: Plunges at the center of each closed shape.',
         type: 'enum',
         options: {
             path: 'On the Path',
             outline: 'Outline',
+            inside: 'Inside',
             pocket: 'Fill',
             drill: 'Drill'
         },

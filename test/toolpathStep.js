@@ -32,13 +32,13 @@ test('card status: hidden toolpaths are not previewed', (t) => {
     t.end();
 });
 
-test('CNC method tiles: path, outline, fill (pocket), drill with the select values', (t) => {
-    t.deepEqual(getCncMethodTiles(false).map(tile => tile.value), ['path', 'outline', 'pocket', 'drill']);
-    t.deepEqual(getCncMethodTiles(false).map(tile => tile.icon), ['path', 'outline', 'fill', 'drill']);
+test('CNC method tiles: path, outline, inside, fill (pocket), drill with the select values', (t) => {
+    t.deepEqual(getCncMethodTiles(false).map(tile => tile.value), ['path', 'outline', 'inside', 'pocket', 'drill']);
+    t.deepEqual(getCncMethodTiles(false).map(tile => tile.icon), ['path', 'outline', 'inside', 'fill', 'drill']);
     t.end();
 });
 
 test('CNC method tiles: no drill on rotary material', (t) => {
-    t.deepEqual(getCncMethodTiles(true).map(tile => tile.value), ['path', 'outline', 'pocket']);
+    t.deepEqual(getCncMethodTiles(true).map(tile => tile.value), ['path', 'outline', 'inside', 'pocket']);
     t.end();
 });

@@ -101,7 +101,9 @@ export default class CNCToolPathGenerator extends EventEmitter {
     _processPathType(svg, pathType, options) {
         if (pathType === 'path') {
             // empty
-        } else if (pathType === 'outline') {
+        } else if (pathType === 'outline' || pathType === 'inside') {
+            // outline: the tool runs outside the shape (the shape keeps its size);
+            // inside: the tool runs inside the shape (it is cut out as an opening)
             const { targetDepth, toolAngle, toolShaftDiameter } = options;
 
             // radius needed to carve to `targetDepth`
@@ -143,8 +145,9 @@ export default class CNCToolPathGenerator extends EventEmitter {
                         }
                     }
 
-                    // use margin / padding depending on `inside`
-                    if (!inside) {
+                    // use margin / padding depending on `inside` (a hole in a shape is
+                    // offset the other way, so the tool stays out of / in the material)
+                    if (inside === (pathType === 'inside')) {
                         const outlinePoints = polyOffset([path.points], off, ClipperLib.JoinType.jtMiter,
                             path.closed ? ClipperLib.EndType.etClosedPolygon : ClipperLib.EndType.etOpenRound);
                         path.points = outlinePoints[0] || [];

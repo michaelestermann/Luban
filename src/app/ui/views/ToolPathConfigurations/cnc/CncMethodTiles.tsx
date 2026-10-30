@@ -26,6 +26,12 @@ const TileImage: React.FC<{ icon: CncMethodTile['icon'] }> = ({ icon }) => (
                 <rect x="9" y="6" width="26" height="20" rx="4" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 2" />
             </g>
         )}
+        {icon === 'inside' && (
+            <g>
+                <rect x="9" y="6" width="26" height="20" rx="4" fill="#e3e6ec" />
+                <rect x="13" y="10" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 2" />
+            </g>
+        )}
         {icon === 'fill' && (
             <g fill="none" stroke="currentColor">
                 <rect x="10" y="7" width="24" height="18" rx="2" strokeWidth="1.6" />
@@ -43,7 +49,7 @@ const TileImage: React.FC<{ icon: CncMethodTile['icon'] }> = ({ icon }) => (
 );
 
 /**
- * CNC vector method as image tiles (Path / Outline / Fill / Drill). Writes the same
+ * CNC vector method as image tiles (Path / Outline / Inside / Fill / Drill). Writes the same
  * `pathType` values as the former method select; Drill is left out on rotary material.
  */
 const CncMethodTiles: React.FC<CncMethodTilesProps> = ({ value, isRotate, disabled = false, onChange }) => {

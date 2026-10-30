@@ -28,6 +28,7 @@ interface OperationsPanelProps {
 const METHOD_KEYS = {
     path: 'key-Cnc/ToolpathParameters-On the Path',
     outline: 'key-Cnc/ToolpathParameters-Outline',
+    inside: 'key-Cnc/ToolpathParameters-Inside',
     drill: 'key-Cnc/ToolpathParameters-Drill',
     carve: 'key-Cnc/ToolpathParameters-Carve',
     rotation: 'key-Cnc/ToolpathParameters-Rotation',

@@ -35,14 +35,15 @@ export function getToolPathCardStatus(toolPath: ToolPathStatusLike | null | unde
 
 export interface CncMethodTile {
     // gcodeConfig.pathType value, the same values as the former method select
-    value: 'path' | 'outline' | 'pocket' | 'drill';
-    icon: 'path' | 'outline' | 'fill' | 'drill';
+    value: 'path' | 'outline' | 'inside' | 'pocket' | 'drill';
+    icon: 'path' | 'outline' | 'inside' | 'fill' | 'drill';
     labelKey: string;
 }
 
 const CNC_METHOD_TILES: CncMethodTile[] = [
     { value: 'path', icon: 'path', labelKey: 'key-Cnc/ToolpathParameters-On the Path' },
     { value: 'outline', icon: 'outline', labelKey: 'key-Cnc/ToolpathParameters-Outline' },
+    { value: 'inside', icon: 'inside', labelKey: 'key-Cnc/ToolpathParameters-Inside' },
     { value: 'pocket', icon: 'fill', labelKey: 'key-Cnc/ToolpathParameters-Fill' },
     { value: 'drill', icon: 'drill', labelKey: 'key-Cnc/ToolpathParameters-Drill' },
 ];

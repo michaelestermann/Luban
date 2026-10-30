@@ -2459,6 +2459,8 @@
     "key_ui-views-MaterialTestModal-FormComponent-height": "Höhe",
     "key_ui-views-MaterialTestModal-FormComponent-width": "Breite",
     "key-FramePicker-Hint": "Griff am Rahmen anklicken",
+    "key-Cnc/ToolpathParameters-Inside": "Innen",
+    "key-Cnc/ToolpathParameters-Inside_Carves inside the outline of the object, cutting it out as an opening.": "Fräst innerhalb der Kontur des Objekts und schneidet es als Öffnung aus.",
     "key-CncLaser/Stepper-Key {{key}}": "Taste {{key}}",
     "key-CncLaser/Group-Expand": "Aufklappen",
     "key-CncLaser/Group-Collapse": "Zuklappen",

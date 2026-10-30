@@ -125,7 +125,7 @@ class CncParameters extends PureComponent {
         // Session Tab
         let toolDefinitionTabKeys = [];
         const toolDefinitionTab = {};
-        const useCncTabConfig = pathType === 'path' || pathType === 'outline';
+        const useCncTabConfig = pathType === 'path' || pathType === 'outline' || pathType === 'inside';
         if (useCncTabConfig) {
             if (!allDefinition.enableTab.default_value) {
                 toolDefinitionTabKeys = [
@@ -182,6 +182,7 @@ class CncParameters extends PureComponent {
                                             <ul>
                                                 <li><b>{i18n._('key-Cnc/ToolpathParameters-On the Path')}</b>: {i18n._('key-Cnc/ToolpathParameters-Onthepath_Carves along the shape of the object.')}</li>
                                                 <li><b>{i18n._('key-Cnc/ToolpathParameters-Outline')}</b>: {i18n._('key-Cnc/ToolpathParameters-Outline_Carves along the outline of the object.')}</li>
+                                                <li><b>{i18n._('key-Cnc/ToolpathParameters-Inside')}</b>: {i18n._('key-Cnc/ToolpathParameters-Inside_Carves inside the outline of the object, cutting it out as an opening.')}</li>
                                                 <li><b>{i18n._('key-Cnc/ToolpathParameters-Fill')}</b>: {i18n._('key-Cnc/ToolpathParameters-Fill_Carves away the inner area of the object.')}</li>
                                                 {!isRotate && (
                                                     <li><b>{i18n._('key-Cnc/ToolpathParameters-Drill')}</b>: {i18n._('key-Cnc/ToolpathParameters-Drill_Plunges at the center of each closed shape.')}</li>
