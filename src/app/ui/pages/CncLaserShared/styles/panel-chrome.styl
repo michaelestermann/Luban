@@ -1,0 +1,122 @@
+// Side panels of the Laser/CNC editor (colours from the redesign mockups)
+.panel {
+    position: relative;
+    height: 100%;
+    background: #ffffff;
+
+    &.left {
+        width: 290px;
+        border-right: 1px solid #e3e6ec;
+
+        &.collapsed {
+            width: 44px;
+        }
+    }
+
+    &.right {
+        width: 330px;
+        border-left: 1px solid #e3e6ec;
+
+        &.collapsed {
+            width: 0;
+            border-left: 0;
+            background: transparent;
+        }
+    }
+}
+
+.expanded {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+.header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 10px 6px 14px;
+}
+
+.label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #5b6170;
+}
+
+.body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.icon-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #2f3441;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+        background: #eef1f6;
+    }
+
+    &.small {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+.rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding-top: 10px;
+}
+
+.edge-tab {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 28px;
+    height: 64px;
+    padding: 0;
+    border: 1px solid #e3e6ec;
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+    background: #ffffff;
+    color: #2f3441;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(20, 30, 50, .08);
+
+    &:hover {
+        background: #eef1f6;
+    }
+}
+
+// the widget list has a fixed 360px width for the former floating sidebar: fill the panel
+.right .body :global(.widget-list-intro > .widget-list-intro) {
+    width: 100%;
+    min-height: 0;
+}

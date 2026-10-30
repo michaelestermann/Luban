@@ -685,7 +685,6 @@ class Visualizer extends React.Component<VisualizerProps> {
                 </div>
                 <div className="position-absolute left-68 bottom-16">
                     <VisualizerBottomLeft
-                        headType={HEAD_CNC}
                         scale={this.props.scale}
                         minScale={MIN_LASER_CNC_CANVAS_SCALE}
                         maxScale={MAX_LASER_CNC_CANVAS_SCALE}

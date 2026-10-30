@@ -46,3 +46,42 @@
         order: 1;
     }
 }
+
+// Laser/CNC editor: compact toolbar row (52px), left panel | canvas | right panel
+[class~='appbar'] {
+    .project-layout.with-panels .content-flex {
+        height: calc(100vh - 79px);
+    }
+}
+
+.project-layout.with-panels {
+    .main-toolbar {
+        border-top: 0;
+        border-bottom: 1px solid #e3e6ec;
+    }
+
+    :global(.ant-spin.ant-spin-spinning) {
+        height: calc(100vh - 54px)
+    }
+
+    .content-flex {
+        height: calc(100vh - 54px);
+        background-color: #eef1f5;
+        position: relative;
+    }
+
+    .left-panel {
+        flex: 0 0 auto;
+        order: -1;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .right-panel {
+        flex: 0 0 auto;
+        order: 1;
+        height: 100%;
+        position: relative;
+        z-index: 20;
+    }
+}

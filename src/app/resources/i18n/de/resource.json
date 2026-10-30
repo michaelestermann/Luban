@@ -2467,5 +2467,18 @@
     "key-FramePicker-MiddleRight": "Mitte rechts",
     "key-FramePicker-BottomLeft": "Unten links",
     "key-FramePicker-BottomCentre": "Unten Mitte",
-    "key-FramePicker-BottomRight": "Unten rechts"
+    "key-FramePicker-BottomRight": "Unten rechts",
+    "key-CncLaser/Stepper-Design": "Entwurf",
+    "key-CncLaser/Stepper-Toolpaths": "Werkzeugwege",
+    "key-CncLaser/Stepper-G-code": "G-Code",
+    "key-CncLaser/Stepper-Workflow steps": "Arbeitsschritte",
+    "key-CncLaser/Stepper-Next: Toolpaths": "Weiter: Werkzeugwege",
+    "key-CncLaser/Stepper-Generate G-code": "G-Code erzeugen",
+    "key-CncLaser/Stepper-Load all to workspace": "Alle in den Arbeitsbereich laden",
+    "key-CncLaser/Stepper-Back": "Zurück",
+    "key-CncLaser/Panel-Properties": "Eigenschaften",
+    "key-CncLaser/Panel-Collapse left panel": "Linkes Panel einklappen",
+    "key-CncLaser/Panel-Expand left panel": "Linkes Panel ausklappen",
+    "key-CncLaser/Panel-Collapse right panel": "Rechtes Panel einklappen",
+    "key-CncLaser/Panel-Expand right panel": "Rechtes Panel ausklappen"
 }

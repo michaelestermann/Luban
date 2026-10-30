@@ -7,12 +7,10 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import {
     DISPLAYED_TYPE_TOOLPATH,
     PAGE_EDITOR,
-    PAGE_PROCESS,
 } from '../../../constants';
 import { actions as editorActions } from '../../../flux/editor';
 import { RootState } from '../../../flux/index.def';
 import { actions as projectActions } from '../../../flux/project';
-import gcodeActions from '../../../flux/workspace/actions-gcode';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
@@ -27,7 +25,7 @@ import { LaserWorkspaceRay } from '../../pages/laser-workspace-ray';
 import { renderPopup } from '../../utils';
 import Thumbnail from '../CncLaserShared/Thumbnail';
 import styles from './styles.styl';
-import { planWorkspaceLoad } from '../../../flux/workspace/gcode-file-list';
+import { loadGcodeToWorkspace } from './load-gcode-to-workspace';
 
 export type LoadGcodeOptions = {
     renderImmediately?: boolean;
@@ -75,9 +73,6 @@ const Output: React.FC<OutputViewProps> = (props) => {
                 dispatch(editorActions.showToolPathGroupObject(headType));
             }
         },
-        switchToProcess: () => {
-            dispatch(editorActions.switchToPage(headType, PAGE_PROCESS));
-        },
         onGenerateThumbnail: () => {
             dispatch(editorActions.setThumbnail(headType, thumbnail?.current?.getThumbnail(series)));
         },
@@ -94,13 +89,6 @@ const Output: React.FC<OutputViewProps> = (props) => {
         },
         showToolPathObject: () => {
             dispatch(editorActions.showToolPathGroupObject(headType));
-        },
-        preview: async () => {
-            if (needToPreview) {
-                await dispatch(editorActions.preview(headType));
-            } else {
-                dispatch(editorActions.showToolPathGroupObject(headType));
-            }
         },
         setAutoPreview: (enable) => {
             dispatch(editorActions.setAutoPreview(headType, enable));
@@ -121,27 +109,17 @@ const Output: React.FC<OutputViewProps> = (props) => {
     };
 
     const onLoadGcodeToWorkspace = useCallback(async () => {
-        if (gcodeFile === null) {
+        const loaded = await dispatch(loadGcodeToWorkspace(headType, loadGcodeOptions?.renderImmediately || false));
+        if (!loaded) {
             return;
         }
-
-        logGcodeExport(headType, 'workspace', materials.isRotate);
-
-        // workspace render G-code. CNC jobs with several tools: replace the job's earlier files,
-        // list all files with file 1 on top, and preview/activate only file 1
-        const files = gcodeFiles.length > 0 ? gcodeFiles : [gcodeFile];
-        dispatch(gcodeActions.removeGcodeFilesOfJob(files[0].jobName));
-        const { listOnly, active } = planWorkspaceLoad(files);
-        listOnly.forEach(file => dispatch(gcodeActions.addGCodeFile(file)));
-        await dispatch(gcodeActions.renderGcodeFile(active, true, loadGcodeOptions?.renderImmediately || false));
 
         // open workspace
         setShowWorkspace(true);
         window.scrollTo(0, 0);
     }, [
-        gcodeFile,
-        gcodeFiles,
-        materials.isRotate,
+        dispatch,
+        headType,
         loadGcodeOptions?.renderImmediately,
     ]);
 
@@ -189,7 +167,8 @@ const Output: React.FC<OutputViewProps> = (props) => {
     });
 
     const isEditor = page === PAGE_EDITOR;
-    const hasToolPathModel = (toolPathGroup.toolPaths.length > 0);
+    // the preview toggle, file list and Export only exist once the toolpaths are previewed
+    const hasVisibleContent = !isEditor && !needToPreview;
 
     const menu = (
         <Menu>
@@ -213,28 +192,9 @@ const Output: React.FC<OutputViewProps> = (props) => {
     );
 
     return (
-        <div className={classNames('border-radius-8', 'background-color-white', styles['output-wrapper'], `${headType}-preview-export-intro-part`)}>
-            <div className={classNames('position-re', 'margin-horizontal-16', 'margin-vertical-16')}>
-                {isEditor && (
-                    <Button
-                        type="primary"
-                        priority="level-one"
-                        onClick={actions.switchToProcess}
-                        disabled={isOnABPosition || (!hasModel ?? false)}
-                    >
-                        {i18n._('key-CncLaser/G-codeAction-Next')}
-                    </Button>
-                )}
-                {(!isEditor && needToPreview) && (
-                    <Button
-                        type="primary"
-                        priority="level-one"
-                        onClick={actions.preview}
-                        disabled={isOnABPosition || ((!hasToolPathModel ?? false) || shouldRenderToolPaths)}
-                    >
-                        {i18n._('key-CncLaser/G-codeAction-Generate G-code and Preview')}
-                    </Button>
-                )}
+        <div>
+            {/* "Next" and "Generate G-code" moved to the stepper row (CncLaserShared/Stepper) */}
+            <div className={classNames(styles['output-wrapper'], { 'display-none': !hasVisibleContent })}>
                 {!isEditor && !needToPreview && displayedType === DISPLAYED_TYPE_TOOLPATH && !showExportOptions && (
                     <Button
                         type="default"

@@ -11,9 +11,11 @@ import ModelItem from './model-item';
 
 interface ObjectListBoxProps {
     headType: 'laser' | 'cnc';
+    // fill the parent (side panel) instead of the fixed-size card list
+    fill?: boolean;
 }
 
-const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType }) => {
+const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false }) => {
     const selectedModelArray = useSelector(state => state[headType].modelGroup?.selectedModelArray);
     const models = useSelector(state => state[headType]?.modelGroup?.models);
 
@@ -74,8 +76,7 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType }) => {
     return (
         <div
             className={classNames(
-                styles['object-list-box'],
-                'width-264',
+                fill ? styles['object-list-fill'] : [styles['object-list-box'], 'width-264'],
             )}
         >
             <div className={classNames('padding-vertical-4')}>

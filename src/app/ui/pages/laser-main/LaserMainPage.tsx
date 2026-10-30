@@ -20,6 +20,8 @@ import LaserVisualizer from '../../widgets/LaserVisualizer';
 import useRenderMainToolBar from '../CncLaserShared/MainToolBar';
 import useRenderRemoveModelsWarning from '../CncLaserShared/RemoveAllModelsWarning';
 import RenderProjectRightView from '../CncLaserShared/ProjectRightView';
+import ProjectLeftView from '../CncLaserShared/ProjectLeftView';
+import { usePanelCollapse } from '../CncLaserShared/PanelChrome';
 import HomePage from '../HomePage';
 import Workspace from '../Workspace';
 import StarterGuide from './StarterGuide';
@@ -154,6 +156,9 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
     };
 
     const warningRemovingModels = useRenderRemoveModelsWarning({ headType: HEAD_LASER });
+    // side panels: collapse state per page (not persisted)
+    const [leftCollapsed, toggleLeftCollapsed] = usePanelCollapse();
+    const [rightCollapsed, toggleRightCollapsed] = usePanelCollapse();
     const listActions = {
         onDragStart: () => {
             setIsDraggingWidget(true);
@@ -254,6 +259,17 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
         <div>
             <ProjectLayout
                 renderMainToolBar={renderMainToolBar}
+                leftCollapsed={leftCollapsed}
+                rightCollapsed={rightCollapsed}
+                renderLeftView={
+                    () => (
+                        <ProjectLeftView
+                            headType={HEAD_LASER}
+                            collapsed={leftCollapsed}
+                            onToggleCollapsed={toggleLeftCollapsed}
+                        />
+                    )
+                }
                 renderRightView={
                     () => (
                         <RenderProjectRightView
@@ -261,6 +277,8 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
                             page={page}
                             widgets={widgets}
                             listActions={listActions}
+                            collapsed={rightCollapsed}
+                            onToggleCollapsed={toggleRightCollapsed}
                         />
                     )
                 }

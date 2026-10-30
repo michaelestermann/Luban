@@ -9,7 +9,7 @@ import SvgIcon from '../components/SvgIcon';
 import { longLangWithType } from '../../constants';
 // import Anchor from '../components/Anchor';
 
-function MenuItem({ menuItem, actions, lang, headType }) {
+function MenuItem({ menuItem, actions, lang, headType, compact = false }) {
     const { type = 'button', name = 'Copy', iconClassName, title, inputInfo, disabled = false } = menuItem;
     const { customRender = noop } = menuItem;
     function handleClick(e) {
@@ -24,9 +24,27 @@ function MenuItem({ menuItem, actions, lang, headType }) {
     switch (itemType) {
         case 'separator':
             return (
-                <div className={styles.separator} />
+                <div className={compact ? styles['separator-compact'] : styles.separator} />
             );
         case 'button':
+            if (compact) {
+                // icon only, the title is the tooltip (and the accessible name)
+                return (
+                    <Tooltip title={i18n._(title)}>
+                        <span aria-label={i18n._(title)} className="display-inline">
+                            <SvgIcon
+                                size={24}
+                                name={name}
+                                disabled={disabled}
+                                className={classNames(styles['bar-icon-compact'], iconClassName)}
+                                onClick={(e) => handleClick(e)}
+                                inputInfo={inputInfo}
+                                type={['static']}
+                            />
+                        </span>
+                    </Tooltip>
+                );
+            }
             return (
                 <Tooltip title={i18n._(title)}>
                     <SvgIcon
@@ -54,7 +72,8 @@ MenuItem.propTypes = {
     menuItem: PropTypes.object.isRequired,
     actions: PropTypes.object.isRequired,
     lang: PropTypes.string,
-    headType: PropTypes.string
+    headType: PropTypes.string,
+    compact: PropTypes.bool
 };
 
 export default MenuItem;

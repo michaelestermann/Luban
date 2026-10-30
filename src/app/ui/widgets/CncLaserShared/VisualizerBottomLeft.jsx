@@ -2,15 +2,12 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import i18n from '../../../lib/i18n';
-import Card from '../../components/Card';
 import Slider from '../../components/Slider';
 import SvgIcon from '../../components/SvgIcon';
 // import styles from './styles.styl';
 import { DISPLAYED_TYPE_TOOLPATH, MAX_LASER_CNC_CANVAS_SCALE, MIN_LASER_CNC_CANVAS_SCALE } from '../../../constants';
-import CncLaserObjectList from '../CncLaserList/ObjectList';
 
-const VisualizerBottomLeft = ({ headType, toFront, zoomOut, zoomIn, scale, minScale, maxScale, updateScale, displayedType }) => {
+const VisualizerBottomLeft = ({ toFront, zoomOut, zoomIn, scale, minScale, maxScale, updateScale, displayedType }) => {
     return (
         <div
             style={{
@@ -18,18 +15,7 @@ const VisualizerBottomLeft = ({ headType, toFront, zoomOut, zoomIn, scale, minSc
                 cursor: 'auto',
             }}
         >
-            <div className="margin-horizontal-8">
-                <div className="margin-bottom-8">
-                    <Card
-                        title={i18n._('key-CncLaser/ObjectList_Title-Object List')}
-                        hasToggleButton
-                    >
-                        <CncLaserObjectList
-                            headType={headType}
-                        />
-                    </Card>
-                </div>
-            </div>
+            {/* The object list moved to the left panel (CncLaserShared/ProjectLeftView) */}
             {displayedType !== DISPLAYED_TYPE_TOOLPATH && (
                 <div className={classNames('margin-horizontal-8', 'height-24')}>
                     <SvgIcon
@@ -72,7 +58,6 @@ VisualizerBottomLeft.propTypes = {
     minScale: PropTypes.number,
     maxScale: PropTypes.number,
     updateScale: PropTypes.func.isRequired,
-    headType: PropTypes.string.isRequired,
     displayedType: PropTypes.string
 };
 

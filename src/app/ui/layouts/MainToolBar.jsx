@@ -23,7 +23,11 @@ class MainToolBar extends React.PureComponent {
         isConnected: PropTypes.bool,
         materialInfo: PropTypes.object,
         setShowMachineMaterialSettings: PropTypes.func,
-        wrapID: PropTypes.string
+        wrapID: PropTypes.string,
+        // compact: icon-only buttons in one row with a centre (stepper) and a right slot
+        compact: PropTypes.bool,
+        renderCenter: PropTypes.func,
+        renderRight: PropTypes.func
     };
 
     state = {};
@@ -52,9 +56,38 @@ class MainToolBar extends React.PureComponent {
         } = this.props;
 
         const { activeMachine = null } = this.props;
-        const { wrapID } = this.props;
+        const { wrapID, compact = false, renderCenter, renderRight } = this.props;
 
         let key = 0;
+        if (compact) {
+            return (
+                <div
+                    id={wrapID || ''}
+                    className={classNames(styles['toolbar-container'], styles['toolbar-compact'], mainBarClassName || '')}
+                >
+                    <div className={styles['compact-items']}>
+                        {
+                            leftItems && leftItems.filter(item => item).map((menuItem) => (
+                                <MenuItem
+                                    key={key++}
+                                    menuItem={menuItem}
+                                    actions={actions}
+                                    lang={lang}
+                                    headType={headType}
+                                    compact
+                                />
+                            ))
+                        }
+                    </div>
+                    <div className={styles['compact-center']}>
+                        {renderCenter && renderCenter()}
+                    </div>
+                    <div className={styles['compact-right']}>
+                        {renderRight && renderRight()}
+                    </div>
+                </div>
+            );
+        }
         return (
             <div
                 id={wrapID || ''}

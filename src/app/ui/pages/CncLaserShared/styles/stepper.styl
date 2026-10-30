@@ -1,0 +1,94 @@
+// Stepper and primary action of the Laser/CNC editor (colours from the redesign mockups)
+.stepper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.step {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: #2f3441;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover:not(:disabled):not(.current) {
+        background: #eef1f6;
+    }
+
+    &.done {
+        color: #15803d;
+        font-weight: 600;
+    }
+
+    &.current {
+        background: #1d4ed8;
+        color: #ffffff;
+        font-weight: 600;
+        cursor: default;
+    }
+
+    &:disabled {
+        color: #b4b9c4;
+        cursor: not-allowed;
+    }
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.secondary,
+.primary {
+    height: 36px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:disabled {
+        cursor: not-allowed;
+    }
+}
+
+.secondary {
+    padding: 0 16px;
+    border: 1px solid #d9dde6;
+    background: #ffffff;
+    color: #1f2430;
+
+    &:hover:not(:disabled) {
+        background: #eef1f6;
+    }
+
+    &:disabled {
+        color: #b4b9c4;
+    }
+}
+
+.primary {
+    padding: 0 18px;
+    border: 0;
+    background: #1d4ed8;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+        background: #1e40af;
+    }
+
+    &:disabled {
+        background: #e8eefc;
+        color: #9aa1b0;
+    }
+}

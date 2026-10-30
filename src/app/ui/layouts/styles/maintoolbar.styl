@@ -70,3 +70,66 @@
     //white-space: normal !important;
     margin-top: 2px;
 }
+
+// Compact row (Laser/CNC editor): icon buttons | stepper | primary action
+.toolbar-compact {
+    display: flex;
+    align-items: center;
+    height: 52px;
+    padding: 0 12px;
+    gap: 12px;
+
+    .compact-items {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+
+        &::-webkit-scrollbar {
+            height: 4px;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: #d9dde6;
+            border-radius: 2px;
+        }
+    }
+
+    .compact-center {
+        flex: 0 0 auto;
+        display: flex;
+        justify-content: center;
+    }
+
+    .compact-right {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .bar-icon-compact {
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+        border-radius: 8px;
+        text-align: center;
+        flex: 0 0 auto;
+
+        &:hover {
+            background: #eef1f6 !important;
+        }
+    }
+
+    .separator-compact {
+        flex: 0 0 auto;
+        width: 1px;
+        height: 24px;
+        margin: 0 6px;
+        background-color: #e3e6ec;
+    }
+}

@@ -1,12 +1,12 @@
 import { Machine } from '@snapmaker/luban-platform';
-import { message } from 'antd';
+import { message, Tooltip } from 'antd';
 import i18next from 'i18next';
 import { includes } from 'lodash';
 import PropTypes from 'prop-types';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
-import { HEAD_CNC, HEAD_LASER, PROCESS_MODE_GREYSCALE, PROCESS_MODE_VECTOR, longLangWithType } from '../../../constants';
+import { HEAD_CNC, HEAD_LASER, PROCESS_MODE_GREYSCALE, PROCESS_MODE_VECTOR } from '../../../constants';
 import { getMachineToolOptions } from '../../../constants/machines';
 import { actions as editorActions } from '../../../flux/editor';
 import { RootState } from '../../../flux/index.def';
@@ -15,7 +15,7 @@ import { actions as projectActions } from '../../../flux/project';
 import { ConnectionType } from '../../../flux/workspace/state';
 import i18n from '../../../lib/i18n';
 import { canDecomposeSelection, getDecomposeHref, loadDecomposeInfo } from '../../../lib/svg-decompose';
-import { SnapmakerOriginalExtendedMachine, SnapmakerOriginalMachine } from '../../../machines';
+import { SnapmakerOriginalExtendedMachine, SnapmakerOriginalMachine, SnapmakerRayMachine } from '../../../machines';
 import { calculateElemsBoundingbox, handleClipPath, handleMask } from '../../SVGEditor/lib/ImageSvgCompose';
 import Dropdown from '../../components/Dropdown';
 import Menu from '../../components/Menu';
@@ -29,6 +29,7 @@ import MaterialThicknessInput from '../../widgets/LaserCameraAidBackground/Mater
 import SelectCaptureMode, { MODE_THICKNESS_COMPENSATION } from '../../widgets/LaserCameraAidBackground/SelectCaptureMode';
 import LaserSetBackground from '../../widgets/LaserSetBackground';
 import { L20WLaserToolModule, L2WLaserToolModule, L40WLaserToolModule } from '../../../machines/snapmaker-2-toolheads';
+import { Stepper, StepperActions } from './Stepper';
 
 function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setShowMaterialTest, setShowWorkspace,
     onChangeSVGClippingMode,
@@ -147,6 +148,35 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
     function handleShowStlModal() {
         setShowStlModal(true);
     }
+
+    // compact toolbar row: dropdown items as icon + arrow, the title is the tooltip
+    const renderCompactDropdown = (iconName: string, title: string, overlay: React.ReactElement) => (
+        <Tooltip title={title}>
+            <span className="display-inline">
+                <Dropdown
+                    className="display-inline align-c"
+                    overlay={overlay}
+                >
+                    <div
+                        aria-label={title}
+                        className="hover-normal-grey-2 border-radius-8"
+                        style={{ display: 'flex', alignItems: 'center', height: 36, padding: '0 2px 0 6px', fontSize: 0, cursor: 'pointer' }}
+                    >
+                        <SvgIcon
+                            name={iconName}
+                            size={24}
+                            type={['static']}
+                        />
+                        <SvgIcon
+                            type={['static']}
+                            name="DropdownOpen"
+                            size={16}
+                        />
+                    </div>
+                </Dropdown>
+            </span>
+        </Tooltip>
+    );
 
     const leftItems = [
         {
@@ -413,30 +443,7 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
                     if (!machineToolOptions?.supportCameraCapture) {
                         return null;
                     }
-                    return (
-                        <Dropdown
-                            className="display-inline align-c padding-horizontal-2 height-50"
-                            overlay={cameraCaptureMenu}
-                        >
-                            <div
-                                className="display-inline font-size-0 v-align-t hover-normal-grey-2 border-radius-4 padding-top-4"
-                            >
-                                <SvgIcon
-                                    name="MainToolbarCameraCapture"
-                                    type={['static']}
-                                >
-                                    <div className={`${includes(longLangWithType[i18next.language], headType) ? 'font-size-small' : 'font-size-base margin-top-4'} color-black-3 height-16`}>
-                                        {i18n._('key-CncLaser/MainToolBar-Camera Capture')}
-                                        <SvgIcon
-                                            type={['static']}
-                                            name="DropdownOpen"
-                                            size={20}
-                                        />
-                                    </div>
-                                </SvgIcon>
-                            </div>
-                        </Dropdown>
-                    );
+                    return renderCompactDropdown('MainToolbarCameraCapture', i18n._('key-CncLaser/MainToolBar-Camera Capture'), cameraCaptureMenu);
                 }
             },
         );
@@ -538,30 +545,7 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
             {
                 type: 'render',
                 customRender: () => {
-                    return (
-                        <Dropdown
-                            className="display-inline align-c padding-horizontal-2 height-50"
-                            overlay={showStlMenu}
-                        >
-                            <div
-                                className="display-inline font-size-0 v-align-t hover-normal-grey-2 border-radius-4 padding-top-4"
-                            >
-                                <SvgIcon
-                                    name="MainToolbarStl3dView"
-                                    type={['static']}
-                                >
-                                    <div className={`${includes(longLangWithType[i18next.language], headType) ? 'font-size-small' : 'font-size-base'} "color-black-3 height-16"`}>
-                                        {i18n._('key-CncLaser/MainToolBar-STL 3D View')}
-                                        <SvgIcon
-                                            type={['static']}
-                                            name="DropdownOpen"
-                                            size={20}
-                                        />
-                                    </div>
-                                </SvgIcon>
-                            </div>
-                        </Dropdown>
-                    );
+                    return renderCompactDropdown('MainToolbarStl3dView', i18n._('key-CncLaser/MainToolBar-STL 3D View'), showStlMenu);
                 }
             },
         );
@@ -668,6 +652,11 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
             onClose: () => { setShowCameraCapture(false); }
         });
     })();
+    // A-B position mode and SVG clipping mode block the workflow steps (as the former
+    // Next / Generate / Export buttons did for A-B position mode)
+    const stepperBlocked = !!isOnABPosition || isSVGClipping;
+    const onOpenWorkspace = useCallback(() => setShowWorkspace(true), [setShowWorkspace]);
+
     const renderStlModal = () => {
         return (
             <Cnc3DVisualizer show={showStlModal} />
@@ -685,6 +674,18 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
                     headType={headType}
                     // machineInfo={machineInfo}
                     isConnected={isConnected}
+                    compact
+                    renderCenter={() => (
+                        <Stepper headType={headType} blocked={stepperBlocked} />
+                    )}
+                    renderRight={() => (
+                        <StepperActions
+                            headType={headType}
+                            blocked={stepperBlocked}
+                            renderImmediately={activeMachine?.identifier === SnapmakerRayMachine.identifier}
+                            onOpenWorkspace={onOpenWorkspace}
+                        />
+                    )}
                 />
             );
         }

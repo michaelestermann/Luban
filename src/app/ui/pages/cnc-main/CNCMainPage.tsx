@@ -33,6 +33,8 @@ import CNCVisualizer from '../../widgets/CNCVisualizer';
 import Thumbnail from '../../widgets/CncLaserShared/Thumbnail';
 import useRenderMainToolBar from '../CncLaserShared/MainToolBar';
 import RenderProjectRightView from '../CncLaserShared/ProjectRightView';
+import ProjectLeftView from '../CncLaserShared/ProjectLeftView';
+import { usePanelCollapse } from '../CncLaserShared/PanelChrome';
 import useRenderRemoveModelsWarning from '../CncLaserShared/RemoveAllModelsWarning';
 import HomePage from '../HomePage';
 import Workspace from '../Workspace';
@@ -198,6 +200,9 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
 
     const warningModal = useRenderWarning();
     const removeModelsWarningModal = useRenderRemoveModelsWarning({ headType: HEAD_CNC });
+    // side panels: collapse state per page (not persisted)
+    const [leftCollapsed, toggleLeftCollapsed] = usePanelCollapse();
+    const [rightCollapsed, toggleRightCollapsed] = usePanelCollapse();
     const listActions = {
         onDragStart: () => {
             setIsDraggingWidget(true);
@@ -388,6 +393,17 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
         <div>
             <ProjectLayout
                 renderMainToolBar={renderMainToolBar}
+                leftCollapsed={leftCollapsed}
+                rightCollapsed={rightCollapsed}
+                renderLeftView={
+                    () => (
+                        <ProjectLeftView
+                            headType={HEAD_CNC}
+                            collapsed={leftCollapsed}
+                            onToggleCollapsed={toggleLeftCollapsed}
+                        />
+                    )
+                }
                 renderRightView={
                     () => (
                         <RenderProjectRightView
@@ -395,6 +411,8 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
                             page={page}
                             widgets={widgets}
                             listActions={listActions}
+                            collapsed={rightCollapsed}
+                            onToggleCollapsed={toggleRightCollapsed}
                         />
                     )
                 }
