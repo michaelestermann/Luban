@@ -44,6 +44,7 @@ import { actions as machineActions } from '../machine';
 import definitionManager from '../manager/DefinitionManager';
 import { SVGClippingOperation, SVGClippingType } from '../../constants/clipping';
 import { createSVGElement } from '../../ui/SVGEditor/element-utils';
+import { isActionForOtherHead } from '../head-type-action';
 
 const initModelGroup = new ModelGroup2D('laser');
 const initToolPathGroup = new ToolPathGroup(initModelGroup, 'laser');
@@ -768,9 +769,12 @@ export default function reducer(state = INITIAL_STATE, action) {
     const { headType, type } = action;
     switch (type) {
         case ACTION_UPDATE_STATE: {
+            // CNC editor updates use the same action type; they must not change the laser state
+            if (isActionForOtherHead(action, HEAD_LASER)) return state;
             return Object.assign({}, state, { ...action.state });
         }
         case ACTION_UPDATE_CONFIG: {
+            if (isActionForOtherHead(action, HEAD_LASER)) return state;
             return Object.assign({}, state, {
                 config: { ...state.config, ...action.config }
             });
