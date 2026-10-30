@@ -318,7 +318,7 @@ function ToolPathFastConfigurations({ setEditingToolpath, headType, toolpath }) 
                 }
             };
             // todo merge 'updateGcodeConfig' and 'updateToolConfig' function
-            if (currentToolDefinition.settings) {
+            if (currentToolDefinition?.settings) {
                 let shouldUpdateDefinition = false;
                 Object.entries(option).forEach(([itemKey, itemValue]) => {
                     const newKey = toLine(itemKey);
@@ -373,7 +373,8 @@ function ToolPathFastConfigurations({ setEditingToolpath, headType, toolpath }) 
     }
     const isModifiedDefinition = actions.checkIfDefinitionModified();
 
-    const showMethodTiles = headType === HEAD_CNC && toolPath.type === TOOLPATH_TYPE_VECTOR;
+    // like the other parameters, the method tiles need the active tool definition
+    const showMethodTiles = headType === HEAD_CNC && toolPath.type === TOOLPATH_TYPE_VECTOR && !!activeToolListDefinition;
 
     return (
         <React.Fragment>
