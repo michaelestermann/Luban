@@ -68,6 +68,7 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
     // subview
     const [showHomePage, setShowHomePage] = useState(false);
     const [showWorkspace, setShowWorkspace] = useState(false);
+    const openWorkspace = useCallback(() => setShowWorkspace(true), []);
     const [showJobType, setShowJobType] = useState(true);
     const [showMaterialTest, setShowMaterialTest] = useState(false);
 
@@ -267,6 +268,7 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
                             headType={HEAD_LASER}
                             collapsed={leftCollapsed}
                             onToggleCollapsed={toggleLeftCollapsed}
+                            onOpenWorkspace={openWorkspace}
                             modeBlocked={pageMode === PageMode.SVGClipping || pageMode === PageMode.ABPosition}
                         />
                     )
@@ -280,6 +282,7 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
                             listActions={listActions}
                             collapsed={rightCollapsed}
                             onToggleCollapsed={toggleRightCollapsed}
+                            onOpenWorkspace={openWorkspace}
                         />
                     )
                 }

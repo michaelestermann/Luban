@@ -1,5 +1,6 @@
+import workspaceBaseActions from '../../../flux/workspace/actions-base';
 import gcodeActions from '../../../flux/workspace/actions-gcode';
-import { planWorkspaceLoad } from '../../../flux/workspace/gcode-file-list';
+import { planSingleFileWorkspaceLoad, planWorkspaceLoad } from '../../../flux/workspace/gcode-file-list';
 import { logGcodeExport } from '../../../lib/gaEvent';
 
 /**
@@ -22,6 +23,28 @@ export const loadGcodeToWorkspace = (headType: 'laser' | 'cnc', renderImmediatel
     dispatch(gcodeActions.removeGcodeFilesOfJob(files[0].jobName));
     const { listOnly, active } = planWorkspaceLoad(files);
     listOnly.forEach(file => dispatch(gcodeActions.addGCodeFile(file)));
+    await dispatch(gcodeActions.renderGcodeFile(active, true, renderImmediately));
+    return true;
+};
+
+/**
+ * Load one file of the generated job into the workspace (G-code step, "Send via Wi-Fi" on a
+ * file card). The file goes on top of the workspace list, like file 1 of "Load all"; files
+ * of the same job sent before stay, files of an earlier generation of the job are dropped.
+ *
+ * Returns false when the file is not part of the current G-code. The caller opens the workspace.
+ */
+export const loadGcodeFileToWorkspace = (headType: 'laser' | 'cnc', uploadName: string, renderImmediately = false) => async (dispatch, getState) => {
+    const { gcodeFile, gcodeFiles = [], materials } = getState()[headType];
+    const jobFiles: any[] = gcodeFiles.length > 0 ? gcodeFiles : [gcodeFile].filter(Boolean);
+    const { keep, active } = planSingleFileWorkspaceLoad(getState().workspace.gcodeFiles || [], jobFiles, uploadName);
+    if (!active) {
+        return false;
+    }
+
+    logGcodeExport(headType, 'workspace', materials?.isRotate);
+
+    dispatch(workspaceBaseActions.updateState({ gcodeFiles: keep }));
     await dispatch(gcodeActions.renderGcodeFile(active, true, renderImmediately));
     return true;
 };

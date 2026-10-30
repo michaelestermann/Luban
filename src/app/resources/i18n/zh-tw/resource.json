@@ -2478,5 +2478,20 @@
     "key-CncLaser/ToolPathList-needs preview": "needs preview",
     "key-CncLaser/ToolPathList-generating": "generating",
     "key-CncLaser/ToolPathList-failed": "failed",
-    "key-CncLaser/ToolPathSettings-Select a toolpath to change its settings.": "Select a toolpath to change its settings."
+    "key-CncLaser/ToolPathSettings-Select a toolpath to change its settings.": "Select a toolpath to change its settings.",
+    "key-CncLaser/GcodeFiles-Files": "Files",
+    "key-CncLaser/GcodeFiles-Files · change tool between them": "Files · change tool between them",
+    "key-CncLaser/GcodeFiles-Send via Wi-Fi": "Send via Wi-Fi",
+    "key-CncLaser/GcodeFiles-Change bit · re-zero Z": "Change bit · re-zero Z",
+    "key-CncLaser/JobPanel-Machine": "Machine",
+    "key-CncLaser/JobPanel-Not connected": "Not connected",
+    "key-CncLaser/JobPanel-Connected via serial port": "Connected via serial port",
+    "key-CncLaser/JobPanel-Job": "Job",
+    "key-CncLaser/JobPanel-Total time": "Total time",
+    "key-CncLaser/JobPanel-Files": "Files",
+    "key-CncLaser/JobPanel-Tool changes": "Tool changes",
+    "key-CncLaser/JobPanel-Work area": "Work area",
+    "key-CncLaser/JobPanel-Before file {{file}}": "Before file {{file}}",
+    "key-CncLaser/JobPanel-Before files {{files}}": "Before files {{files}}",
+    "key-CncLaser/JobPanel-Swap the bit as shown in the list and set the Z zero again on the machine. Luban adds no tool-change pause.": "Swap the bit as shown in the list and set the Z zero again on the machine. Luban adds no tool-change pause."
 }

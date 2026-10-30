@@ -31,3 +31,33 @@ export const removeJobFiles = <T extends { jobName?: string }>(files: T[], jobNa
     }
     return files.filter(file => file.jobName !== jobName);
 };
+
+type JobFileEntry = { uploadName?: string; jobName?: string };
+
+/**
+ * Drop files of an earlier generation of a job (same job name, not among the job's current
+ * files). Files of the current generation that were sent before stay.
+ */
+export const removeStaleJobFiles = <T extends JobFileEntry>(files: T[], jobFiles: JobFileEntry[]): T[] => {
+    const jobName = jobFiles[0]?.jobName;
+    if (!jobName) {
+        return files;
+    }
+    const current = new Set(jobFiles.map(file => file.uploadName));
+    return files.filter(file => file.jobName !== jobName || current.has(file.uploadName));
+};
+
+/**
+ * Loading one file of a job ("Send via Wi-Fi" on a file card): that file becomes the active
+ * file; the workspace list keeps the job's other current files, stale ones are dropped.
+ */
+export const planSingleFileWorkspaceLoad = <W extends JobFileEntry, F extends JobFileEntry>(
+    workspaceFiles: W[],
+    jobFiles: F[],
+    uploadName: string
+): { keep: W[], active: F | null } => {
+    return {
+        keep: removeStaleJobFiles(workspaceFiles, jobFiles),
+        active: jobFiles.find(file => file.uploadName === uploadName) || null
+    };
+};

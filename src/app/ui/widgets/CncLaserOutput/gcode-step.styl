@@ -1,0 +1,230 @@
+// Step 3 (G-code) of the Laser/CNC editor: file cards (left) and job panel (right),
+// colours from the redesign mockup StepGcode
+.files {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0 10px 12px;
+    list-style: none;
+}
+
+.file {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #e3e6ec;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.file-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.file-number {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.file-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.file-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2430;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-sub {
+    font-size: 12px;
+    color: #5b6170;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-name {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #2f3441;
+    word-break: break-all;
+}
+
+.file-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.small-button {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid #d9dde6;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2430;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        border-color: #1d4ed8;
+        color: #1d4ed8;
+    }
+
+    &:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+}
+
+.change {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.empty {
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #5b6170;
+}
+
+// right panel: machine / job
+.job {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 16px 12px;
+}
+
+.machine {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #f4f6f9;
+
+    &.connected {
+        background: #f0fdf4;
+    }
+}
+
+.dot {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    background: #9aa1b0;
+
+    .connected & {
+        background: #16a34a;
+    }
+}
+
+.machine-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+        font-size: 13px;
+        color: #1f2430;
+    }
+
+    span {
+        font-size: 12px;
+        color: #5b6170;
+
+        .connected & {
+            color: #166534;
+        }
+    }
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #5b6170;
+}
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.tile {
+    padding: 10px;
+    border-radius: 8px;
+    background: #f4f6f9;
+
+    div {
+        font-size: 11px;
+        color: #5b6170;
+    }
+
+    strong {
+        font-size: 16px;
+        color: #1f2430;
+        white-space: nowrap;
+    }
+}
+
+.hint {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    background: #fff7ed;
+
+    strong {
+        font-size: 13px;
+        color: #9a3412;
+    }
+
+    span {
+        font-size: 12px;
+        line-height: 1.5;
+        color: #7c2d12;
+    }
+}

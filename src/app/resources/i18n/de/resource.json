@@ -2499,5 +2499,20 @@
     "key-CncLaser/ToolPathList-needs preview": "Vorschau nötig",
     "key-CncLaser/ToolPathList-generating": "wird berechnet",
     "key-CncLaser/ToolPathList-failed": "fehlgeschlagen",
-    "key-CncLaser/ToolPathSettings-Select a toolpath to change its settings.": "Werkzeugweg auswählen, um seine Einstellungen zu ändern."
+    "key-CncLaser/ToolPathSettings-Select a toolpath to change its settings.": "Werkzeugweg auswählen, um seine Einstellungen zu ändern.",
+    "key-CncLaser/GcodeFiles-Files": "Dateien",
+    "key-CncLaser/GcodeFiles-Files · change tool between them": "Dateien · Werkzeug dazwischen wechseln",
+    "key-CncLaser/GcodeFiles-Send via Wi-Fi": "Über WLAN senden",
+    "key-CncLaser/GcodeFiles-Change bit · re-zero Z": "Fräser wechseln · Z neu nullen",
+    "key-CncLaser/JobPanel-Machine": "Maschine",
+    "key-CncLaser/JobPanel-Not connected": "Nicht verbunden",
+    "key-CncLaser/JobPanel-Connected via serial port": "Über serielle Schnittstelle verbunden",
+    "key-CncLaser/JobPanel-Job": "Auftrag",
+    "key-CncLaser/JobPanel-Total time": "Gesamtzeit",
+    "key-CncLaser/JobPanel-Files": "Dateien",
+    "key-CncLaser/JobPanel-Tool changes": "Werkzeugwechsel",
+    "key-CncLaser/JobPanel-Work area": "Arbeitsbereich",
+    "key-CncLaser/JobPanel-Before file {{file}}": "Vor Datei {{file}}",
+    "key-CncLaser/JobPanel-Before files {{files}}": "Vor den Dateien {{files}}",
+    "key-CncLaser/JobPanel-Swap the bit as shown in the list and set the Z zero again on the machine. Luban adds no tool-change pause.": "Den Fräser wie in der Liste angegeben wechseln und den Z-Nullpunkt an der Maschine neu setzen. Luban fügt keine Pause für den Werkzeugwechsel ein."
 }

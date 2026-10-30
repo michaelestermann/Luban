@@ -1,5 +1,5 @@
 import { message } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans } from 'react-i18next';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useHistory, withRouter } from 'react-router-dom';
@@ -128,6 +128,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
     const [isDraggingWidget, setIsDraggingWidget] = useState(false);
     const [showHomePage, setShowHomePage] = useState(false);
     const [showWorkspace, setShowWorkspace] = useState(false);
+    const openWorkspace = useCallback(() => setShowWorkspace(true), []);
     const [showJobType, setShowJobType] = useState(true);
     const [enabledIntro, setEnabledIntro] = useState(null);
     const initIndex = 0;
@@ -401,6 +402,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
                             headType={HEAD_CNC}
                             collapsed={leftCollapsed}
                             onToggleCollapsed={toggleLeftCollapsed}
+                            onOpenWorkspace={openWorkspace}
                         />
                     )
                 }
@@ -413,6 +415,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
                             listActions={listActions}
                             collapsed={rightCollapsed}
                             onToggleCollapsed={toggleRightCollapsed}
+                            onOpenWorkspace={openWorkspace}
                         />
                     )
                 }
