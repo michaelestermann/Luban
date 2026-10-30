@@ -63,6 +63,8 @@ import ModelLoader from '../../ui/widgets/PrintingVisualizer/ModelLoader';
 import AddOperation2D from '../operation-history/AddOperation2D';
 import DeleteOperation2D from '../operation-history/DeleteOperation2D';
 import DecomposeOperation2D from '../operation-history/DecomposeOperation2D';
+import UpdateToolPathMembershipOperation from '../operation-history/UpdateToolPathMembershipOperation';
+import { canAddToToolPath, withModelAdded, withModelRemoved } from '../../toolpaths/membership';
 import DrawDelete from '../operation-history/DrawDelete';
 import DrawLine from '../operation-history/DrawLine';
 import DrawStart from '../operation-history/DrawStart';
@@ -3220,6 +3222,63 @@ export const actions = {
             type: ACTION_UPDATE_STATE,
             state: { showSVGShapeLibrary }
         };
+    },
+
+    /**
+     * Add the selected objects to a toolpath. Objects of an incompatible type
+     * or already in the toolpath are skipped.
+     */
+    addSelectedModelsToToolPath: (headType, toolPathId) => (dispatch, getState) => {
+        const { modelGroup, toolPathGroup } = getState()[headType];
+        const toolPath = toolPathGroup.getToolPath(toolPathId);
+        if (!toolPath) return;
+        const selected = [];
+        for (const model of modelGroup.getSelectedModelArray()) {
+            if (model.children?.length) {
+                selected.push(...model.children);
+            } else {
+                selected.push(model);
+            }
+        }
+        const before = [...toolPath.modelMap.keys()];
+        let after = before;
+        for (const model of selected) {
+            if (canAddToToolPath(toolPath, model)) {
+                after = withModelAdded(after, model.modelID);
+            }
+        }
+        if (after.length === before.length) return;
+        dispatch(actions.applyToolPathMembership(headType, toolPath, before, after));
+    },
+
+    /**
+     * Remove one object from a toolpath. The last object cannot be removed,
+     * a toolpath is never left empty.
+     */
+    removeModelFromToolPath: (headType, toolPathId, modelId) => (dispatch, getState) => {
+        const { toolPathGroup } = getState()[headType];
+        const toolPath = toolPathGroup.getToolPath(toolPathId);
+        if (!toolPath) return;
+        const before = [...toolPath.modelMap.keys()];
+        const after = withModelRemoved(before, modelId);
+        if (after.length === before.length || after.length === 0) return;
+        dispatch(actions.applyToolPathMembership(headType, toolPath, before, after));
+    },
+
+    applyToolPathMembership: (headType, toolPath, before, after) => (dispatch, getState) => {
+        const { toolPathGroup } = getState()[headType];
+        const operation = new UpdateToolPathMembershipOperation({
+            toolPath,
+            toolPathGroup,
+            before,
+            after
+        });
+        operation.redo();
+        const operations = new CompoundOperation();
+        operations.push(operation);
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(actions.resetProcessState(headType));
+        dispatch(baseActions.render(headType));
     },
 
     // Decompose the selected imported SVG one level: each direct child of
