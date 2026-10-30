@@ -76,7 +76,8 @@ const CloseIcon: React.FC = () => (
 /**
  * Step-1 Operations panel: the toolpaths in milling order as cards with their objects as
  * chips. × removes an object from the toolpath (not the last one), "+ Add selected" adds the
- * selected objects, "+ New" opens the existing create-toolpath dialog.
+ * selected objects, "+ New" opens the existing create-toolpath dialog, a double-click on a card
+ * opens the same dialog to edit the operation.
  */
 const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) => {
     const dispatch = useDispatch();
@@ -160,6 +161,12 @@ const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) 
                                 [styles['drop-after']]: reorder.dropSide(index) === 'after'
                             })}
                             {...reorder.cardProps(index)}
+                            onDoubleClick={(event) => {
+                                // double-click on the card (not on its buttons) edits the operation
+                                if (!blocked && !(event.target as HTMLElement).closest('button')) {
+                                    setEditingToolpath(toolPath);
+                                }
+                            }}
                         >
                             <div className={styles['card-head']}>
                                 {!blocked && <DragGrip className={styles.grip} />}
