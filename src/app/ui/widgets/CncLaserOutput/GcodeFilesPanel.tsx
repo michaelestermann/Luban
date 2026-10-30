@@ -6,8 +6,11 @@ import { RootState } from '../../../flux/index.def';
 import { actions as projectActions } from '../../../flux/project';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
+import log from '../../../lib/log';
 import { formatDuration, getVisibleToolPathNames } from '../../../toolpaths/gcode-job-summary';
 import { operationColor } from '../../../toolpaths/operations-panel';
+import { toast } from '../../components/Toast';
+import { makeSceneToast } from '../../views/toasts/SceneToast';
 import { loadGcodeFileToWorkspace } from './load-gcode-to-workspace';
 import { useGcodeOutputAvailability, useRenderImmediately } from './use-gcode-output';
 import styles from './gcode-step.styl';
@@ -55,11 +58,16 @@ const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorks
     const isCnc = headType === HEAD_CNC;
     const disabled = isOnABPosition || !canUseGcode;
 
-    const onSend = useCallback(async (file: GcodeFile) => {
-        const loaded = await dispatch(loadGcodeFileToWorkspace(headType, file.uploadName, renderImmediately));
-        if (loaded) {
-            onOpenWorkspace();
-            window.scrollTo(0, 0);
+    const onLoad = useCallback(async (file: GcodeFile) => {
+        try {
+            const loaded = await dispatch(loadGcodeFileToWorkspace(headType, file.uploadName, renderImmediately));
+            if (loaded) {
+                onOpenWorkspace();
+                window.scrollTo(0, 0);
+            }
+        } catch (e) {
+            log.error(`Failed to load G-code file ${file.uploadName} to the workspace`, e);
+            toast(makeSceneToast('warning', i18n._('key-Workspace/Page-Failed to load G-code.')));
         }
     }, [dispatch, headType, renderImmediately, onOpenWorkspace]);
 
@@ -106,7 +114,7 @@ const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorks
                                     className={styles['small-button']}
                                     disabled={disabled}
                                     title={i18n._('key-CncLaser/G-codeAction-Load G-code to Workspace')}
-                                    onClick={() => { onSend(file); }}
+                                    onClick={() => { onLoad(file); }}
                                 >
                                     {i18n._('key-CncLaser/GcodeFiles-Send via Wi-Fi')}
                                 </button>
