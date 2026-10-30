@@ -3171,12 +3171,18 @@ export const actions = {
                         dispatch(actions.bringSelectedModelToFront(headType, m));
                     }
                     SVGActions.setSelectedSvgModelsByModels(selectedModels);
+                    // exactly one whole group in the box: the group is selected (its row in the object list)
+                    const groupIDs = new Set(selectedModels.map(m => modelGroup.getParentGroup?.(m.modelID)?.modelID ?? null));
+                    const onlyGroupID = groupIDs.size === 1 ? [...groupIDs][0] : null;
+                    modelGroup.selectedGroupID = onlyGroupID;
                 } else {
                     dispatch(actions.clearSelection(headType));
                 }
+                // the box is computed in a worker: re-render after the selection changed, so the
+                // object list and the panels show it
+                dispatch(baseActions.render(headType));
             }
         );
-        dispatch(baseActions.render(headType));
     },
 
     isPointInSelectArea: (headType, x, y) => (dispatch, getState) => {
