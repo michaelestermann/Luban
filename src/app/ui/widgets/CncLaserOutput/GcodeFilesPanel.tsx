@@ -40,7 +40,7 @@ const ChangeBitIcon: React.FC = () => (
 /**
  * Left panel of the G-code step: the generated files (CNC: one per tool run, in milling
  * order; laser: its single file) as cards with number, tool, toolpaths, time and file
- * name. "Send via Wi-Fi" loads that file into the workspace and opens it, "Export" saves
+ * name. "Load to workspace" loads that file into the workspace and opens it, "Export" saves
  * that file (as Export G-code to File). Between CNC files: change the bit, re-zero Z.
  */
 const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorkspace }) => {
@@ -116,7 +116,7 @@ const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorks
                                     title={i18n._('key-CncLaser/G-codeAction-Load G-code to Workspace')}
                                     onClick={() => { onLoad(file); }}
                                 >
-                                    {i18n._('key-CncLaser/GcodeFiles-Send via Wi-Fi')}
+                                    {i18n._('key-CncLaser/GcodeFiles-Load to workspace')}
                                 </button>
                                 <button
                                     type="button"

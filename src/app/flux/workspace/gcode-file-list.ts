@@ -48,7 +48,7 @@ export const removeStaleJobFiles = <T extends JobFileEntry>(files: T[], jobFiles
 };
 
 /**
- * Loading one file of a job ("Send via Wi-Fi" on a file card): that file becomes the active
+ * Loading one file of a job ("Load to workspace" on a file card): that file becomes the active
  * file; the workspace list keeps the job's other current files, stale ones are dropped.
  */
 export const planSingleFileWorkspaceLoad = <W extends JobFileEntry, F extends JobFileEntry>(

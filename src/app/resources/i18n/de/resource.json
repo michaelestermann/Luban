@@ -2503,7 +2503,7 @@
     "key-CncLaser/ToolPathSettings-Select a toolpath to change its settings.": "Werkzeugweg auswählen, um seine Einstellungen zu ändern.",
     "key-CncLaser/GcodeFiles-Files": "Dateien",
     "key-CncLaser/GcodeFiles-Files · change tool between them": "Dateien · Werkzeug dazwischen wechseln",
-    "key-CncLaser/GcodeFiles-Send via Wi-Fi": "Über WLAN senden",
+    "key-CncLaser/GcodeFiles-Load to workspace": "In Workspace laden",
     "key-CncLaser/GcodeFiles-Change bit · re-zero Z": "Fräser wechseln · Z neu nullen",
     "key-CncLaser/JobPanel-Machine": "Maschine",
     "key-CncLaser/JobPanel-Not connected": "Nicht verbunden",

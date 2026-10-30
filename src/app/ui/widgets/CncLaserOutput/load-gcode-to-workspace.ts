@@ -28,7 +28,7 @@ export const loadGcodeToWorkspace = (headType: 'laser' | 'cnc', renderImmediatel
 };
 
 /**
- * Load one file of the generated job into the workspace (G-code step, "Send via Wi-Fi" on a
+ * Load one file of the generated job into the workspace (G-code step, "Load to workspace" on a
  * file card). The file goes on top of the workspace list, like file 1 of "Load all"; files
  * of the same job sent before stay, files of an earlier generation of the job are dropped.
  *
