@@ -40,6 +40,7 @@ import OperationHistory from '../../core/OperationHistory';
 import log from '../../lib/log';
 import {
     computePartTransformation,
+    createAllOrNone,
     fetchSvgText,
     getDecomposeHref,
     measurePartBBox,
@@ -3277,29 +3278,44 @@ export const actions = {
             const container = parentGroup ? parentGroup.children : modelGroup.models;
             const index = container.indexOf(original);
 
-            const partModels = [];
-            for (let i = 0; i < placed.length; i++) {
+            // All parts or none: on any failure the parts made so far are
+            // removed again and the original stays untouched (no history).
+            const discardPart = (part) => {
+                new AddOperation2D({ target: part, svgActions: SVGActions, toolPathGroup }).undo();
+            };
+            const partModels = await createAllOrNone(placed.length, async (i) => {
                 const { originalName, uploadName, sourceWidth, sourceHeight } = uploads[i].body;
                 const modelID = `id${uuid()}`;
                 // History gets one decompose entry instead of one entry per part
                 dispatch(operationHistoryActions.excludeModelById(headType, modelID));
-                // eslint-disable-next-line no-await-in-loop
-                await dispatch(actions.generateModel(headType, {
-                    originalName,
-                    uploadName,
-                    sourceWidth,
-                    sourceHeight,
-                    mode: original.mode,
-                    sourceType: 'svg',
-                    config: { ...original.config },
-                    gcodeConfig: { ...original.gcodeConfig },
-                    transformation: placed[i].transformation,
-                    modelID
-                }));
-                const part = modelGroup.getModel(modelID);
-                if (part) partModels.push(part);
+                try {
+                    await dispatch(actions.generateModel(headType, {
+                        originalName,
+                        uploadName,
+                        sourceWidth,
+                        sourceHeight,
+                        mode: original.mode,
+                        sourceType: 'svg',
+                        config: { ...original.config },
+                        gcodeConfig: { ...original.gcodeConfig },
+                        transformation: placed[i].transformation,
+                        modelID
+                    }));
+                } catch (e) {
+                    // generateModel may fail after the model was added
+                    const halfMade = modelGroup.getModel(modelID);
+                    if (halfMade) discardPart(halfMade);
+                    throw e;
+                }
+                return modelGroup.getModel(modelID);
+            }, discardPart);
+            if (!partModels) {
+                SVGActions.clearSelection();
+                SVGActions.addSelectedSvgModelsByModels([original], materials.isRotate);
+                dispatch(baseActions.updateState(headType, modelGroup.getState()));
+                dispatch(baseActions.render(headType));
+                return;
             }
-            if (partModels.length === 0) return;
 
             const operation = new DecomposeOperation2D({
                 original,

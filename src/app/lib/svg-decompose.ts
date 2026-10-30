@@ -8,6 +8,8 @@
  * `loadDecomposeInfo`) are used by the editor action and the UI.
  */
 
+import log from './log';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Elements that draw something and can become a part.
@@ -364,4 +366,43 @@ export async function loadDecomposeInfo(model: DecomposableModel | null): Promis
     const canSplit = await pending.get(href);
     model.decomposeInfo = { href, canSplit };
     return canSplit;
+}
+
+/**
+ * Create `count` parts one after another, all or nothing: if a part cannot
+ * be created (null/undefined result or an exception), every part already
+ * created is discarded (newest first) and null is returned.
+ */
+export async function createAllOrNone<T>(
+    count: number,
+    create: (index: number) => Promise<T | null | undefined>,
+    discard: (part: T) => void
+): Promise<T[] | null> {
+    const created: T[] = [];
+    let complete = true;
+    try {
+        for (let i = 0; i < count; i++) {
+            // eslint-disable-next-line no-await-in-loop
+            const part = await create(i);
+            if (part === null || part === undefined) {
+                complete = false;
+                break;
+            }
+            created.push(part);
+        }
+    } catch (e) {
+        log.error('Failed to create decomposed part:', e);
+        complete = false;
+    }
+    if (complete) {
+        return created;
+    }
+    for (let i = created.length - 1; i >= 0; i--) {
+        try {
+            discard(created[i]);
+        } catch (e) {
+            log.error('Failed to discard decomposed part:', e); // keep discarding the others
+        }
+    }
+    return null;
 }

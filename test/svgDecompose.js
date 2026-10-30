@@ -6,7 +6,8 @@ import {
     computePartTransformation,
     readFrame,
     canDecompose,
-    canDecomposeSelection
+    canDecomposeSelection,
+    createAllOrNone
 } from '../src/app/lib/svg-decompose';
 
 const deps = {
@@ -264,5 +265,49 @@ test('svgDecompose: canDecomposeSelection checks the selection and modes', (t) =
     t.equal(canDecomposeSelection([model], { isOnABPosition: true }), false, 'A-B position');
     t.equal(canDecomposeSelection([model], { isSVGClipping: true }), false, 'clipping mode');
     t.equal(canDecomposeSelection([{ ...model, visible: false }], {}), false, 'hidden model');
+    t.end();
+});
+
+test('svgDecompose: createAllOrNone returns all parts when every one is created', async (t) => {
+    const discarded = [];
+    const parts = await createAllOrNone(3, async (i) => ({ id: i }), (part) => discarded.push(part));
+    t.deepEqual(parts, [{ id: 0 }, { id: 1 }, { id: 2 }], 'all parts in order');
+    t.deepEqual(discarded, [], 'nothing discarded');
+    t.end();
+});
+
+test('svgDecompose: createAllOrNone discards created parts when one is missing', async (t) => {
+    const discarded = [];
+    const created = [];
+    const parts = await createAllOrNone(3, async (i) => {
+        if (i === 1) return null;
+        const part = { id: i };
+        created.push(part);
+        return part;
+    }, (part) => discarded.push(part));
+    t.equal(parts, null, 'no parts');
+    t.deepEqual(discarded, created, 'every created part discarded');
+    t.end();
+});
+
+test('svgDecompose: createAllOrNone discards created parts when creation throws', async (t) => {
+    const discarded = [];
+    const parts = await createAllOrNone(3, async (i) => {
+        if (i === 2) throw new Error('upload failed');
+        return { id: i };
+    }, (part) => discarded.push(part));
+    t.equal(parts, null, 'no parts');
+    t.deepEqual(discarded.map((p) => p.id), [1, 0], 'created parts discarded, newest first');
+    t.end();
+});
+
+test('svgDecompose: createAllOrNone keeps discarding when a discard throws', async (t) => {
+    const discarded = [];
+    const parts = await createAllOrNone(3, async (i) => (i === 2 ? null : { id: i }), (part) => {
+        discarded.push(part.id);
+        if (part.id === 1) throw new Error('boom');
+    });
+    t.equal(parts, null, 'no parts');
+    t.deepEqual(discarded, [1, 0], 'all discards attempted');
     t.end();
 });
