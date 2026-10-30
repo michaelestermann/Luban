@@ -97,3 +97,15 @@ export const formatDuration = (seconds: number | undefined | null): string => {
     }
     return `${secs} s`;
 };
+
+export type ToolPathStateLike = { name: string; visible?: boolean; visibleModelIDs?: string[] };
+
+/**
+ * Names of the toolpaths that go into the G-code: visible and with visible objects.
+ * Takes toolpath states (ToolPathGroup.getToolPaths()), which are plain objects without methods.
+ */
+export const getVisibleToolPathNames = (toolPaths: ToolPathStateLike[]): string[] => {
+    return toolPaths
+        .filter(toolPath => toolPath.visible && (toolPath.visibleModelIDs?.length ?? 0) > 0)
+        .map(toolPath => toolPath.name);
+};

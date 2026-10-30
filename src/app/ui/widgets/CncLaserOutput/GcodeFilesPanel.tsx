@@ -6,7 +6,7 @@ import { RootState } from '../../../flux/index.def';
 import { actions as projectActions } from '../../../flux/project';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
-import { formatDuration } from '../../../toolpaths/gcode-job-summary';
+import { formatDuration, getVisibleToolPathNames } from '../../../toolpaths/gcode-job-summary';
 import { operationColor } from '../../../toolpaths/operations-panel';
 import { loadGcodeFileToWorkspace } from './load-gcode-to-workspace';
 import { useGcodeOutputAvailability, useRenderImmediately } from './use-gcode-output';
@@ -72,9 +72,7 @@ const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorks
         return null;
     }
 
-    const visibleToolPathNames = toolPaths
-        .filter(toolPath => toolPath.visible && toolPath.hasVisibleModels())
-        .map(toolPath => toolPath.name);
+    const visibleToolPathNames = getVisibleToolPathNames(toolPaths);
 
     return (
         <ol className={styles.files} aria-label={i18n._('key-CncLaser/GcodeFiles-Files')}>

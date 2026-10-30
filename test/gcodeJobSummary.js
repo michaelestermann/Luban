@@ -1,5 +1,5 @@
 import test from 'tape';
-import { formatDuration, getWorkArea, summarizeGcodeJob } from '../src/app/toolpaths/gcode-job-summary';
+import { formatDuration, getVisibleToolPathNames, getWorkArea, summarizeGcodeJob } from '../src/app/toolpaths/gcode-job-summary';
 import { planSingleFileWorkspaceLoad, removeStaleJobFiles } from '../src/app/flux/workspace/gcode-file-list';
 
 const box = (minX, minY, maxX, maxY, minZ = 0) => ({ min: { x: minX, y: minY, z: minZ }, max: { x: maxX, y: maxY, z: 0 } });
@@ -85,5 +85,17 @@ test('planSingleFileWorkspaceLoad: the chosen file becomes active, files of the 
     t.equal(plan.active.uploadName, 'u2', 'file 2 is loaded');
     t.deepEqual(plan.keep.map(f => f.uploadName), ['u1'], 'file 1 sent earlier stays, stale file of the job is dropped');
     t.equal(planSingleFileWorkspaceLoad(workspace, job, 'nope').active, null, 'unknown file: nothing to load');
+    t.end();
+});
+
+test('getVisibleToolPathNames: works on toolpath states (plain objects from getToolPaths)', (t) => {
+    const states = [
+        { name: 'Isolation', visible: true, visibleModelIDs: ['a'] },
+        { name: 'Hidden', visible: false, visibleModelIDs: ['b'] },
+        { name: 'Empty', visible: true, visibleModelIDs: [] },
+        { name: 'Umriss', visible: true, visibleModelIDs: ['c', 'd'] },
+    ];
+    t.deepEqual(getVisibleToolPathNames(states), ['Isolation', 'Umriss'], 'only visible toolpaths with visible objects');
+    t.deepEqual(getVisibleToolPathNames([{ name: 'X', visible: true }]), [], 'missing visibleModelIDs counts as none');
     t.end();
 });
