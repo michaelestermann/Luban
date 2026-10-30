@@ -1348,6 +1348,7 @@
     "key-CncLaser/TransformationSection-Rotate the selected object to the angle you need.": "Drehen Sie das ausgewählte Objekt in den gewünschten Winkel.",
     "key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.": "Legen Sie die Koordinate des ausgewählten Objekts fest. Sie können das Objekt auch direkt ziehen. Das Objekt sollte nicht über den Arbeitsbereich hinaus verschoben werden.",
     "key-CncLaser/TransformationSection-Set the size of the selected object. You can also resize the object directly. The object should not exceed the work size.": "Stellen Sie die Größe des ausgewählten Objekts ein. Sie können die Objektgröße auch direkt ändern. Das Objekt sollte die Arbeitsgröße nicht überschreiten.",
+    "key-CncLaser/TransformationSection-Set the reference point for aligning the object. Adjust the objects position based on the selected anchor point.": "Legt den Bezugspunkt für die Ausrichtung des Objekts fest. Die Position des Objekts wird anhand des gewählten Ankerpunkts angepasst.",
     "key-CncLaser/TransformationSection-Size": "Größe",
     "key-Common/Clear": "Leeren",
     "key-Common/Clear All": "Alles leeren",

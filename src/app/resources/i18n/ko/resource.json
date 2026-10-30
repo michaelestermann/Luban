@@ -1338,6 +1338,7 @@
     "key-CncLaser/TransformationSection-Rotate the selected object to the angle you need.": "선택한 개체를 필요한 각도로 회전합니다.",
     "key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.": "선택한 개체의 좌표를 설정합니다. 개체를 직접 드래그할 수도 있습니다. 개체를 작업 영역 밖으로 이동해서는 안 됩니다.",
     "key-CncLaser/TransformationSection-Set the size of the selected object. You can also resize the object directly. The object should not exceed the work size.": "선택한 개체의 크기를 설정합니다. 개체의 크기를 직접 조정할 수도 있습니다. 개체는 작업 크기를 초과해서는 안 됩니다.",
+    "key-CncLaser/TransformationSection-Set the reference point for aligning the object. Adjust the objects position based on the selected anchor point.": "Set the reference point for aligning the object. Adjusts the objects position based on the selected anchor point.",
     "key-CncLaser/TransformationSection-Size": "크기",
     "key-Common/Clear": "",
     "key-Common/Clear All": "",

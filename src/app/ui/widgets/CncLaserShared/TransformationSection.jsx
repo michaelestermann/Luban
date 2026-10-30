@@ -249,7 +249,7 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                 </TipTrigger>
                 <TipTrigger
                     title={i18n._('key-CncLaser/TransformationSection-AnchorPoint')}
-                    content={i18n._('key-CncLaser/TransformationSection-Sets the reference point for aligning the object. Adjusts the objects position based on the selected anchor point.')}
+                    content={i18n._('key-CncLaser/TransformationSection-Set the reference point for aligning the object. Adjust the objects position based on the selected anchor point.')}
                 >
                     <div className="margin-vertical-8">
                         <FramePicker
