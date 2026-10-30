@@ -2459,5 +2459,19 @@
     "key-CncLaser/Panel-Collapse left panel": "Collapse left panel",
     "key-CncLaser/Panel-Expand left panel": "Expand left panel",
     "key-CncLaser/Panel-Collapse right panel": "Collapse right panel",
-    "key-CncLaser/Panel-Expand right panel": "Expand right panel"
+    "key-CncLaser/Panel-Expand right panel": "Expand right panel",
+    "key-CncLaser/Operations-Operations": "Operations",
+    "key-CncLaser/Operations-Operations · order": "Operations · order",
+    "key-CncLaser/Operations-+ New": "+ New",
+    "key-CncLaser/Operations-+ Add selected": "+ Add selected",
+    "key-CncLaser/Operations-Remove {{name}} from {{operation}}": "Remove {{name}} from {{operation}}",
+    "key-CncLaser/Operations-An operation needs at least one object.": "An operation needs at least one object.",
+    "key-CncLaser/Operations-Not available while positioning or clipping.": "Not available while positioning or clipping.",
+    "key-CncLaser/Operations-Select objects to add them.": "Select objects to add them.",
+    "key-CncLaser/Operations-The selected objects do not fit this operation type.": "The selected objects do not fit this operation type.",
+    "key-CncLaser/Operations-The selected objects are already in this operation.": "The selected objects are already in this operation.",
+    "key-CncLaser/Operations-No operations yet. Select objects and click + New.": "No operations yet. Select objects and click + New.",
+    "key-CncLaser/Operations-Create an operation from the selected objects.": "Create an operation from the selected objects.",
+    "key-CncLaser/SelectionBar-{{count}} objects": "{{count}} objects",
+    "key-CncLaser/SelectionBar-Selection actions": "Selection actions"
 }

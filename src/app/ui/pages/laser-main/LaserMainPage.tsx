@@ -267,6 +267,7 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
                             headType={HEAD_LASER}
                             collapsed={leftCollapsed}
                             onToggleCollapsed={toggleLeftCollapsed}
+                            modeBlocked={pageMode === PageMode.SVGClipping || pageMode === PageMode.ABPosition}
                         />
                     )
                 }

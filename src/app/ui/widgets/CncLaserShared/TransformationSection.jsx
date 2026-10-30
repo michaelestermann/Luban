@@ -12,23 +12,12 @@ import SvgIcon from '../../components/SvgIcon';
 import { NumberInput as Input } from '../../components/Input';
 import { anchorOffset, DEFAULT_ANCHOR } from '../../../lib/anchor';
 import FramePicker from './FramePicker';
+import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 
 import { actions as editorActions } from '../../../flux/editor';
 
 import styles from './styles.styl';
 import { HEAD_CNC, SVG_NODE_NAME_TEXT } from '../../../constants';
-
-const HORIZONTAL_ALIGN = {
-    LEFT: 'left',
-    CENTER: 'center',
-    RIGHT: 'right'
-};
-
-const VERTICAL_ALIGN = {
-    TOP: 'top',
-    MIDDLE: 'middle',
-    BOTTOM: 'bottom'
-};
 
 /**
  * Transformation section.
@@ -190,48 +179,11 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
         },
 
         onAlignVertical: (align) => {
-            const elements = selectedElements;
-            const referenceElement = elements[0];
-            const referenceY = referenceElement.y.baseVal.value;
-            const referenceHeight = referenceElement.height.baseVal.value;
-
-            elements.forEach(element => {
-                let newY;
-                const centerElement = element.height.baseVal.value / 2;
-                if (align === 'top') {
-                    newY = referenceY + centerElement;
-                } else if (align === 'middle') {
-                    newY = referenceY + referenceHeight / 2;
-                } else {
-                    newY = referenceY + referenceHeight - centerElement;
-                }
-
-                dispatch(editorActions.moveElementsImmediately(headType, [element], { newY }));
-            });
-
-            dispatch(editorActions.selectElements(headType, elements));
+            alignElementsVertical(dispatch, headType, selectedElements, align);
         },
 
         onAlignHorizontal: (align) => {
-            const elements = selectedElements;
-            const referenceElement = elements[0];
-            const referenceX = referenceElement.x.baseVal.value;
-            const referenceWidth = referenceElement.width.baseVal.value;
-
-            elements.forEach(element => {
-                let newX;
-                const centerElement = element.width.baseVal.value / 2;
-                if (align === 'left') {
-                    newX = referenceX + centerElement;
-                } else if (align === 'center') {
-                    newX = referenceX + referenceWidth / 2;
-                } else {
-                    newX = referenceX + referenceWidth - centerElement;
-                }
-                dispatch(editorActions.moveElementsImmediately(headType, [element], { newX }));
-            });
-
-            dispatch(editorActions.selectElements(headType, elements));
+            alignElementsHorizontal(dispatch, headType, selectedElements, align);
         },
 
         onFlipVertically: () => {

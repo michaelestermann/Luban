@@ -32,6 +32,8 @@ function processKey(value, options) {
 interface TranslateOptions {
     lng?: string;
     defaultValue?: string;
+    // interpolation values, e.g. { count } for "{{count}} objects"
+    [interpolation: string]: unknown;
 }
 
 const _ = (value: string = '', options: TranslateOptions = {}): string => {

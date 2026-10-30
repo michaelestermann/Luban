@@ -4,6 +4,7 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import { actions as editorActions } from '../../../../flux/editor';
 import i18n from '../../../../lib/i18n';
+import { getModelOperationColors } from '../../../../toolpaths/operations-panel';
 import modal from '../../../../lib/modal';
 import styles from '../styles.styl';
 import ModelItem from './model-item';
@@ -18,6 +19,10 @@ interface ObjectListBoxProps {
 const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false }) => {
     const selectedModelArray = useSelector(state => state[headType].modelGroup?.selectedModelArray);
     const models = useSelector(state => state[headType]?.modelGroup?.models);
+
+    // toolpath membership colour dots; toolPathGroup is mutable, renderingTimestamp re-renders on changes
+    useSelector(state => state[headType]?.renderingTimestamp);
+    const toolPaths = useSelector(state => state[headType]?.toolPathGroup)?.getToolPaths();
 
     const inProgress = useSelector(state => state[headType]?.inProgress, shallowEqual);
     const previewFailed = useSelector(state => state[headType]?.previewFailed, shallowEqual);
@@ -150,6 +155,7 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
                                                 onToggleVisible={actions.onClickModelHideBox}
                                                 inProgress={inProgress}
                                                 placement="right"
+                                                dotColors={getModelOperationColors(toolPaths, child.modelID)}
                                             />
                                         </div>
                                     ))}
@@ -168,6 +174,7 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
                                 onToggleVisible={actions.onClickModelHideBox}
                                 inProgress={inProgress}
                                 placement="right"
+                                dotColors={getModelOperationColors(toolPaths, model.modelID)}
                             />
                         );
                     })

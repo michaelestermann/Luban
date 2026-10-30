@@ -36,6 +36,7 @@ import Space from '../../components/Space';
 import { repairModelPopup } from '../../views/repair-model/repair-model-popup';
 import PrintablePlate from '../CncLaserShared/PrintablePlate';
 import VisualizerBottomLeft from '../CncLaserShared/VisualizerBottomLeft';
+import SelectionBar from '../CncLaserShared/SelectionBar';
 import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
 
@@ -683,6 +684,7 @@ class Visualizer extends React.Component<VisualizerProps> {
                         transformSourceType="2D"
                     />
                 </div>
+                <SelectionBar headType="cnc" />
                 <div className="position-absolute left-68 bottom-16">
                     <VisualizerBottomLeft
                         scale={this.props.scale}

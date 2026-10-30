@@ -34,7 +34,7 @@ ModelIcon.propTypes = {
 function ModelItem(
     {
         model, visible, isSelected, styles, onSelect, onToggleVisible,
-        inProgress, placement, disabled = false,
+        inProgress, placement, disabled = false, dotColors = [],
     }
 ) {
     const [tipTriggerVisible, setTipVisible] = useState('');
@@ -105,6 +105,14 @@ function ModelItem(
                             {suffixName}
                         </span>
                     </Anchor>
+                    {dotColors.length > 0 && (
+                        <span className={styles['operation-dots']} aria-hidden="true">
+                            {dotColors.map((color, index) => (
+                                // eslint-disable-next-line react/no-array-index-key
+                                <span key={index} className={styles['operation-dot']} style={{ background: color }} />
+                            ))}
+                        </span>
+                    )}
                     <SvgIcon
                         className="margin-right-8"
                         name={visible ? 'ShowNormal' : 'HideNormal'}
@@ -131,6 +139,8 @@ ModelItem.propTypes = {
     inProgress: PropTypes.bool.isRequired,
     disabled: PropTypes.bool,
     placement: PropTypes.string,
+    // colours of the toolpaths the object is in (milling order)
+    dotColors: PropTypes.arrayOf(PropTypes.string),
 };
 
 export default React.memo(ModelItem);

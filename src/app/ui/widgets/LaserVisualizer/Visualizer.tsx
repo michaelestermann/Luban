@@ -43,6 +43,7 @@ import SVGClippingOverlay from '../../views/model-operation-overlay/SVGClippingO
 import ABPositionOverlay from '../../views/model-operation-overlay/ABPositionOverlay';
 import PrintablePlate from '../CncLaserShared/PrintablePlate';
 import VisualizerBottomLeft from '../CncLaserShared/VisualizerBottomLeft';
+import SelectionBar from '../CncLaserShared/SelectionBar';
 import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
 import ToolPathGroup from '../../../toolpaths/ToolPathGroup';
@@ -613,6 +614,7 @@ class Visualizer extends React.Component<VisualizerProps> {
                         transformSourceType="2D"
                     />
                 </div>
+                <SelectionBar headType="laser" modeBlocked={this.props.pageMode === PageMode.SVGClipping || this.props.pageMode === PageMode.ABPosition} />
                 <div className="position-absolute left-68 bottom-16">
                     <VisualizerBottomLeft
                         scale={this.props.scale}
