@@ -4,16 +4,15 @@ import { EditorStep, getEditorStep } from './editor-step';
 
 /**
  * Go to a step of the Laser/CNC editor stepper, reusing the existing page actions.
+ * Generated G-code is never discarded by moving between steps.
  *
  * - design:    switchToPage(editor) + showModelGroupObject (= the former "Edit" tab)
- * - toolpaths: switchToPage(process) (= the former "Next" / "Process" tab); coming back
- *              from the G-code step clears the generated G-code so the step mapping
- *              returns to "toolpaths" (the toolpath preview stays valid)
- * - gcode:     switchToPage(process), then preview when the toolpaths need it (preview
- *              triggers G-code generation, = the former "Generate G-code and Preview");
- *              when the preview is up to date but no G-code exists, bump the generate
- *              counter so the mounted Output widget creates the thumbnail and calls
- *              commitGenerateGcode exactly as after a preview
+ * - toolpaths: switchToPage(process) (= the former "Next" / "Process" tab) and set the UI flag
+ *              `viewingToolpaths`, so a still valid G-code file is kept but step 2 is shown
+ * - gcode:     switchToPage(process) and clear `viewingToolpaths`; a valid G-code file shows
+ *              step 3 again without regenerating. Without valid G-code: preview (= the former
+ *              "Generate G-code and Preview"); the preview starts the progress and ends in
+ *              G-code generation (shouldGenerateGcodeCounter -> Output -> commitGenerateGcode)
  */
 export const goToStep = (headType: 'laser' | 'cnc', step: EditorStep) => async (dispatch, getState) => {
     const current = getEditorStep(getState()[headType]);
@@ -32,20 +31,14 @@ export const goToStep = (headType: 'laser' | 'cnc', step: EditorStep) => async (
     }
 
     if (step === 'toolpaths') {
-        if (getEditorStep(getState()[headType]) === 'gcode') {
-            dispatch(editorActions.clearGcodeFile(headType));
-        }
+        dispatch(editorActions.updateState(headType, { viewingToolpaths: true }));
         return;
     }
 
     // step === 'gcode'
-    const { needToPreview, gcodeFile, isGcodeGenerating, shouldGenerateGcodeCounter } = getState()[headType];
-    if (needToPreview) {
+    dispatch(editorActions.updateState(headType, { viewingToolpaths: false }));
+    const { needToPreview, gcodeFile, isGcodeGenerating } = getState()[headType];
+    if (needToPreview || (!gcodeFile && !isGcodeGenerating)) {
         await dispatch(editorActions.preview(headType));
-    } else if (!gcodeFile && !isGcodeGenerating) {
-        dispatch(editorActions.showToolPathGroupObject(headType));
-        dispatch(editorActions.updateState(headType, {
-            shouldGenerateGcodeCounter: shouldGenerateGcodeCounter + 1
-        }));
     }
 };

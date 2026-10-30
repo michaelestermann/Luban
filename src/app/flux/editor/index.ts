@@ -2485,8 +2485,8 @@ export const actions = {
         if (!includes([PAGE_EDITOR, PAGE_PROCESS], page)) {
             return;
         }
-        // switch to `page`
-        dispatch(baseActions.updateState(headType, { page }));
+        // switch to `page` (a page change ends the stepper's "viewing toolpaths" state)
+        dispatch(baseActions.updateState(headType, { page, viewingToolpaths: false }));
 
         // when switching to "Process" page, we need to
         // trigger preview of all images

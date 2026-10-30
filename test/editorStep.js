@@ -22,6 +22,16 @@ test('getEditorStep: process page with generated G-code is the gcode step', (t) 
     t.end();
 });
 
+test('getEditorStep: viewing the toolpaths keeps a valid G-code file but shows step 2', (t) => {
+    t.equal(getEditorStep({ page: 'process', needToPreview: false, gcodeFile, viewingToolpaths: true }), 'toolpaths',
+        'process + valid gcodeFile + viewingToolpaths');
+    t.equal(getEditorStep({ page: 'process', needToPreview: false, gcodeFile, viewingToolpaths: false }), 'gcode',
+        'process + valid gcodeFile + !viewingToolpaths');
+    t.equal(getEditorStep({ page: 'editor', needToPreview: false, gcodeFile, viewingToolpaths: true }), 'design',
+        'the editor page wins over the flag');
+    t.end();
+});
+
 test('getEditorStep: missing state falls back to design', (t) => {
     t.equal(getEditorStep(undefined), 'design');
     t.end();

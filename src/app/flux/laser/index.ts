@@ -147,6 +147,8 @@ const INITIAL_STATE = {
     previewFailed: false,
     autoPreviewEnabled: false,
     needToPreview: true,
+    // stepper: the user chose the toolpaths step although G-code exists (kept, not regenerated)
+    viewingToolpaths: false,
 
     // rendering
     renderingTimestamp: 0,

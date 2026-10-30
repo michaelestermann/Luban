@@ -508,6 +508,8 @@ export const processActions = {
             isChangedAfterGcodeGenerating: false,
             gcodeFile: gcodeFiles[0],
             gcodeFiles,
+            // a new G-code file shows the G-code step
+            viewingToolpaths: false,
             stage: STEP_STAGE.CNC_LASER_GENERATING_GCODE,
             isGcodeGenerating: false,
             progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_GENERATING_GCODE, 1)

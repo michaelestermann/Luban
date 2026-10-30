@@ -19,6 +19,7 @@ function useStepAvailability(headType: HeadType, blocked: boolean) {
     const page = useSelector((state: RootState) => state[headType]?.page);
     const needToPreview = useSelector((state: RootState) => state[headType]?.needToPreview);
     const gcodeFile = useSelector((state: RootState) => state[headType]?.gcodeFile);
+    const viewingToolpaths = useSelector((state: RootState) => state[headType]?.viewingToolpaths);
     const gcodeFiles = useSelector((state: RootState) => state[headType]?.gcodeFiles) || [];
     const isGcodeGenerating = useSelector((state: RootState) => state[headType]?.isGcodeGenerating);
     const hasModel = useSelector((state: RootState) => state[headType]?.modelGroup.hasModel(), shallowEqual);
@@ -27,7 +28,7 @@ function useStepAvailability(headType: HeadType, blocked: boolean) {
     // toolPathGroup is mutable: re-evaluate the toolpath checks on every render tick
     useSelector((state: RootState) => state[headType]?.renderingTimestamp);
 
-    const step = getEditorStep({ page, needToPreview, gcodeFile });
+    const step = getEditorStep({ page, needToPreview, gcodeFile, viewingToolpaths });
 
     const hasToolPath = toolPathGroup.toolPaths.length > 0;
     const noVisibleToolPath = toolPathGroup.toolPaths.every(toolPath => {
