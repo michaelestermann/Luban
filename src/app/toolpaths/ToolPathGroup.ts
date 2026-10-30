@@ -8,6 +8,7 @@ import { generateModelDefaultConfigs } from '../models/ModelInfoUtils';
 import ThreeModel from '../models/ThreeModel';
 import ToolPath from './ToolPath';
 import { moveItem } from './reorder';
+import { removeModelFromAllToolPaths } from './membership-snapshot';
 import { SUCCESS, createToolPathNameByType, getModelsByToolPathType, getToolPathType } from './utils';
 
 class ToolPathGroup {
@@ -413,22 +414,7 @@ class ToolPathGroup {
      * the caller (e.g. an operation-history entry) can use to undo.
      */
     public removeModelFromToolPaths(modelID: string): { deletedToolPathIDs: string[] } {
-        const deleted: string[] = [];
-        for (const toolPath of this.toolPaths.slice()) {
-            const idx = toolPath.visibleModelIDs.indexOf(modelID);
-            if (idx === -1) continue;
-            toolPath.visibleModelIDs.splice(idx, 1);
-            if (toolPath.visibleModelIDs.length === 0) {
-                this.deleteToolPath(toolPath.id);
-                deleted.push(toolPath.id);
-            }
-        }
-        if (deleted.length === 0) {
-            // No tool path was deleted, but membership still changed —
-            // tell consumers so they can refresh their UI.
-            this._updated();
-        }
-        return { deletedToolPathIDs: deleted };
+        return removeModelFromAllToolPaths(this, modelID);
     }
 
     public deleteAllToolPaths() {

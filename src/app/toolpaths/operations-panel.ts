@@ -101,3 +101,21 @@ export function getOperationMethodId(toolPath: ToolPathLike, headType: string): 
     }
     return config.pathType || null;
 }
+
+/**
+ * Colour dots of a group in the object list: the group row shows the toolpaths that contain
+ * every member, each member row the toolpaths that contain only some of the members.
+ */
+export function getGroupOperationColors(toolPaths: ToolPathLike[] | null | undefined, memberIds: string[]) {
+    const group = [];
+    const members = new Map<string, string[]>(memberIds.map(id => [id, []]));
+    (toolPaths || []).forEach((toolPath, index) => {
+        const has = memberIds.filter(id => toolPath?.modelMap?.has(id));
+        if (memberIds.length > 0 && has.length === memberIds.length) {
+            group.push(operationColor(index));
+        } else {
+            has.forEach(id => members.get(id).push(operationColor(index)));
+        }
+    });
+    return { group, members };
+}
