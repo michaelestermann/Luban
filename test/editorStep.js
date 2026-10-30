@@ -1,6 +1,6 @@
 import { test } from 'tape';
 import {
-    getEditorStep, getStepIndex, EDITOR_STEPS, needsGcodeRegeneration, planGoToGcode, stateAfterGcodeFailure, stateAfterNewGcode
+    getEditorStep, getStepIndex, EDITOR_STEPS, needsGcodeRegeneration, stepForShortcutKey, planGoToGcode, stateAfterGcodeFailure, stateAfterNewGcode
 } from '../src/app/ui/pages/CncLaserShared/editor-step';
 
 const gcodeFile = { uploadName: 'a.nc' };
@@ -132,5 +132,24 @@ test('planGoToGcode: generation failed, then Generate again -> regenerates (no s
     const again = planGoToGcode(failed);
     t.equal(again.preview, true, 'the next click regenerates');
     t.equal(getEditorStep(applyPlan(failed, again)), 'toolpaths', 'and stays on step 2 until the new file arrives');
+    t.end();
+});
+
+test('stepForShortcutKey: keys 1, 2, 3 open design, toolpaths, G-code', (t) => {
+    const key = (k, extra = {}) => ({ key: k, ctrlKey: false, altKey: false, metaKey: false, target: { tagName: 'DIV' }, ...extra });
+    t.equal(stepForShortcutKey(key('1')), 'design');
+    t.equal(stepForShortcutKey(key('2')), 'toolpaths');
+    t.equal(stepForShortcutKey(key('3')), 'gcode');
+    t.equal(stepForShortcutKey(key('4')), null, 'no fourth step');
+    t.end();
+});
+
+test('stepForShortcutKey: no step change while typing or with a modifier', (t) => {
+    const key = (extra) => ({ key: '2', ctrlKey: false, altKey: false, metaKey: false, target: { tagName: 'DIV' }, ...extra });
+    t.equal(stepForShortcutKey(key({ target: { tagName: 'INPUT' } })), null, 'number field');
+    t.equal(stepForShortcutKey(key({ target: { tagName: 'TEXTAREA' } })), null, 'text area');
+    t.equal(stepForShortcutKey(key({ target: { tagName: 'DIV', isContentEditable: true } })), null, 'editable text');
+    t.equal(stepForShortcutKey(key({ ctrlKey: true })), null, 'Ctrl+2');
+    t.equal(stepForShortcutKey(key({ altKey: true })), null, 'Alt+2');
     t.end();
 });

@@ -2446,6 +2446,7 @@
     "key_ui-views-MaterialTestModal-FormComponent-power": "전력",
     "key_ui-views-MaterialTestModal-FormComponent-min": "최소",
     "key-FramePicker-Hint": "Click a handle on the frame",
+    "key-CncLaser/Stepper-Key {{key}}": "Key {{key}}",
     "key-CncLaser/Group-Undo": "Undo",
     "key-CncLaser/Group-Grouped {{count}} objects.": "Grouped {{count}} objects.",
     "key-CncLaser/Group-{{names}} had no objects left and were removed.": "{{names}} had no objects left and were removed.",

@@ -101,3 +101,24 @@ export function planGoToGcode(state: EditorStepState): GoToGcodePlan {
     }
     return { clearGcodeFile: true, preview: needsGcodeRegeneration(state), request: true };
 }
+
+interface ShortcutKeyEvent {
+    key: string;
+    ctrlKey?: boolean;
+    altKey?: boolean;
+    metaKey?: boolean;
+    target?: { tagName?: string; isContentEditable?: boolean } | null;
+}
+
+/** Keys 1, 2, 3 open the steps; not while typing in a field or with Ctrl/Alt/Cmd. */
+export function stepForShortcutKey(event: ShortcutKeyEvent): EditorStep | null {
+    if (event.ctrlKey || event.altKey || event.metaKey) {
+        return null;
+    }
+    const target = event.target;
+    if (target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)) {
+        return null;
+    }
+    const index = ['1', '2', '3'].indexOf(event.key);
+    return index === -1 ? null : EDITOR_STEPS[index];
+}

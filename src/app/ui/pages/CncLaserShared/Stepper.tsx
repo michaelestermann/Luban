@@ -1,12 +1,12 @@
 import classNames from 'classnames';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import { RootState } from '../../../flux/index.def';
 import i18n from '../../../lib/i18n';
 import { loadGcodeToWorkspace } from '../../widgets/CncLaserOutput/load-gcode-to-workspace';
 import { goToStep } from './editor-step-actions';
-import { EDITOR_STEPS, EditorStep, getEditorStep, getStepIndex } from './editor-step';
+import { EDITOR_STEPS, EditorStep, getEditorStep, getStepIndex, stepForShortcutKey } from './editor-step';
 import styles from './styles/stepper.styl';
 
 type HeadType = 'laser' | 'cnc';
@@ -83,6 +83,25 @@ export const Stepper: React.FC<StepperProps> = ({ headType, blocked = false }) =
     const currentIndex = getStepIndex(step);
     const labels = stepLabels();
 
+    // keys 1, 2, 3 open the steps (like a click on them), not while a dialog is open
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            const target = stepForShortcutKey({ ...event, key: event.key, target: event.target as HTMLElement });
+            if (!target || target === step || !canEnter[target] || event.repeat) {
+                return;
+            }
+            const dialogOpen = [...document.querySelectorAll('.ant-modal-wrap')]
+                .some(wrap => getComputedStyle(wrap).display !== 'none');
+            if (dialogOpen) {
+                return;
+            }
+            event.preventDefault();
+            dispatch(goToStep(headType, target));
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [dispatch, headType, step, canEnter]);
+
     return (
         <nav className={styles.stepper} aria-label={i18n._('key-CncLaser/Stepper-Workflow steps')}>
             {EDITOR_STEPS.map((item, index) => {
@@ -99,6 +118,8 @@ export const Stepper: React.FC<StepperProps> = ({ headType, blocked = false }) =
                                 [styles.done]: isDone,
                             })}
                             aria-current={isCurrent ? 'step' : undefined}
+                            aria-keyshortcuts={String(index + 1)}
+                            title={i18n._('key-CncLaser/Stepper-Key {{key}}', { key: index + 1 })}
                             disabled={disabled}
                             onClick={() => {
                                 if (!isCurrent) {

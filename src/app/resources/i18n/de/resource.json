@@ -2459,6 +2459,7 @@
     "key_ui-views-MaterialTestModal-FormComponent-height": "Höhe",
     "key_ui-views-MaterialTestModal-FormComponent-width": "Breite",
     "key-FramePicker-Hint": "Griff am Rahmen anklicken",
+    "key-CncLaser/Stepper-Key {{key}}": "Taste {{key}}",
     "key-CncLaser/Group-Undo": "Rückgängig",
     "key-CncLaser/Group-Grouped {{count}} objects.": "{{count}} Objekte gruppiert.",
     "key-CncLaser/Group-{{names}} had no objects left and were removed.": "{{names}} hatten keine Objekte mehr und wurden entfernt.",
