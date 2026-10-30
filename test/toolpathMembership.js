@@ -57,3 +57,34 @@ test('membership operation undo restores previous ids', (t) => {
     t.equal(updated, 2);
     t.end();
 });
+
+test('removing a member also removes its mesh from the toolpath object', (t) => {
+    const meshB = { name: 'meshB' };
+    const removed = [];
+    const toolPath = {
+        id: 'tp',
+        status: 'success',
+        object: { remove: (m) => removed.push(m) },
+        modelMap: new Map([['a', { meshObj: null }], ['b', { meshObj: meshB }]])
+    };
+    const toolPathGroup = { _updated: () => {}, checkoutToolPathStatus: () => {} };
+    const op = new UpdateToolPathMembershipOperation({ toolPath, toolPathGroup, before: ['a', 'b'], after: ['a'] });
+    op.redo();
+    t.deepEqual(removed, [meshB]);
+    t.deepEqual([...toolPath.modelMap.keys()], ['a']);
+    t.end();
+});
+
+test('undo and redo call onChange so the preview is marked stale', (t) => {
+    const toolPath = { id: 'tp', status: 'success', modelMap: new Map([['a', {}]]) };
+    const toolPathGroup = { _updated: () => {}, checkoutToolPathStatus: () => {} };
+    let calls = 0;
+    const op = new UpdateToolPathMembershipOperation({
+        toolPath, toolPathGroup, before: ['a'], after: ['a', 'b'], onChange: () => { calls++; }
+    });
+    op.redo();
+    op.undo();
+    op.redo();
+    t.equal(calls, 3);
+    t.end();
+});

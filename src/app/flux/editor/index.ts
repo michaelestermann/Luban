@@ -3271,14 +3271,16 @@ export const actions = {
             toolPath,
             toolPathGroup,
             before,
-            after
+            after,
+            onChange: () => {
+                dispatch(actions.resetProcessState(headType));
+                dispatch(baseActions.render(headType));
+            }
         });
         operation.redo();
         const operations = new CompoundOperation();
         operations.push(operation);
         dispatch(operationHistoryActions.setOperations(headType, operations));
-        dispatch(actions.resetProcessState(headType));
-        dispatch(baseActions.render(headType));
     },
 
     // Decompose the selected imported SVG one level: each direct child of
