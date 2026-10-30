@@ -37,7 +37,11 @@ interface TranslateOptions {
 }
 
 const _ = (value: string = '', options: TranslateOptions = {}): string => {
-    const key = processKey(value, options);
+    let key = processKey(value, options);
+    // A count option asks for the "_plural" entry; most keys have none, so use the plain key then
+    if (key !== value && typeof options.count === 'number' && !i18next.exists(key) && !i18next.exists(key, { lng: 'en' })) {
+        key = processKey(value, { ...options, count: undefined });
+    }
 
     options.defaultValue = value;
 
