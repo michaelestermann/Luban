@@ -232,8 +232,8 @@ class Visualizer extends React.Component<VisualizerProps> {
         enterGroup: (groupID) => {
             this.props.enterGroup(groupID);
         },
-        exitGroup: () => {
-            this.props.exitGroup();
+        exitGroup: (options) => {
+            this.props.exitGroup(options);
         },
         onChangeFile: async (event) => {
             const file = event.target.files[0];
@@ -895,7 +895,7 @@ const mapDispatchToProps = (dispatch) => {
         groupSelectedModels: () => dispatch(editorActions.groupSelectedModels('laser')),
         ungroupSelectedGroup: () => dispatch(editorActions.ungroupSelectedGroup('laser')),
         enterGroup: (groupID) => dispatch(editorActions.enterGroup('laser', groupID)),
-        exitGroup: () => dispatch(editorActions.exitGroup('laser')),
+        exitGroup: (options) => dispatch(editorActions.exitGroup('laser', options)),
         onCreateElement: (element) => dispatch(editorActions.createModelFromElement('laser', element)),
         selectAllElements: () => dispatch(editorActions.selectAllElements('laser')),
         onSelectElements: (elements) => dispatch(editorActions.selectElements('laser', elements)),

@@ -79,6 +79,7 @@ import { baseActions } from './actions-base';
 /* eslint-disable-next-line import/no-cycle */
 import { processActions } from './actions-process';
 import { groupActions } from './actions-group';
+import { resolveObjectClick } from '../../models/group-selection';
 /* eslint-disable-next-line import/no-cycle */
 import { actions as operationHistoryActions } from '../operation-history';
 /* eslint-disable-next-line import/no-cycle */
@@ -1006,8 +1007,12 @@ export const actions = {
         return null;
     },
 
-    // TODO: method docs
-    selectTargetModel: (headType: HeadType, model, isMultiSelect = false) => (dispatch, getState) => {
+    /**
+     * Select an object (object list or canvas). A grouped object selects its whole group,
+     * unless `selectMember` is set (double-click, member row in the list) or a sibling member
+     * is already selected; then only the object is selected.
+     */
+    selectTargetModel: (headType: HeadType, model, isMultiSelect = false, selectMember = false) => (dispatch, getState) => {
         const SVGActions: SVGActionsFactory = getState()[headType].SVGActions;
         const modelGroup: ModelGroup2D = getState()[headType].modelGroup;
         const workpiece: Workpiece = getState()[headType].workpiece;
@@ -1019,22 +1024,20 @@ export const actions = {
         // be re-set below only if a group child is clicked.
         modelGroup.selectedGroupID = null;
 
-        // Group-aware routing: if the clicked model lives inside a
-        // group and we're not in enter-mode, promote the selection to
-        // the full group (all children), so the group behaves as an
-        // atomic unit.
+        // Group-aware routing: a click on a grouped object selects the
+        // whole group (all children), so the group behaves as one object.
         let modelsToSelect = [model];
         let parentGroupID: string | null = null;
         if (model && model.modelID && modelGroup.getParentGroup) {
-            const enteredGroupId = modelGroup.getEnteredGroupId
-                ? modelGroup.getEnteredGroupId()
-                : null;
-            if (!enteredGroupId) {
-                const parentGroup = modelGroup.getParentGroup(model.modelID);
-                if (parentGroup) {
-                    modelsToSelect = parentGroup.children.slice();
-                    parentGroupID = parentGroup.modelID;
-                }
+            const parentGroup = modelGroup.getParentGroup(model.modelID);
+            const click = resolveObjectClick(
+                parentGroup ? parentGroup.modelID : null,
+                selectMember && parentGroup ? parentGroup.modelID : modelGroup.getEnteredGroupId()
+            );
+            dispatch(groupActions.setMemberSelection(headType, click.enteredGroupId));
+            if (click.expandToGroup) {
+                modelsToSelect = parentGroup.children.slice();
+                parentGroupID = parentGroup.modelID;
             }
         }
 
@@ -1651,6 +1654,31 @@ export const actions = {
         dispatch(baseActions.render(headType));
     },
 
+    /** Show or hide all objects of a group (the eye on a group row), one undo step. */
+    setGroupVisible: (headType, group, visible) => (dispatch, getState) => {
+        const { SVGActions } = getState()[headType];
+        const operations = new CompoundOperation();
+        for (const child of group.children) {
+            if (child.visible !== visible && child.elem) {
+                const operation = new VisibleOperation2D({
+                    svgTarget: child.elem,
+                    svgActions: SVGActions,
+                    target: child,
+                    visible
+                });
+                operation.redo();
+                operations.push(operation);
+            }
+        }
+        if (operations.isEmpty()) return;
+        // the visibility change clears the selection
+        getState()[headType].modelGroup.selectedGroupID = null;
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(baseActions.updateState(headType, { isChangedAfterGcodeGenerating: true }));
+        dispatch(actions.resetProcessState(headType));
+        dispatch(baseActions.render(headType));
+    },
+
     showSelectedModel: (headType, model) => (dispatch, getState) => {
         const { modelGroup, SVGActions } = getState()[headType];
         const svgElements = SVGActions.svgContentGroup.getSelected();
@@ -1962,29 +1990,23 @@ export const actions = {
         const { SVGActions, materials, modelGroup } = getState()[headType];
         const isRotate = materials.isRotate;
 
-        // Group-aware routing: if any clicked element belongs to a
-        // grouped model, expand the selection to all elements of that
-        // group so the group behaves as an atomic unit.
-        const enteredGroupId = modelGroup.getEnteredGroupId
-            ? modelGroup.getEnteredGroupId()
-            : null;
+        // Group-aware routing: a click on a grouped element selects all
+        // elements of that group, unless a sibling member is selected
+        // (double-click selected a member: then clicks pick members).
         let expandedElements = elements;
         modelGroup.selectedGroupID = null;
 
-        if (!enteredGroupId && modelGroup.getParentGroup) {
+        if (modelGroup.getParentGroup) {
             const leafModels = modelGroup.getModels();
             const clickedModels = leafModels.filter(m => elements.includes(m.elem));
-
-            for (const clickedModel of clickedModels) {
-                const parentGroup = modelGroup.getParentGroup(clickedModel.modelID);
-                if (parentGroup) {
-                    // Expand to all children of the group
-                    expandedElements = parentGroup.children
-                        .map(child => child.elem)
-                        .filter(Boolean);
-                    modelGroup.selectedGroupID = parentGroup.modelID;
-                    break;
-                }
+            const parentGroup = clickedModels.length ? modelGroup.getParentGroup(clickedModels[0].modelID) : null;
+            const click = resolveObjectClick(parentGroup ? parentGroup.modelID : null, modelGroup.getEnteredGroupId());
+            dispatch(groupActions.setMemberSelection(headType, click.enteredGroupId));
+            if (click.expandToGroup) {
+                expandedElements = parentGroup.children
+                    .map(child => child.elem)
+                    .filter(Boolean);
+                modelGroup.selectedGroupID = parentGroup.modelID;
             }
         }
 
@@ -3130,10 +3152,8 @@ export const actions = {
 
                     // Group-aware: if any selected model belongs to a
                     // group, include ALL members of that group.
-                    const enteredGroupId = modelGroup.getEnteredGroupId
-                        ? modelGroup.getEnteredGroupId()
-                        : null;
-                    if (!enteredGroupId && modelGroup.getParentGroup) {
+                    dispatch(groupActions.setMemberSelection(headType, null));
+                    if (modelGroup.getParentGroup) {
                         const seen = new Set();
                         const expanded = [];
                         for (const m of selectedModels) {
@@ -3264,6 +3284,17 @@ export const actions = {
         if (!toolPath) return;
         const before = [...toolPath.modelMap.keys()];
         const after = withModelRemoved(before, modelId);
+        if (after.length === before.length || after.length === 0) return;
+        dispatch(actions.applyToolPathMembership(headType, toolPath, before, after));
+    },
+
+    /** Remove several objects (e.g. a group) from a toolpath in one step; never empties the toolpath. */
+    removeModelsFromToolPath: (headType, toolPathId, modelIds) => (dispatch, getState) => {
+        const { toolPathGroup } = getState()[headType];
+        const toolPath = toolPathGroup.getToolPath(toolPathId);
+        if (!toolPath) return;
+        const before = [...toolPath.modelMap.keys()];
+        const after = modelIds.reduce((ids, id) => withModelRemoved(ids, id), before);
         if (after.length === before.length || after.length === 0) return;
         dispatch(actions.applyToolPathMembership(headType, toolPath, before, after));
     },

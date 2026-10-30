@@ -138,10 +138,10 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                 },
                 [PREDEFINED_SHORTCUT_ACTIONS.UNSELECT]: () => {
                     if (!(menuDisabledCountRef.current > 0)) {
-                        // If inside a group, Escape exits the group
-                        // instead of unselecting.
+                        // With a group member selected, Escape selects the
+                        // whole group instead of unselecting.
                         if (props.editorActions.exitGroup && props.modelGroup?.getEnteredGroupId?.()) {
-                            props.editorActions.exitGroup();
+                            props.editorActions.exitGroup({ selectGroup: true });
                         } else {
                             props.editorActions.unselectAll();
                         }

@@ -1409,8 +1409,8 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         }
         const { tagName } = mouseTarget;
 
-        // Double-click on a grouped element: enter the group and
-        // immediately select the clicked child element.
+        // Double-click on a grouped element (the click before selected the
+        // whole group): select only the clicked member.
         if (this.props.editorActions?.enterGroup && this.props.modelGroup) {
             const modelGroup = this.props.modelGroup;
             const enteredGroupId = modelGroup.getEnteredGroupId?.();
@@ -1430,8 +1430,8 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                     ? modelGroup.getParentGroup?.(clickedModel.modelID)
                     : null;
                 if (parentGroup) {
-                    // 1. Enter group mode (sets enteredGroupId on the
-                    //    modelGroup instance immediately)
+                    // 1. Member selection for this group (sets enteredGroupId
+                    //    on the modelGroup instance immediately)
                     this.props.editorActions.enterGroup(parentGroup.modelID);
                     // 2. Clear ALL selection state (visual + data) so the
                     //    subsequent select starts fresh. Use SVGActions

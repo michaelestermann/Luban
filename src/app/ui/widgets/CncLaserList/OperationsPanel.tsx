@@ -15,6 +15,7 @@ import {
 } from '../../../toolpaths/operations-panel';
 import ToolPathConfigurations from '../../views/ToolPathConfigurations/ToolPathConfigurations';
 import styles from './operations-panel.styl';
+import { groupMemberChips } from '../../../models/group-selection';
 import { useCardReorder } from './use-card-reorder';
 import DragGrip from './DragGrip';
 
@@ -58,6 +59,14 @@ function addSelectedTip(state: AddSelectedState): string | null {
     }
 }
 
+const GroupChipIcon: React.FC = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="3 2" />
+        <rect x="7" y="7" width="6" height="6" rx="1" />
+        <rect x="11" y="11" width="6" height="6" rx="1" />
+    </svg>
+);
+
 const CloseIcon: React.FC = () => (
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true">
         <path d="M6 6l12 12M18 6L6 18" />
@@ -87,6 +96,7 @@ const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) 
     const selectedModels = modelGroup?.getSelectedModelArray?.() || [];
 
     // all objects by id, group children included
+    const groups = (modelGroup?.models || []).filter(model => model.type === '2d-group');
     const modelsById = new Map();
     (modelGroup?.models || []).forEach((model) => {
         modelsById.set(model.modelID, model);
@@ -136,7 +146,6 @@ const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) 
                 )}
                 {toolPaths.map((toolPath, index) => {
                     const memberIds = getMemberIds(toolPath);
-                    const removable = canRemoveMember(memberIds.length, blocked);
                     const addState = getAddSelectedState(toolPath, selectedModels, blocked);
                     const method = methodLabel(getOperationMethodId(toolPath, headType), headType);
                     const toolName = toolPath.toolParams?.definitionName ? i18n._(toolPath.toolParams.definitionName) : null;
@@ -159,34 +168,40 @@ const OperationsPanel: React.FC<OperationsPanelProps> = ({ headType, blocked }) 
                                 {subtitle && <span className={styles['card-tool']} title={subtitle}>{subtitle}</span>}
                             </div>
                             <div className={styles.chips}>
-                                {memberIds.map((modelId) => {
-                                    const model = modelsById.get(modelId);
-                                    if (!model) {
+                                {groupMemberChips(memberIds, groups).map((chip) => {
+                                    const isGroup = chip.kind === 'group';
+                                    const model = isGroup ? null : modelsById.get(chip.id);
+                                    if (!isGroup && !model) {
                                         return null;
                                     }
+                                    const name = isGroup ? `${chip.name} · ${chip.ids.length}` : model.modelName;
+                                    const ids = isGroup ? chip.ids : [chip.id];
+                                    // a group chip removes all its objects; an operation keeps at least one object
+                                    const chipRemovable = canRemoveMember(memberIds.length - ids.length + 1, blocked);
                                     const removeLabel = i18n._('key-CncLaser/Operations-Remove {{name}} from {{operation}}', {
-                                        name: model.modelName,
+                                        name: isGroup ? chip.name : model.modelName,
                                         operation: toolPath.name
                                     });
                                     let removeTip = removeLabel;
                                     if (blocked) {
                                         removeTip = addSelectedTip('blocked');
-                                    } else if (!removable) {
+                                    } else if (!chipRemovable) {
                                         removeTip = i18n._('key-CncLaser/Operations-An operation needs at least one object.');
                                     }
                                     return (
-                                        <span key={modelId} className={styles.chip}>
-                                            <span className={styles['chip-name']} title={model.modelName}>{model.modelName}</span>
+                                        <span key={chip.id} className={classNames(styles.chip, { [styles['group-chip']]: isGroup })}>
+                                            {isGroup && <GroupChipIcon />}
+                                            <span className={styles['chip-name']} title={name}>{name}</span>
                                             <Tooltip title={removeTip}>
                                                 <span className={styles['tip-wrapper']}>
                                                     <button
                                                         type="button"
                                                         className={styles['chip-remove']}
                                                         aria-label={removeLabel}
-                                                        disabled={!removable}
+                                                        disabled={!chipRemovable}
                                                         onClick={() => {
-                                                            if (removable) {
-                                                                dispatch(editorActions.removeModelFromToolPath(headType, toolPath.id, modelId));
+                                                            if (chipRemovable) {
+                                                                dispatch(editorActions.removeModelsFromToolPath(headType, toolPath.id, ids));
                                                             }
                                                         }}
                                                     >

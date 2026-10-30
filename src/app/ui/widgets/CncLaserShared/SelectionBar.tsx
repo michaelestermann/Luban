@@ -62,9 +62,15 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
         return null;
     }
 
-    const label = selectedModels.length === 1
+    const selectedGroup = modelGroup?.selectedGroupID
+        ? (modelGroup.models || []).find(model => model.modelID === modelGroup.selectedGroupID)
+        : null;
+    let label = selectedModels.length === 1
         ? (selectedModels[0].modelName || selectedModels[0].name || '')
         : i18n._('key-CncLaser/SelectionBar-{{count}} objects', { count: selectedModels.length });
+    if (selectedGroup) {
+        label = i18n._('key-CncLaser/SelectionBar-{{name}} · {{count}} objects', { name: selectedGroup.name, count: selectedModels.length });
+    }
 
     const canUngroup = !!modelGroup?.canUngroup?.();
     const canGroup = !!modelGroup?.canGroup?.();

@@ -12,6 +12,8 @@ export interface RailItem {
 interface PanelChromeProps {
     side: 'left' | 'right';
     title: string;
+    // short hint next to the title (e.g. a keyboard shortcut)
+    hint?: string;
     collapsed: boolean;
     onToggle: () => void;
     // left panel: icon buttons on the collapsed rail, each re-opens the panel
@@ -57,7 +59,7 @@ const RightPanelIcon: React.FC = () => (
  * menu event).
  */
 const PanelChrome: React.FC<PanelChromeProps> = ({
-    side, title, collapsed, onToggle, railItems = [], collapseLabel, expandLabel, className, bodyClassName, children
+    side, title, hint, collapsed, onToggle, railItems = [], collapseLabel, expandLabel, className, bodyClassName, children
 }) => {
     return (
         <div
@@ -98,6 +100,7 @@ const PanelChrome: React.FC<PanelChromeProps> = ({
             >
                 <header className={styles.header}>
                     <span className={styles.label}>{title}</span>
+                    {hint && <span className={styles.hint}>{hint}</span>}
                     <button
                         type="button"
                         className={classNames(styles['icon-button'], styles.small)}

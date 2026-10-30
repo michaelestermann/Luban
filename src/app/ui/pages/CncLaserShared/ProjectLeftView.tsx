@@ -78,6 +78,7 @@ const ProjectLeftView: React.FC<ProjectLeftViewProps> = ({
         <PanelChrome
             side="left"
             title={title}
+            hint={isDesign ? i18n._('key-CncLaser/Group-Ctrl+G group') : undefined}
             collapsed={collapsed}
             onToggle={onToggleCollapsed}
             collapseLabel={i18n._('key-CncLaser/Panel-Collapse left panel')}

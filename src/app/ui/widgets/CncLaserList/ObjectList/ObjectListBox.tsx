@@ -7,6 +7,7 @@ import i18n from '../../../../lib/i18n';
 import { getModelOperationColors } from '../../../../toolpaths/operations-panel';
 import modal from '../../../../lib/modal';
 import styles from '../styles.styl';
+import GroupRow from './GroupRow';
 import ModelItem from './model-item';
 
 
@@ -18,6 +19,8 @@ interface ObjectListBoxProps {
 
 const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false }) => {
     const selectedModelArray = useSelector(state => state[headType].modelGroup?.selectedModelArray);
+    // the selected group (null when single objects or a group member are selected)
+    const selectedGroupID = useSelector(state => state[headType].modelGroup?.selectedGroupID);
     const models = useSelector(state => state[headType]?.modelGroup?.models);
 
     // toolpath membership colour dots; toolPathGroup is mutable, renderingTimestamp re-renders on changes
@@ -29,7 +32,8 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
 
     const dispatch = useDispatch();
 
-    const onSelectItem = useCallback((model, event) => {
+    // member: the object belongs to a group and is selected on its own (not the whole group)
+    const onSelectItem = useCallback((model, event, member = false) => {
         let isMultiSelect = event.shiftKey;
 
         // TODO: Add comment here
@@ -41,18 +45,25 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
             isMultiSelect = false;
         }
 
-        dispatch(editorActions.selectTargetModel(headType, model, isMultiSelect));
+        dispatch(editorActions.selectTargetModel(headType, model, isMultiSelect && !member, member));
     }, [dispatch, headType, selectedModelArray]);
+    const onSelectMember = useCallback((model, event) => onSelectItem(model, event, true), [onSelectItem]);
 
     const actions = {
-        onClickModelHideBox(model) {
+        onClickModelHideBox(model, member = false) {
             const visible = model.visible;
-            dispatch(editorActions.selectTargetModel(headType, model));
+            dispatch(editorActions.selectTargetModel(headType, model, false, member));
             if (visible) {
                 dispatch(editorActions.hideSelectedModel(headType, model));
             } else {
                 dispatch(editorActions.showSelectedModel(headType, model));
             }
+        },
+        onToggleMemberVisible(model) {
+            actions.onClickModelHideBox(model, true);
+        },
+        onToggleGroupVisible(group, visible) {
+            dispatch(editorActions.setGroupVisible(headType, group, visible));
         }
     };
 
@@ -74,10 +85,6 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
         setCollapsedGroups((prev) => ({ ...prev, [groupID]: !prev[groupID] }));
     }, []);
 
-    const onDoubleClickGroup = useCallback((groupID: string) => {
-        dispatch(editorActions.enterGroup(headType, groupID));
-    }, [dispatch, headType]);
-
     return (
         <div
             className={classNames(
@@ -87,79 +94,22 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
             <div className={classNames('padding-vertical-4')}>
                 {
                     allModels && allModels.map((entity) => {
-                        // Render a foldable group row with its children
-                        // indented underneath.
-                        if (entity && (entity as { type?: string }).type === '2d-group') {
-                            const group = entity as unknown as {
-                                modelID: string;
-                                name: string;
-                                visible: boolean;
-                                children: Array<{
-                                    modelID: string;
-                                    visible: boolean;
-                                    modelName?: string;
-                                }>;
-                            };
-                            const isCollapsed = !!collapsedGroups[group.modelID];
+                        if (entity && entity.type === '2d-group') {
                             return (
-                                <React.Fragment key={group.modelID}>
-                                    <div
-                                        className={classNames(
-                                            'padding-vertical-4',
-                                            'padding-horizontal-8',
-                                            'sm-flex',
-                                            'justify-space-between',
-                                        )}
-                                        onDoubleClick={() => onDoubleClickGroup(group.modelID)}
-                                    >
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleGroup(group.modelID);
-                                            }}
-                                            style={{ cursor: 'pointer', marginRight: 6, background: 'none', border: 'none', padding: 0 }}
-                                        >
-                                            {isCollapsed ? '▶' : '▼'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                if (group.children.length > 0) {
-                                                    dispatch(
-                                                        editorActions.selectTargetModel(
-                                                            headType,
-                                                            group.children[0],
-                                                            false,
-                                                        ),
-                                                    );
-                                                }
-                                            }}
-                                            className="flex-1"
-                                            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}
-                                        >
-                                            {group.name}
-                                        </button>
-                                    </div>
-                                    {!isCollapsed && group.children.map((child) => (
-                                        <div
-                                            key={child.modelID}
-                                            style={{ paddingLeft: 16 }}
-                                        >
-                                            <ModelItem
-                                                model={child as unknown as never}
-                                                visible={child.visible}
-                                                styles={styles}
-                                                isSelected={selectedModelArray && selectedModelArray.includes(child)}
-                                                onSelect={onSelectItem}
-                                                onToggleVisible={actions.onClickModelHideBox}
-                                                inProgress={inProgress}
-                                                placement="right"
-                                                dotColors={getModelOperationColors(toolPaths, child.modelID)}
-                                            />
-                                        </div>
-                                    ))}
-                                </React.Fragment>
+                                <GroupRow
+                                    key={entity.modelID}
+                                    group={entity}
+                                    collapsed={!!collapsedGroups[entity.modelID]}
+                                    onToggleCollapsed={toggleGroup}
+                                    selected={selectedGroupID === entity.modelID}
+                                    selectedModelArray={selectedModelArray}
+                                    toolPaths={toolPaths}
+                                    inProgress={inProgress}
+                                    onSelectGroup={onSelectItem}
+                                    onSelectMember={onSelectMember}
+                                    onToggleGroupVisible={actions.onToggleGroupVisible}
+                                    onToggleMemberVisible={actions.onToggleMemberVisible}
+                                />
                             );
                         }
                         const model = entity;
