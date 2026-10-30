@@ -48,9 +48,6 @@ import { isActionForOtherHead } from '../head-type-action';
 
 const initModelGroup = new ModelGroup2D('laser');
 const initToolPathGroup = new ToolPathGroup(initModelGroup, 'laser');
-// Wire the tool-path-group back-reference so ModelGroup2D.group() can
-// enforce the "Model leaves Tool Path" rule on grouped children.
-initModelGroup.setToolPathGroupRef(initToolPathGroup);
 const operationHistory = new OperationHistory();
 
 const initialWorkpiece: Workpiece = {

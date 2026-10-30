@@ -86,12 +86,6 @@ class ModelGroup2D extends EventEmitter {
     // (so existing transform / tool path paths that iterate leaf models
     // keep working). null means the current selection is "free" models.
     public selectedGroupID: string | null = null;
-    // Optional back-reference to the ToolPathGroup so `group()` can
-    // apply the "Model leaves Tool Path" rule to every grouped child.
-    // Typed structurally to avoid a cyclic runtime import.
-    private toolPathGroupRef: {
-        removeModelFromToolPaths(id: string): { deletedToolPathIDs: string[] };
-    } | null = null;
 
 
     public constructor(headType: THeadType) {
@@ -328,14 +322,9 @@ class ModelGroup2D extends EventEmitter {
         // Insert new group into models[] at the computed index
         this.models.splice(insertIndex, 0, newGroup);
 
-        // Apply "Model leaves Tool Path" rule: each freshly grouped
-        // child is removed from any tool path it belonged to. Tool
-        // paths that go empty are deleted.
-        if (this.toolPathGroupRef) {
-            for (const child of newGroup.children) {
-                this.toolPathGroupRef.removeModelFromToolPaths(child.modelID);
-            }
-        }
+        // The children keep their tool paths: grouping only changes how
+        // they are selected and moved, single members can still be in
+        // (and get) their own operations.
 
         // Select the new group at top level: the children stay in
         // selectedModelArray (so transform/tool-path code sees leaf
@@ -416,12 +405,6 @@ class ModelGroup2D extends EventEmitter {
 
     public getEnteredGroupId(): string | null {
         return this.enteredGroupId;
-    }
-
-    public setToolPathGroupRef(
-        ref: { removeModelFromToolPaths(id: string): { deletedToolPathIDs: string[] } } | null,
-    ): void {
-        this.toolPathGroupRef = ref;
     }
 
     /**

@@ -5,10 +5,6 @@ import type ModelGroup2D from '../../models/ModelGroup2D';
 import type SvgGroup from '../../models/SvgGroup';
 import type SvgModel from '../../models/SvgModel';
 import type SVGActionsFactory from '../../models/SVGActionsFactory';
-import i18n from '../../lib/i18n';
-import { toast } from '../../ui/components/Toast';
-import { makeUndoToast } from '../../ui/views/toasts/UndoToast';
-import { actions as operationHistoryActions } from '../operation-history';
 import { baseActions } from './actions-base';
 
 type HeadType = 'laser' | 'cnc';
@@ -59,7 +55,7 @@ export const groupActions = {
         if (!modelGroup.canGroup()) return;
 
         const targetModels = modelGroup.selectedModelArray.slice() as SvgModel[];
-        const op = new GroupSvgOperation({ modelGroup, targetModels, toolPathGroup: state.toolPathGroup });
+        const op = new GroupSvgOperation({ modelGroup, targetModels });
         const compound = new CompoundOperation();
         compound.push(op);
         compound.registerCallbackAll(() => {
@@ -70,27 +66,6 @@ export const groupActions = {
         compound.redo();
         if (operationHistory && typeof operationHistory.push === 'function') {
             operationHistory.push(compound);
-        }
-
-        // Grouping takes the objects out of their operations: say which, with Undo
-        const { removed, reduced } = op.getMembershipLoss();
-        if (removed.length || reduced.length) {
-            dispatch(baseActions.updateState(headType, { isChangedAfterGcodeGenerating: true }));
-            const parts = [i18n._('key-CncLaser/Group-Grouped {{count}} objects.', { count: targetModels.length })];
-            if (removed.length) {
-                parts.push(i18n._('key-CncLaser/Group-{{names}} had no objects left and were removed.', { names: removed.join(', ') }));
-            }
-            if (reduced.length) {
-                parts.push(i18n._('key-CncLaser/Group-The objects were taken out of {{names}}.', { names: reduced.join(', ') }));
-            }
-            const toastId = toast(makeUndoToast(parts.join(' '), () => {
-                toast.dismiss(toastId);
-                // only while the grouping is still the last step
-                if (getState()[headType].history?.get?.() === compound) {
-                    dispatch(operationHistoryActions.undo(headType));
-                    dispatch(baseActions.render(headType));
-                }
-            }), { autoClose: 8000, closeOnClick: false });
         }
     },
 

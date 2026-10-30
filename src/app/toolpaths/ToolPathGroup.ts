@@ -8,7 +8,6 @@ import { generateModelDefaultConfigs } from '../models/ModelInfoUtils';
 import ThreeModel from '../models/ThreeModel';
 import ToolPath from './ToolPath';
 import { moveItem } from './reorder';
-import { removeModelFromAllToolPaths } from './membership-snapshot';
 import { SUCCESS, createToolPathNameByType, getModelsByToolPathType, getToolPathType } from './utils';
 
 class ToolPathGroup {
@@ -402,19 +401,6 @@ class ToolPathGroup {
         this.selectToolPathById(null);
 
         this._updated();
-    }
-
-    /**
-     * Remove a model's ID from every tool path that references it.
-     * Implements the "Model leaves Tool Path" rule: a tool path whose
-     * visibleModelIDs become empty as a result is deleted entirely;
-     * any other tool path keeps its remaining members.
-     *
-     * Returns the list of tool path ids that ended up deleted, which
-     * the caller (e.g. an operation-history entry) can use to undo.
-     */
-    public removeModelFromToolPaths(modelID: string): { deletedToolPathIDs: string[] } {
-        return removeModelFromAllToolPaths(this, modelID);
     }
 
     public deleteAllToolPaths() {
