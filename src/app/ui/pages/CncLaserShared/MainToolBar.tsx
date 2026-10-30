@@ -14,6 +14,7 @@ import { actions as laserActions } from '../../../flux/laser';
 import { actions as projectActions } from '../../../flux/project';
 import { ConnectionType } from '../../../flux/workspace/state';
 import i18n from '../../../lib/i18n';
+import { canDecomposeSelection, getDecomposeHref, loadDecomposeInfo } from '../../../lib/svg-decompose';
 import { SnapmakerOriginalExtendedMachine, SnapmakerOriginalMachine } from '../../../machines';
 import { calculateElemsBoundingbox, handleClipPath, handleMask } from '../../SVGEditor/lib/ImageSvgCompose';
 import Dropdown from '../../components/Dropdown';
@@ -32,7 +33,8 @@ import { L20WLaserToolModule, L2WLaserToolModule, L40WLaserToolModule } from '..
 function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setShowMaterialTest, setShowWorkspace,
     onChangeSVGClippingMode,
     // onChangeMaterialTestMode,
-    onChangeABPositionMode }) {
+    onChangeABPositionMode,
+    isSVGClipping = false }) {
     const { isOnABPosition, APosition, BPosition } = useSelector((state: RootState) => state.laser);
 
     const size = useSelector((state: RootState) => state.machine?.size);
@@ -265,6 +267,31 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
                     dispatch(editorActions.ungroupSelectedGroup(headType));
                 } else if (canGroup) {
                     dispatch(editorActions.groupSelectedModels(headType));
+                }
+            }
+        },
+    );
+
+    // Decompose: enabled when exactly one imported SVG is selected whose SVG
+    // has at least 2 parts (checked once per SVG, cached on the model).
+    const selectedModels = renderingTimestamp !== undefined ? (modelGroup?.getSelectedModelArray?.() ?? []) : [];
+    const decomposeCandidate = selectedModels.length === 1 ? selectedModels[0] : null;
+    const decomposeHref = getDecomposeHref(decomposeCandidate);
+    useEffect(() => {
+        if (decomposeHref && decomposeCandidate.decomposeInfo?.href !== decomposeHref) {
+            loadDecomposeInfo(decomposeCandidate).then(() => dispatch(editorActions.render(headType)));
+        }
+    }, [decomposeCandidate, decomposeHref, dispatch, headType]);
+    const canDecomposeSelected = canDecomposeSelection(selectedModels, { isRotate, isOnABPosition, isSVGClipping });
+    leftItems.push(
+        {
+            title: i18n._('key-CncLaser/MainToolBar-Decompose'),
+            type: 'button',
+            disabled: !canDecomposeSelected,
+            name: 'MainToolbarModelSplit',
+            action: () => {
+                if (canDecomposeSelected) {
+                    dispatch(editorActions.decomposeSelectedSVG(headType));
                 }
             }
         },

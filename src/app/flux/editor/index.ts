@@ -38,6 +38,15 @@ import {
 import CompoundOperation from '../../core/CompoundOperation';
 import OperationHistory from '../../core/OperationHistory';
 import log from '../../lib/log';
+import {
+    computePartTransformation,
+    fetchSvgText,
+    getDecomposeHref,
+    measurePartBBox,
+    readFrame,
+    reframePart,
+    splitOneLevel
+} from '../../lib/svg-decompose';
 import ProgressStatesManager, { PROCESS_STAGE, STEP_STAGE } from '../../lib/manager/ProgressManager';
 import workerManager from '../../lib/manager/workerManager';
 import ModelGroup from '../../models/ModelGroup';
@@ -52,6 +61,7 @@ import { NS } from '../../ui/SVGEditor/lib/namespaces';
 import ModelLoader from '../../ui/widgets/PrintingVisualizer/ModelLoader';
 import AddOperation2D from '../operation-history/AddOperation2D';
 import DeleteOperation2D from '../operation-history/DeleteOperation2D';
+import DecomposeOperation2D from '../operation-history/DecomposeOperation2D';
 import DrawDelete from '../operation-history/DrawDelete';
 import DrawLine from '../operation-history/DrawLine';
 import DrawStart from '../operation-history/DrawStart';
@@ -274,6 +284,9 @@ const DEFAULT_STATE = {
 };
 
 export const ACTION_UPDATE_STATE = 'editor/ACTION_UPDATE_STATE';
+// Head types with a decompose in progress (guards against double clicks)
+const decomposingHeadTypes = new Set<string>();
+
 export const actions = {
     ...baseActions,
 
@@ -3208,147 +3221,115 @@ export const actions = {
         };
     },
 
-    // Decompose a selected SVG image model into individual vector elements.
-    // Each shape in the SVG becomes a separate model placed at the same canvas
-    // position/size as the original, preserving parent <g> transforms correctly.
+    // Decompose the selected imported SVG one level: each direct child of
+    // its SVG (single wrapper <g>s skipped) becomes its own object with a
+    // tight frame, in the same place, with the original's mode/settings and
+    // tool paths. One undo step reverts it completely.
     decomposeSelectedSVG: (headType) => async (dispatch, getState) => {
-        const { modelGroup } = getState()[headType];
+        if (decomposingHeadTypes.has(headType)) return;
+        const { modelGroup, SVGActions, toolPathGroup, materials } = getState()[headType];
+        if (materials?.isRotate) return;
+        if (headType === HEAD_LASER && getState().laser?.isOnABPosition) return;
         const selected = modelGroup.getSelectedModelArray();
         if (!selected || selected.length !== 1) return;
-        const model = selected[0];
-        // Only handle SVG source elements represented as an <image> on the canvas
-        if (!model || model.sourceType !== 'svg' || !model.elem || model.elem.nodeName !== 'image') return;
+        const original = selected[0];
+        const href = getDecomposeHref(original);
+        if (!href) return;
 
+        decomposingHeadTypes.add(headType);
         try {
-            // Use the href already on the <image> element — it is a fully-qualified
-            // URL the browser can fetch directly (e.g. http://localhost:PORT/...)
-            const href = model.elem.getAttribute('href');
-            if (!href) return;
+            const svgText = await fetchSvgText(href);
+            const { parts, canSplit } = splitOneLevel(svgText);
+            original.decomposeInfo = { href, canSplit };
+            const frame = readFrame(svgText);
+            if (!canSplit || !frame) return;
 
-            const res = await fetch(href);
-            const svgText = await res.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(svgText, 'image/svg+xml');
-            const root = doc.documentElement as unknown as SVGSVGElement;
-
-            // Resolve viewBox of the source SVG
-            const viewBoxAttr = root.getAttribute('viewBox');
-            let vx = 0, vy = 0, vw = 0, vh = 0;
-            if (viewBoxAttr) {
-                [vx, vy, vw, vh] = viewBoxAttr.trim().split(/[\s,]+/).map(parseFloat);
-            } else {
-                vw = parseFloat(root.getAttribute('width')) || 100;
-                vh = parseFloat(root.getAttribute('height')) || 100;
+            const placed = [];
+            for (const part of parts) {
+                const bbox = measurePartBBox(part);
+                if (bbox) {
+                    placed.push({
+                        svg: reframePart(part, bbox),
+                        transformation: computePartTransformation({
+                            original: original.transformation,
+                            viewBox: frame.viewBox,
+                            // The canvas <image> decides how the SVG is fitted (default xMidYMid meet)
+                            preserveAspectRatio: original.elem.getAttribute('preserveAspectRatio'),
+                            bbox
+                        })
+                    });
+                }
             }
+            if (placed.length < 2) return;
 
-            // Collect <defs> and top-level <style> elements so referenced assets
-            // (gradients, markers, etc.) survive in each per-shape SVG.
-            const defsEl = root.querySelector('defs');
-            const defsXml = defsEl ? new XMLSerializer().serializeToString(defsEl) : '';
-            const styleXml = Array.from(root.querySelectorAll(':scope > style'))
-                .map(s => new XMLSerializer().serializeToString(s))
-                .join('');
-
-            // Walk the SVG tree collecting individual shapes.
-            // Groups are flattened; their transforms are accumulated and wrapped
-            // around each child shape so geometry is preserved exactly.
-            const SHAPE_TAGS = new Set([
-                'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
-                'path', 'text', 'image'
-            ]);
-
-            interface ShapeEntry { element: Element; parentTransforms: string[]; }
-            const collectShapes = (node: Element, parentTransforms: string[]): ShapeEntry[] => {
-                const result: ShapeEntry[] = [];
-                for (const child of Array.from(node.children)) {
-                    // Strip namespace prefix (e.g. "svg:path" → "path")
-                    const tag = child.tagName.replace(/^[^:]+:/, '').toLowerCase();
-                    const childTransform = child.getAttribute('transform');
-                    if (tag === 'g') {
-                        const next = childTransform
-                            ? [...parentTransforms, childTransform]
-                            : parentTransforms;
-                        result.push(...collectShapes(child, next));
-                    } else if (SHAPE_TAGS.has(tag)) {
-                        result.push({ element: child, parentTransforms });
-                    } else {
-                        // Unknown container — recurse without adding a transform
-                        result.push(...collectShapes(child, parentTransforms));
-                    }
-                }
-                return result;
-            };
-
-            const shapes = collectShapes(root, []);
-            if (shapes.length === 0) return;
-
-            // Snapshot the original model's canvas transformation before removing it.
-            const {
-                positionX = 0, positionY = 0,
-                width = 10, height = 10,
-                rotationZ = 0, scaleX = 1, scaleY = 1
-            } = model.transformation;
-
-            // Remove the original compound <image> model first so the selection
-            // is clear when generateModel selects each new part.
-            dispatch(actions.removeSelectedModel(headType));
-
-            // For each extracted shape: build a standalone SVG (same viewBox as the
-            // original so coordinates remain correct), upload it, then place it at
-            // exactly the same canvas position/size as the original model.
-            for (const { element: shape, parentTransforms } of shapes) {
-                let shapeXml = new XMLSerializer().serializeToString(shape);
-
-                // Re-wrap with accumulated parent-group transforms (innermost last)
-                for (let i = parentTransforms.length - 1; i >= 0; i--) {
-                    shapeXml = `<g transform="${parentTransforms[i]}">${shapeXml}</g>`;
-                }
-
-                const svgContent = [
-                    '<svg xmlns="http://www.w3.org/2000/svg"',
-                    ` viewBox="${vx} ${vy} ${vw} ${vh}"`,
-                    ` width="${vw}" height="${vh}">`,
-                    defsXml,
-                    styleXml,
-                    shapeXml,
-                    '</svg>'
-                ].join('');
-
-                const modelID = `decompose-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-                const file = new File([blob], `${modelID}.svg`);
+            const baseName = (original.originalName || 'svg').replace(/\.svg$/i, '');
+            const uploads = await Promise.all(placed.map(async ({ svg }, i) => {
                 const formData = new FormData();
-                formData.append('image', file);
+                formData.append('image', new File([new Blob([svg], { type: 'image/svg+xml' })], `${baseName}-${i + 1}.svg`));
+                return api.uploadImage(formData);
+            }));
 
+            // The scene may have changed while uploading
+            if (!modelGroup.getModels().includes(original)) return;
+
+            const toolPaths = toolPathGroup.toolPaths.filter(item => item.modelMap.has(original.modelID));
+            const parentGroup = modelGroup.getParentGroup?.(original.modelID) ?? null;
+            const container = parentGroup ? parentGroup.children : modelGroup.models;
+            const index = container.indexOf(original);
+
+            const partModels = [];
+            for (let i = 0; i < placed.length; i++) {
+                const { originalName, uploadName, sourceWidth, sourceHeight } = uploads[i].body;
+                const modelID = `id${uuid()}`;
+                // History gets one decompose entry instead of one entry per part
+                dispatch(operationHistoryActions.excludeModelById(headType, modelID));
                 // eslint-disable-next-line no-await-in-loop
-                const uploadRes = await api.uploadImage(formData);
-                const { originalName, uploadName, sourceWidth, sourceHeight } = uploadRes.body;
-
-                // Place the new part-model at the same position/size as the original.
-                // Passing width/height/positionX/positionY overrides generateModel's
-                // default auto-sizing logic (see the spread order in generateModel).
-                dispatch(actions.generateModel(headType, {
+                await dispatch(actions.generateModel(headType, {
                     originalName,
                     uploadName,
                     sourceWidth,
                     sourceHeight,
-                    mode: 'vector',
+                    mode: original.mode,
                     sourceType: 'svg',
-                    transformation: {
-                        positionX,
-                        positionY,
-                        width,
-                        height,
-                        rotationZ,
-                        scaleX,
-                        scaleY,
-                    }
+                    config: { ...original.config },
+                    gcodeConfig: { ...original.gcodeConfig },
+                    transformation: placed[i].transformation,
+                    modelID
                 }));
+                const part = modelGroup.getModel(modelID);
+                if (part) partModels.push(part);
             }
+            if (partModels.length === 0) return;
 
+            const operation = new DecomposeOperation2D({
+                original,
+                parts: partModels,
+                addOperations: partModels.map(target => new AddOperation2D({ target, svgActions: SVGActions, toolPathGroup })),
+                deleteOperation: new DeleteOperation2D({ target: original, svgActions: SVGActions, toolPathGroup, parentGroup }),
+                modelGroup,
+                toolPathGroup,
+                toolPaths,
+                parentGroup,
+                index
+            });
+            operation.placeParts();
+            operation.state.deleteOperation.redo();
+
+            const operations = new CompoundOperation();
+            operations.push(operation);
+            dispatch(operationHistoryActions.setOperations(headType, operations));
+
+            SVGActions.clearSelection();
+            modelGroup.selectedGroupID = null;
+            SVGActions.addSelectedSvgModelsByModels(partModels, materials.isRotate);
+
+            dispatch(baseActions.updateState(headType, modelGroup.getState()));
+            dispatch(baseActions.resetCalculatedState(headType));
             dispatch(baseActions.render(headType));
         } catch (e) {
-            console.error('Failed to decompose SVG:', e);
+            log.error('Failed to decompose SVG:', e);
+        } finally {
+            decomposingHeadTypes.delete(headType);
         }
     }
 };

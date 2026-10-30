@@ -26,6 +26,7 @@ import { actions as editorActions } from '../../../flux/editor';
 import { actions as operationHistoryActions } from '../../../flux/operation-history';
 import { actions as laserActions } from '../../../flux/laser';
 import i18n from '../../../lib/i18n';
+import { canDecomposeSelection } from '../../../lib/svg-decompose';
 import modal from '../../../lib/modal';
 import { humanReadableTime } from '../../../lib/time-utils';
 import UniApi from '../../../lib/uni-api';
@@ -526,14 +527,11 @@ class Visualizer extends React.Component<VisualizerProps> {
         const displayedType = this.props.displayedType;
         const pasteDisabled = (this.props.modelGroup.clipboard.length === 0);
         const editable = this.props.pageMode !== PageMode.ABPosition;
-        const decomposeEnabled = (
-            this.props.selectedModelArray
-            && this.props.selectedModelArray.length === 1
-            && this.props.selectedModelArray[0].visible
-            && this.props.selectedModelArray[0].sourceType === 'svg'
-            && this.props.selectedModelArray[0].elem
-            && this.props.selectedModelArray[0].elem.nodeName === 'image'
-        );
+        const decomposeEnabled = canDecomposeSelection(this.props.selectedModelArray, {
+            isRotate: this.props.materials?.isRotate,
+            isOnABPosition: this.props.isOnABPosition,
+            isSVGClipping: this.props.pageMode === PageMode.SVGClipping
+        });
 
         return (
             <div

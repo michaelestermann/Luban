@@ -19,6 +19,7 @@ import { actions as machineActions } from '../../../flux/machine';
 import { actions as operationHistoryActions } from '../../../flux/operation-history';
 import { controller } from '../../../communication/socket-communication';
 import i18n from '../../../lib/i18n';
+import { canDecomposeSelection } from '../../../lib/svg-decompose';
 import { STEP_STAGE } from '../../../lib/manager/ProgressManager';
 import modal from '../../../lib/modal';
 import { humanReadableTime } from '../../../lib/time-utils';
@@ -100,6 +101,7 @@ interface VisualizerProps {
     selectModelInProcess: () => void;
     removeSelectedModelsByCallback: () => void;
     duplicateSelectedModel: () => void;
+    decomposeSelectedSVG: () => void;
     // onModelTransform: PropTypes.func.isRequired,
     // onModelAfterTransform: PropTypes.func.isRequired,
 
@@ -201,6 +203,7 @@ class Visualizer extends React.Component<VisualizerProps> {
         selectModelInProcess: PropTypes.func.isRequired,
         removeSelectedModelsByCallback: PropTypes.func.isRequired,
         duplicateSelectedModel: PropTypes.func.isRequired,
+        decomposeSelectedSVG: PropTypes.func.isRequired,
         // onModelTransform: PropTypes.func.isRequired,
         // onModelAfterTransform: PropTypes.func.isRequired,
 
@@ -387,6 +390,9 @@ class Visualizer extends React.Component<VisualizerProps> {
         },
         duplicateSelectedModel: () => {
             this.props.duplicateSelectedModel();
+        },
+        decomposeSelectedSVG: () => {
+            this.props.decomposeSelectedSVG();
         },
         rotateModel: (angle) => {
             const elements = this.props.SVGActions.svgContentGroup.selectedElements;
@@ -584,6 +590,9 @@ class Visualizer extends React.Component<VisualizerProps> {
         const notice = this.getNotice();
         const progress = this.props.progress;
         const contextMenuDisabled = !isOnlySelectedOneModel || !this.props.selectedModelArray[0].visible;
+        const decomposeEnabled = canDecomposeSelection(this.props.selectedModelArray, {
+            isRotate: (this.props.materials as { isRotate?: boolean })?.isRotate
+        });
         const { displayedType } = this.props;
         const pasteDisabled = (this.props.modelGroup.clipboard.length === 0);
         const editable = true;
@@ -724,6 +733,12 @@ class Visualizer extends React.Component<VisualizerProps> {
                                 label: i18n._('key-Cnc/Edit/ContextMenu-Duplicate'),
                                 disabled: contextMenuDisabled,
                                 onClick: this.actions.duplicateSelectedModel
+                            },
+                            {
+                                type: 'item',
+                                label: i18n._('key-Cnc/Edit/ContextMenu-Decompose'),
+                                disabled: !decomposeEnabled,
+                                onClick: this.actions.decomposeSelectedSVG
                             },
                             {
                                 type: 'separator'
@@ -912,6 +927,7 @@ const mapDispatchToProps = (dispatch) => {
         onFlipSelectedModel: (flip) => dispatch(editorActions.onFlipSelectedModel('cnc', flip)),
         selectModelInProcess: (intersect, selectEvent) => dispatch(editorActions.selectModelInProcess('cnc', intersect, selectEvent)),
         duplicateSelectedModel: () => dispatch(editorActions.duplicateSelectedModel('cnc')),
+        decomposeSelectedSVG: () => dispatch(editorActions.decomposeSelectedSVG('cnc')),
         removeSelectedModelsByCallback: (mode) => dispatch(editorActions.removeSelectedModelsByCallback('cnc', mode)),
         cut: () => dispatch(editorActions.cut('cnc')),
         copy: () => dispatch(editorActions.copy('cnc')),

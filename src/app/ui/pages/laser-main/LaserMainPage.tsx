@@ -136,7 +136,8 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
         setShowMaterialTest,
         setShowWorkspace,
         onChangeSVGClippingMode,
-        onChangeABPositionMode
+        onChangeABPositionMode,
+        isSVGClipping: pageMode === PageMode.SVGClipping
     });
     const renderHomepage = () => {
         const onClose = () => {
