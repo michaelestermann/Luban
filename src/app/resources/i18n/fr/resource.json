@@ -2446,5 +2446,16 @@
     "key_ui-views-MaterialTestModal-FormComponent-min": "Min.",
     "key_ui-views-MaterialTestModal-FormComponent-max": "Max.",
     "key_ui-views-MaterialTestModal-FormComponent-height": "Hauteur",
-    "key_ui-views-MaterialTestModal-FormComponent-width": "Largeur"
+    "key_ui-views-MaterialTestModal-FormComponent-width": "Largeur",
+    "key-FramePicker-Hint": "Click a handle on the frame",
+    "key-FramePicker-Reference": "Reference point",
+    "key-FramePicker-TopLeft": "Top left",
+    "key-FramePicker-TopCentre": "Top centre",
+    "key-FramePicker-TopRight": "Top right",
+    "key-FramePicker-MiddleLeft": "Middle left",
+    "key-FramePicker-Centre": "Centre",
+    "key-FramePicker-MiddleRight": "Middle right",
+    "key-FramePicker-BottomLeft": "Bottom left",
+    "key-FramePicker-BottomCentre": "Bottom centre",
+    "key-FramePicker-BottomRight": "Bottom right"
 }

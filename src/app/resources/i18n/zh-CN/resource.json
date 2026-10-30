@@ -2446,5 +2446,16 @@
     "key_ui-views-MaterialTestModal-FormComponent-min": "最小值",
     "key_ui-views-MaterialTestModal-FormComponent-max": "最大值",
     "key_ui-views-MaterialTestModal-FormComponent-height": "高度",
-    "key_ui-views-MaterialTestModal-FormComponent-width": "宽度"
+    "key_ui-views-MaterialTestModal-FormComponent-width": "宽度",
+    "key-FramePicker-Hint": "Click a handle on the frame",
+    "key-FramePicker-Reference": "Reference point",
+    "key-FramePicker-TopLeft": "Top left",
+    "key-FramePicker-TopCentre": "Top centre",
+    "key-FramePicker-TopRight": "Top right",
+    "key-FramePicker-MiddleLeft": "Middle left",
+    "key-FramePicker-Centre": "Centre",
+    "key-FramePicker-MiddleRight": "Middle right",
+    "key-FramePicker-BottomLeft": "Bottom left",
+    "key-FramePicker-BottomCentre": "Bottom centre",
+    "key-FramePicker-BottomRight": "Bottom right"
 }

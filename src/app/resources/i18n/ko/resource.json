@@ -2443,5 +2443,16 @@
     "key_ui-views-MaterialTestModal-FormComponent-columnCount": "열 수",
     "key_ui-views-MaterialTestModal-FormComponent-speed": "속도",
     "key_ui-views-MaterialTestModal-FormComponent-power": "전력",
-    "key_ui-views-MaterialTestModal-FormComponent-min": "최소"
+    "key_ui-views-MaterialTestModal-FormComponent-min": "최소",
+    "key-FramePicker-Hint": "Click a handle on the frame",
+    "key-FramePicker-Reference": "Reference point",
+    "key-FramePicker-TopLeft": "Top left",
+    "key-FramePicker-TopCentre": "Top centre",
+    "key-FramePicker-TopRight": "Top right",
+    "key-FramePicker-MiddleLeft": "Middle left",
+    "key-FramePicker-Centre": "Centre",
+    "key-FramePicker-MiddleRight": "Middle right",
+    "key-FramePicker-BottomLeft": "Bottom left",
+    "key-FramePicker-BottomCentre": "Bottom centre",
+    "key-FramePicker-BottomRight": "Bottom right"
 }

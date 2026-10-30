@@ -10,23 +10,13 @@ import { toFixed, toFixedNumber, convertSVGPointToLogicalPoint } from '../../../
 import TipTrigger from '../../components/TipTrigger';
 import SvgIcon from '../../components/SvgIcon';
 import { NumberInput as Input } from '../../components/Input';
+import { anchorOffset, DEFAULT_ANCHOR } from '../../../lib/anchor';
+import FramePicker from './FramePicker';
 
 import { actions as editorActions } from '../../../flux/editor';
 
 import styles from './styles.styl';
 import { HEAD_CNC, SVG_NODE_NAME_TEXT } from '../../../constants';
-
-const X_ANCHOR = {
-    LEFT: 'left',
-    CENTER: 'center',
-    RIGHT: 'right'
-};
-
-const Y_ANCHOR = {
-    TOP: 'top',
-    MIDDLE: 'middle',
-    BOTTOM: 'bottom'
-};
 
 const HORIZONTAL_ALIGN = {
     LEFT: 'left',
@@ -46,6 +36,41 @@ const VERTICAL_ALIGN = {
  * This component is used for display properties of selected SVG elements.
  */
 const extnameArray = ['.svg', '.dxf'];
+
+const getElemHref = (model) => {
+    const elem = model?.elem;
+    if (!elem || elem.tagName?.toLowerCase() !== 'image') {
+        return undefined;
+    }
+    return elem.getAttribute('href') || elem.getAttribute('xlink:href') || undefined;
+};
+
+const getPickerImage = (models) => {
+    if (models.length === 1) {
+        return { imageHref: getElemHref(models[0]) };
+    }
+    const rects = models
+        .map(model => ({ href: getElemHref(model), rect: model.elem?.getBoundingClientRect?.() }))
+        .filter(item => item.rect && item.rect.width > 0 && item.rect.height > 0);
+    if (rects.length === 0) {
+        return {};
+    }
+    const left = Math.min(...rects.map(item => item.rect.left));
+    const top = Math.min(...rects.map(item => item.rect.top));
+    const right = Math.max(...rects.map(item => item.rect.right));
+    const bottom = Math.max(...rects.map(item => item.rect.bottom));
+    const frameW = right - left;
+    const frameH = bottom - top;
+    return {
+        items: rects.map(({ href, rect }) => ({
+            href,
+            x: (rect.left - left) / frameW,
+            y: (rect.top - top) / frameH,
+            width: rect.width / frameW,
+            height: rect.height / frameH
+        }))
+    };
+};
 const TransformationSection = ({ headType, updateSelectedModelUniformScalingState, disabled }) => {
     const size = useSelector(state => state?.machine?.size);
     const modelGroup = useSelector(state => state[headType]?.modelGroup);
@@ -65,8 +90,7 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
     const config = useSelector(state => state[headType]?.modelGroup?.getSelectedModel()?.config);
     const isTextVector = (config.svgNodeName === SVG_NODE_NAME_TEXT);
     const [minSize, setMinSize] = useState(0.1);
-    const [xAnchor, setXAnchor] = useState(X_ANCHOR.CENTER);
-    const [yAnchor, setYAnchor] = useState(Y_ANCHOR.MIDDLE);
+    const [anchor, setAnchor] = useState(DEFAULT_ANCHOR);
 
     // calculate logical transformation
     // TODO: convert positions in flux
@@ -96,58 +120,32 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
         });
     }, [selectedModelArray]);
 
+    // anchor offset from the selection centre (logical, Y up)
+    const { dx: anchorDx, dy: anchorDy } = anchorOffset(anchor, { width, height });
+
     const transform = {
-        x: () => {
-            let value = toFixed(logicalX, 1);
-
-            if (xAnchor === X_ANCHOR.LEFT) {
-                value -= width / 2;
-            } else if (xAnchor === X_ANCHOR.RIGHT) {
-                value += width / 2;
-            }
-
-            return value.toFixed(1);
-        },
-
-        y: () => {
-            let value = toFixed(logicalY, 1);
-
-            if (yAnchor === Y_ANCHOR.BOTTOM) {
-                value -= height / 2;
-            } else if (yAnchor === Y_ANCHOR.TOP) {
-                value += height / 2;
-            }
-
-            return value.toFixed(1);
-        }
+        x: () => (Number(toFixed(logicalX, 1)) + anchorDx).toFixed(1),
+        y: () => (Number(toFixed(logicalY, 1)) + anchorDy).toFixed(1)
     };
 
+    // picture(s) of the selected object(s) for the anchor picker
+    const pickerImage = getPickerImage(selectedModelArray);
+
     const actions = {
-        onAnchorChanged: (anchorX, anchorY) => {
-            setXAnchor(anchorX);
-            setYAnchor(anchorY);
+        onAnchorChanged: (newAnchor) => {
+            setAnchor(newAnchor);
         },
 
         onChangeLogicalX: (newLogicalX) => {
             const elements = selectedElements;
-            let newX = newLogicalX + size.x;
-            if (xAnchor === X_ANCHOR.LEFT) {
-                newX += width / 2;
-            } else if (xAnchor === X_ANCHOR.RIGHT) {
-                newX -= width / 2;
-            }
+            const newX = newLogicalX + size.x - anchorDx;
 
             dispatch(editorActions.moveElementsImmediately(headType, elements, { newX }));
         },
 
         onChangeLogicalY: (newLogicalY) => {
             const elements = selectedElements;
-            let newY = -newLogicalY + size.y;
-            if (yAnchor === Y_ANCHOR.TOP) {
-                newY += height / 2;
-            } else if (yAnchor === Y_ANCHOR.BOTTOM) {
-                newY -= height / 2;
-            }
+            const newY = -newLogicalY + size.y + anchorDy;
 
             dispatch(editorActions.moveElementsImmediately(headType, elements, { newY }));
         },
@@ -301,79 +299,17 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                     title={i18n._('key-CncLaser/TransformationSection-AnchorPoint')}
                     content={i18n._('key-CncLaser/TransformationSection-Sets the reference point for aligning the object. Adjusts the objects position based on the selected anchor point.')}
                 >
-                    <div className="sm-flex margin-vertical-8 ">
-                        <span className="sm-flex-auto sm-flex-order-negative width-64 text-overflow-ellipsis">{i18n._('key-CncLaser/TransformationSection-AnchorPoint')}</span>
-                        <span className="sm-flex-width sm-flex sm-flex-direction-c justify-space-between">
-                            <div className="margin-vertical-4">
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.LEFT, Y_ANCHOR.TOP)}
-                                    name="AnchorTopLeft"
-                                    className="border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.TOP)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.CENTER, Y_ANCHOR.TOP)}
-                                    name="AnchorTopCenter"
-                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.TOP)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.RIGHT, Y_ANCHOR.TOP)}
-                                    name="AnchorTopRight"
-                                    className="border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.TOP)}
-                                    borderRadius={8}
-                                />
-                            </div>
-                            <div className="margin-vertical-4">
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.LEFT, Y_ANCHOR.MIDDLE)}
-                                    name="AnchorMiddleLeft"
-                                    className="border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.MIDDLE)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.CENTER, Y_ANCHOR.MIDDLE)}
-                                    name="AnchorMiddleCenter"
-                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.MIDDLE)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.RIGHT, Y_ANCHOR.MIDDLE)}
-                                    name="AnchorMiddleRight"
-                                    className="border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.MIDDLE)}
-                                    borderRadius={8}
-                                />
-                            </div>
-                            <div className="margin-vertical-4">
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.LEFT, Y_ANCHOR.BOTTOM)}
-                                    name="AnchorBottomLeft"
-                                    className="border-radius-8 border-default-grey-1 margin-left-16"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.LEFT && yAnchor === Y_ANCHOR.BOTTOM)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.CENTER, Y_ANCHOR.BOTTOM)}
-                                    name="AnchorBottomCenter"
-                                    className="border-radius-8 border-default-grey-1 margin-horizontal-4"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.CENTER && yAnchor === Y_ANCHOR.BOTTOM)}
-                                    borderRadius={8}
-                                />
-                                <SvgIcon
-                                    onClick={() => actions.onAnchorChanged(X_ANCHOR.RIGHT, Y_ANCHOR.BOTTOM)}
-                                    name="AnchorBottomRight"
-                                    className="border-radius-8 border-default-grey-1"
-                                    disabled={disabled || !selectedNotHide || drawing || (xAnchor === X_ANCHOR.RIGHT && yAnchor === Y_ANCHOR.BOTTOM)}
-                                    borderRadius={8}
-                                />
-                            </div>
-                        </span>
+                    <div className="margin-vertical-8">
+                        <FramePicker
+                            anchor={anchor}
+                            onChange={actions.onAnchorChanged}
+                            imageHref={pickerImage.imageHref}
+                            items={pickerImage.items}
+                            rotation={canRotate ? logicalAngle : 0}
+                            flip={{ horizontal: scaleX < 0, vertical: scaleY < 0 }}
+                            aspect={logicalWidth / logicalHeight}
+                            disabled={disabled || !selectedNotHide || drawing}
+                        />
                     </div>
                 </TipTrigger>
                 <TipTrigger
