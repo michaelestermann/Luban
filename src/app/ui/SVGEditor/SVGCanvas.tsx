@@ -145,6 +145,8 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
 
     public node = React.createRef();
 
+    public resizeObserver: ResizeObserver = null;
+
     public input = React.createRef();
 
     public mode = 'select';
@@ -185,6 +187,11 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         this.onResize();
         this.setupTextActions();
         window.addEventListener('resize', this.onResize, false);
+        // The canvas area also changes size without a window resize (panels collapsing, layout settling)
+        if (typeof ResizeObserver !== 'undefined' && this.node.current) {
+            this.resizeObserver = new ResizeObserver(() => this.onResize());
+            this.resizeObserver.observe(this.node.current as Element);
+        }
     }
 
     public componentWillReceiveProps(nextProps) {
@@ -256,6 +263,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         this.svgContainer.removeEventListener('mousemove', this.onMouseMove, false);
         this.svgContainer.removeEventListener('wheel', this.onMouseWheel, false);
         window.removeEventListener('mouseup', this.onMouseUp, false);
+        this.resizeObserver && this.resizeObserver.disconnect();
         window.removeEventListener('resize', this.onResize, false);
         window.removeEventListener('hashchange', this.onResize, false);
         window.removeEventListener('dblclick', this.onDblClick, false);

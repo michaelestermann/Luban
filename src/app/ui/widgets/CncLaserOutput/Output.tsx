@@ -155,20 +155,7 @@ const Output: React.FC<OutputViewProps> = (props) => {
             {/* "Next" and "Generate G-code" moved to the stepper row (CncLaserShared/Stepper),
                 the CNC file list to the G-code step (CncLaserOutput/GcodeFilesPanel) */}
             <div className={classNames(styles['output-wrapper'], { 'display-none': !hasVisibleContent })}>
-                {!isEditor && !needToPreview && displayedType === DISPLAYED_TYPE_TOOLPATH && !showExportOptions && (
-                    <Button
-                        type="default"
-                        priority="level-one"
-                        disabled={isOnABPosition}
-                        onClick={() => {
-                            actions.switchToEditPage();
-                            actions.handleMouseOut();
-                        }}
-                        className={classNames('position-re', 'bottom-0', 'left-0')}
-                    >
-                        {i18n._('key-CncLaser/G-codeAction-Close Preview')}
-                    </Button>
-                )}
+                {/* "Close Preview" is the stepper's "1 Design" step / Back now */}
                 {!isEditor && !needToPreview && displayedType !== DISPLAYED_TYPE_TOOLPATH && !showExportOptions && (
                     <Button
                         type="default"
