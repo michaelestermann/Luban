@@ -95,6 +95,8 @@ class ModelGroup2D extends EventEmitter {
         this.headType = headType;
         this.object = new Group();
         this.object.name = 'Model Group';
+        // used as an event listener on the model meshes (undo / redo of added models)
+        this.onModelUpdate = this.onModelUpdate.bind(this);
 
         this.models = [];
 

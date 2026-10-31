@@ -17,9 +17,10 @@ interface ShapeActionKeysProps {
 const KEYS: { keys: string[]; id: string }[] = [
     { keys: ['mod+w'], id: 'weld' },
     { keys: ['o'], id: 'offset' },
+    { keys: ['a'], id: 'array' },
 ];
 
-/** Keys of the selection actions (Ctrl+W weld, O offset), active in step 1 in select mode. */
+/** Keys of the selection actions (Ctrl+W weld, O offset, A array), active in step 1 in select mode. */
 const ShapeActionKeys = ({ headType, mode, editing, isActive }: ShapeActionKeysProps) => {
     const dispatch = useDispatch();
     const store = useStore();

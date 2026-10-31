@@ -41,7 +41,7 @@ const busy = new Set<string>();
 // presentation attributes of the result, taken from a drawn input
 const STYLE_ATTRIBUTES = ['stroke', 'stroke-width', 'fill', 'fill-opacity', 'opacity'];
 
-function markChanged(dispatch, headType: HeadType) {
+export function markChanged(dispatch, headType: HeadType) {
     dispatch(baseActions.updateState(headType, {
         simulationNeedToPreview: true,
         displayedType: DISPLAYED_TYPE_MODEL,
@@ -49,7 +49,7 @@ function markChanged(dispatch, headType: HeadType) {
     }));
 }
 
-function warn(text: string) {
+export function warn(text: string) {
     toast(makeSceneToast('warning', text));
 }
 
@@ -214,7 +214,7 @@ export const combineActions = {
         if (!canEditShapes(getState(), headType) || offsetModels(getState()[headType].modelGroup).length === 0) {
             return;
         }
-        dispatch(baseActions.updateState(headType, { offsetSession: { ...lastOffset } }));
+        dispatch(baseActions.updateState(headType, { offsetSession: { ...lastOffset }, arraySession: null }));
     },
 
     updateOffset: (headType: HeadType, values: Partial<OffsetSettings>) => (dispatch, getState) => {

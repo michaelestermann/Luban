@@ -363,7 +363,8 @@ class OperatorPoints {
             L${minX},${maxY} z`;
         rect.setAttribute('d', dstr);
         // todo it will be rotated after resize
-        const xform = angle ? `rotate(${[angle, cx, cy].join(',')})` : '';
+        // several elements: the box is axis aligned (the rotated corners are in it)
+        const xform = elements.length === 1 && angle ? `rotate(${[angle, cx, cy].join(',')})` : '';
         this.operatorPointsGroup.setAttribute('transform', xform);
 
         // recalculate grip coordinates

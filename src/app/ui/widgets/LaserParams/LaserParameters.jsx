@@ -5,6 +5,7 @@ import i18n from '../../../lib/i18n';
 import TextParameters from '../CncLaserShared/TextParameters';
 import TransformationSection from '../CncLaserShared/TransformationSection';
 import OffsetPanel from '../CncLaserShared/OffsetPanel';
+import ArrayPanel from '../CncLaserShared/ArrayPanel';
 import { HEAD_LASER, PAGE_EDITOR, SOURCE_TYPE, SVG_NODE_NAME_IMAGE, SVG_NODE_NAME_TEXT } from '../../../constants';
 
 
@@ -46,6 +47,7 @@ const LaserParameters = ({ widgetActions }) => {
     return (
         <React.Fragment>
             {isEditor && <OffsetPanel headType={HEAD_LASER} />}
+            {isEditor && <ArrayPanel headType={HEAD_LASER} />}
             {isEditor && (
                 <TransformationSection
                     headType={HEAD_LASER}

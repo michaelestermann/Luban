@@ -5,6 +5,7 @@
 import { actions as editorActions } from '../../../flux/editor';
 import { canEditShapes, CombineKind } from '../../../flux/editor/actions-combine';
 import i18n from '../../../lib/i18n';
+import { arraySelection } from '../../SVGEditor/combine/array-model';
 import { combinableModels, offsetModels } from '../../SVGEditor/combine/model-outline';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
 
@@ -47,6 +48,15 @@ export const MORE_ACTIONS: ShapeAction[] = [
         fits: (state, headType) => canEditShapes(state, headType) && !state[headType]?.offsetSession
             && offsetModels(state[headType]?.modelGroup).length > 0,
         run: (dispatch, headType) => dispatch(editorActions.startOffset(headType)),
+    },
+    {
+        id: 'array',
+        label: () => i18n._('key-CncLaser/Array-Array'),
+        keyHint: 'A',
+        // any visible objects or whole groups; not while the array values are open
+        fits: (state, headType) => canEditShapes(state, headType) && !state[headType]?.arraySession
+            && !!arraySelection(state[headType]?.modelGroup),
+        run: (dispatch, headType) => dispatch(editorActions.startArray(headType)),
     },
 ];
 
