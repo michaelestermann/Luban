@@ -116,7 +116,7 @@ class ToolPath {
         this.checkoutToolPathStatus();
     }
 
-    public getState() {
+    private refreshVisibleModelIDs() {
         // Use getModels() which flattens SvgGroup containers to their
         // leaf children, so visibleModelIDs always contains concrete
         // SvgModel IDs (never group entity IDs).
@@ -125,6 +125,10 @@ class ToolPath {
             : this.modelGroup.models;
         // machining order = the toolpath's member order (its chips), not the layer order
         this.visibleModelIDs = orderedMemberIds([...this.modelMap.keys()], allLeafModels);
+    }
+
+    public getState() {
+        this.refreshVisibleModelIDs();
 
         return {
             id: this.id,
@@ -461,6 +465,8 @@ class ToolPath {
     }
 
     public checkoutToolPathStatus() {
+        // the members may have changed since the last getState() (membership undo / redo, combine, offset)
+        this.refreshVisibleModelIDs();
         const taskInfos = this.getSelectModelsAndToolPathInfo();
         const lastConfigJson = JSON.stringify(taskInfos);
 
