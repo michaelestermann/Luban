@@ -2,10 +2,18 @@ import each from 'lodash/each';
 import {
     DoubleSide,
     Group,
+    LinearFilter,
     Mesh,
     MeshBasicMaterial,
     Object3D,
+    OrthographicCamera,
+    PerspectiveCamera,
     ShapeGeometry,
+    Sprite,
+    SpriteMaterial,
+    Texture,
+    Vector2,
+    Vector3,
     Math as ThreeMath
 } from 'three';
 
@@ -20,11 +28,44 @@ import {
 } from '../../../../constants/coordinate';
 import SVGLoader from '../../../../scene/three-extensions/SVGLoader';
 import TargetPoint from '../../../../scene/three-extensions/TargetPoint';
-import TextSprite from '../../../../scene/three-extensions/TextSprite';
 import GridLine from './GridLine';
+import { isPlateLabelShown, plateLabelStep, worldPerPixel } from './plate-labels';
 
 const METRIC_GRID_SPACING = 10; // 10 mm
 const METRIC_GRID_BIG_SPACING = 50;
+
+// On-screen sizes (CSS px) of the axis labels and the origin point, as on the 2D canvas
+const LABEL_FONT_PX = 11;
+const LABEL_GAP_PX = 6; // between an axis and its labels
+const LABEL_TEXTURE_SCALE = 3; // texture px per CSS px: sharp text on HiDPI screens
+const LABEL_COLOR = '#85888C';
+const LABEL_FALLBACK_MM_PER_PX = 0.3; // size of a label px when the camera gives none
+const TARGET_POINT_RADIUS = 2; // mm, geometry of the point
+const TARGET_POINT_RADIUS_PX = 5.5;
+
+const tmpPosition = new Vector3();
+const tmpSize = new Vector2();
+
+/**
+ * Re-sizes an object before each render from the size of one screen pixel at its position
+ * (world units per CSS px; 0 when unknown), so that it keeps a constant on-screen size.
+ */
+function keepScreenSize(object: Object3D, resize: (worldPerPx: number) => void) {
+    object.onBeforeRender = (renderer, scene, camera) => {
+        renderer.getSize(tmpSize);
+        let wpp = 0;
+        if ((camera as PerspectiveCamera).isPerspectiveCamera) {
+            object.getWorldPosition(tmpPosition).applyMatrix4(camera.matrixWorldInverse);
+            wpp = worldPerPixel((camera as PerspectiveCamera).fov, -tmpPosition.z, tmpSize.y);
+        } else if ((camera as OrthographicCamera).isOrthographicCamera && tmpSize.y > 0) {
+            const ortho = camera as OrthographicCamera;
+            wpp = (ortho.top - ortho.bottom) / ortho.zoom / tmpSize.y;
+        }
+        resize(wpp);
+        // the world matrix of this render is already computed: update it for the new size
+        object.updateMatrixWorld();
+    };
+}
 
 
 class PrintablePlate extends Object3D {
@@ -147,42 +188,24 @@ class PrintablePlate extends Object3D {
             group.add(gridLine);
         }
 
-        { // Axis Labels
-            const textSize = (10 / 3);
+        { // Axis Labels: constant on-screen size, see _addAxisLabel
             const minX = Math.ceil((-this.canvasSize.x / 2 + this.coorDelta.dx) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
             const minY = Math.ceil((-this.canvasSize.y / 2 + this.coorDelta.dy) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
             const maxX = Math.floor((this.canvasSize.x / 2 + this.coorDelta.dx) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
             const maxY = Math.floor((this.canvasSize.y / 2 + this.coorDelta.dy) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
 
+            // like the 2D canvas: X labels above the axis for a top origin, Y labels right of it for a right origin
+            const reference = String(this.origin.reference || '');
+            const top = reference.indexOf('Top') !== -1;
+            const right = reference.indexOf('Right') !== -1;
+
             for (let x = minX; x <= maxX; x += METRIC_GRID_BIG_SPACING) {
                 if (x !== 0) {
-                    const textLabel = new TextSprite({
-                        x: x,
-                        y: -4,
-                        z: 0,
-                        size: textSize,
-                        text: x,
-                        textAlign: 'center',
-                        textBaseline: 'bottom',
-                        color: 0x85888c,
-                        opacity: 0.5
-                    });
-                    group.add(textLabel);
+                    this._addAxisLabel(group, x, x, 0, top ? 'above' : 'below');
                 }
             }
             for (let y = minY; y <= maxY; y += METRIC_GRID_BIG_SPACING) {
-                const textLabel = new TextSprite({
-                    x: -4,
-                    y: y,
-                    z: 0,
-                    size: textSize,
-                    text: y,
-                    textAlign: 'center',
-                    textBaseline: 'bottom',
-                    color: 0x85888c,
-                    opacity: 0.5
-                });
-                group.add(textLabel);
+                this._addAxisLabel(group, y, 0, y, right ? 'right' : 'left');
             }
         }
         this.coordinateSystem = group;
@@ -192,10 +215,17 @@ class PrintablePlate extends Object3D {
         // Target Point
         this.targetPoint = new TargetPoint({
             color: 0xFF5759,
-            radius: 2
+            radius: TARGET_POINT_RADIUS
         });
         this.targetPoint.name = 'TargetPoint';
         this.targetPoint.visible = true;
+        // the point keeps its on-screen size at any zoom
+        each(this.targetPoint.children, (mesh) => {
+            keepScreenSize(mesh, (wpp) => {
+                const s = wpp > 0 ? (TARGET_POINT_RADIUS_PX * wpp) / TARGET_POINT_RADIUS : 1;
+                mesh.scale.set(s, s, s);
+            });
+        });
         this.add(this.targetPoint);
 
         // Draw locking block if we have one
@@ -230,6 +260,61 @@ class PrintablePlate extends Object3D {
                 this.add(svgGroup);
             });
         }
+    }
+
+    /**
+     * An axis label: a sprite sized in screen px before each render (see keepScreenSize) and placed
+     * on the given side of its anchor point. Labels that would crowd on screen are hidden (zero size).
+     */
+    private _addAxisLabel(group: Group, value: number, x: number, y: number, side: 'above' | 'below' | 'left' | 'right') {
+        const text = String(value);
+        const resolution = LABEL_TEXTURE_SCALE * LABEL_FONT_PX;
+        const font = `normal ${resolution}px Arial`;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = font;
+        const textWidth = Math.max(1, Math.ceil(context.measureText(text).width));
+        const textHeight = Math.ceil(resolution * 1.25);
+        canvas.width = textWidth;
+        canvas.height = textHeight;
+        context.font = font;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = LABEL_COLOR;
+        context.fillText(text, textWidth / 2, textHeight / 2);
+
+        const texture = new Texture(canvas);
+        texture.needsUpdate = true;
+        texture.minFilter = LinearFilter;
+        const material = new SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+        const sprite = new Sprite(material);
+        sprite.position.set(x, y, 0);
+        sprite.frustumCulled = false;
+
+        // on-screen size of the label (CSS px); the centre moves it off its anchor by a fixed gap
+        const heightPx = textHeight / LABEL_TEXTURE_SCALE;
+        const widthPx = textWidth / LABEL_TEXTURE_SCALE;
+        switch (side) {
+            case 'above':
+                sprite.center.set(0.5, -LABEL_GAP_PX / heightPx);
+                break;
+            case 'below':
+                sprite.center.set(0.5, 1 + LABEL_GAP_PX / heightPx);
+                break;
+            case 'right':
+                sprite.center.set(-LABEL_GAP_PX / widthPx, 0.5);
+                break;
+            default:
+                sprite.center.set(1 + LABEL_GAP_PX / widthPx, 0.5);
+                break;
+        }
+
+        keepScreenSize(sprite, (wpp) => {
+            const shown = isPlateLabelShown(value, plateLabelStep(wpp > 0 ? 1 / wpp : 0));
+            const k = shown ? (wpp || LABEL_FALLBACK_MM_PER_PX) : 0;
+            sprite.scale.set(widthPx * k, heightPx * k, 1);
+        });
+        group.add(sprite);
     }
 
     /**
