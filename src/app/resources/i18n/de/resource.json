@@ -2566,5 +2566,14 @@
     "key-CncLaser/Measure-Measure": "Messen",
     "key-CncLaser/Measure-Measure (M)": "Messen (M)",
     "key-CncLaser/Measure-Click two points · Esc to finish": "Zwei Punkte anklicken · Esc zum Beenden",
-    "key-CncLaser/Measure-Leave the measure tool (Esc)": "Messwerkzeug verlassen (Esc)"
+    "key-CncLaser/Measure-Leave the measure tool (Esc)": "Messwerkzeug verlassen (Esc)",
+    "key-CncLaser/Dimensions-Dimensions (D) · right-click: options": "Bemaßung (D) · Rechtsklick: Optionen",
+    "key-CncLaser/Dimensions-Dimensions · options": "Bemaßung · Optionen",
+    "key-CncLaser/Dimensions-Selection": "Auswahl",
+    "key-CncLaser/Dimensions-All objects": "Alle Objekte",
+    "key-CncLaser/Dimensions-To the workpiece edges": "Zu den Werkstückkanten",
+    "key-CncLaser/Dimensions-Between objects": "Zwischen Objekten",
+    "key-CncLaser/Dimensions-Click a value to type a new distance. Not in the G-code.": "Auf einen Wert klicken, um einen neuen Abstand einzugeben. Nicht im G-Code.",
+    "key-CncLaser/Dimensions-Distance in mm": "Abstand in mm",
+    "key-CncLaser/Dimensions-Click to type a new distance": "Klicken, um einen neuen Abstand einzugeben"
 }

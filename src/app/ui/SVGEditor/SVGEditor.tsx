@@ -12,6 +12,7 @@ import Modal from '../components/Modal/tileModal';
 import SVGShapeLibrary from './SVGShapeLibrary';
 import PointEditOverlay from './path-edit/PointEditOverlay';
 import MeasureOverlay from './measure/MeasureOverlay';
+import DimensionsOverlay from './measure/DimensionsOverlay';
 
 
 export type SVGEditorHandle = {
@@ -426,6 +427,13 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             isActive={props.isActive}
                             onExit={() => onStopDraw(true)}
                         />
+                        <DimensionsOverlay
+                            headType={props.headType}
+                            mode={props.SVGCanvasMode}
+                            editing={!!props.SVGCanvasExt?.elem}
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
+                        />
                         <MeasureOverlay
                             headType={props.headType}
                             mode={props.SVGCanvasMode}
@@ -447,6 +455,7 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                         fileInput={props.fileInput}
                         allowedFiles={props.allowedFiles}
                         editable={props.editable}
+                        isActive={props.isActive}
                         headType={props.headType}
                         onStartDraw={() => onStartDraw()}
                         onStopDraw={(exitCompletely, nextMode) => onStopDraw(exitCompletely, nextMode)}

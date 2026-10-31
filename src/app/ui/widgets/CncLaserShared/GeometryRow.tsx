@@ -1,4 +1,4 @@
-import React, { useReducer } from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 
 import i18n from '../../../lib/i18n';
 import { formatMm, geometryRows, GeometryKey, selectionGeometry } from '../../SVGEditor/measure/geometry-length';
@@ -26,7 +26,12 @@ interface GeometryRowProps {
  */
 const GeometryRow: React.FC<GeometryRowProps> = ({ models }) => {
     // re-render once an imported file has been parsed
-    const [, onLoaded] = useReducer((n: number) => n + 1, 0);
+    const [, rerender] = useReducer((n: number) => n + 1, 0);
+    const mounted = useRef(true);
+    useEffect(() => () => {
+        mounted.current = false;
+    }, []);
+    const onLoaded = () => mounted.current && rerender();
     const items = models.reduce((all, model) => all.concat(modelGeometry(model, onLoaded)), []);
     const geometry = selectionGeometry(items);
     const rows = geometry ? geometryRows(geometry) : [];

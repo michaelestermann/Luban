@@ -15,3 +15,45 @@
     left: 0;
     font-family: inherit;
 }
+
+// value of a dimension line (pink, white text); the selection's values are buttons
+.dimension-label {
+    position: absolute;
+    min-width: 40px;
+    height: 20px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 4px;
+    background: #be185d;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+button.dimension-label {
+    pointer-events: auto;
+    cursor: text;
+
+    &:hover {
+        background: #9d174d;
+    }
+}
+
+.dimension-input {
+    position: absolute;
+    width: 64px;
+    height: 22px;
+    padding: 0 6px;
+    border: 1px solid #be185d;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #1f2430;
+    font-size: 12px;
+    pointer-events: auto;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(190, 24, 93, .2);
+}

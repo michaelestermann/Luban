@@ -48,3 +48,61 @@
     border-bottom: 5px solid currentColor;
     opacity: .6;
 }
+
+// options popover of a switch (mockup "Dimensions · options")
+.options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 226px;
+    font-size: 13px;
+    color: #1f2430;
+}
+
+.options-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #5b6170;
+}
+
+.segments {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 8px;
+    background: #eef1f6;
+}
+
+.segment {
+    flex: 1;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5b6170;
+    cursor: pointer;
+
+    &.on {
+        background: #ffffff;
+        color: #1d4ed8;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+    }
+}
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.note {
+    font-size: 12px;
+    color: #5b6170;
+}

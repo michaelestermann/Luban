@@ -9,6 +9,7 @@ import { library } from './lib/ext-shapes';
 import i18n from '../../lib/i18n';
 import Anchor from '../components/Anchor';
 import RailButton from './rail/RailButton';
+import RailSwitches from './rail/RailSwitches';
 import railStyles from './rail/rail.styl';
 // import { svg } from '../../../server/services/api';
 
@@ -232,6 +233,7 @@ const SVGLeftBar = forwardRef((props, ref) => {
                             <path d="M7 13l2 2M10 10l2 2M13 7l2 2" />
                         </svg>
                     </RailButton>
+                    <RailSwitches headType={props.headType} isActive={!!props.isActive} editable={!!editable} />
                 </div>
                 {/* point editing (select + selectEditing): the mode bar above the canvas replaces the old panel */}
                 {
@@ -342,6 +344,7 @@ SVGLeftBar.propTypes = {
     fileInput: PropTypes.object.isRequired,
     allowedFiles: PropTypes.string.isRequired,
     editable: PropTypes.bool,
+    isActive: PropTypes.bool,
     headType: PropTypes.string,
     onStartDraw: PropTypes.func.isRequired,
     onStopDraw: PropTypes.func.isRequired,
