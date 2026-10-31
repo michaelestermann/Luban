@@ -2634,5 +2634,7 @@
     "key-CncLaser/PointEdit-Only a corner between two straight segments can be rounded": "Only a corner between two straight segments can be rounded",
     "key-CncLaser/Offset-Enter a distance greater than 0": "Enter a distance greater than 0",
     "key-CncLaser/Offset-Nothing is left at this distance": "Nothing is left at this distance",
-    "key-CncLaser/ContextMenu-Edit points": "Edit points"
+    "key-CncLaser/ContextMenu-Edit points": "Edit points",
+    "key-CncLaser/ObjectList-Name": "Name",
+    "key-CncLaser/ObjectList-Double-click or F2 to rename": "Double-click or F2 to rename"
 }

@@ -6,6 +6,7 @@ import { getGroupOperationColors } from '../../../../toolpaths/operations-panel'
 import SvgIcon from '../../../components/SvgIcon';
 import styles from '../styles.styl';
 import ModelItem from './model-item';
+import NameInput from './NameInput';
 
 interface GroupRowProps {
     // SvgGroup (models/SvgGroup); children are SvgModels
@@ -28,6 +29,11 @@ interface GroupRowProps {
     onToggleGroupVisible: (group: any, visible: boolean) => void;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onToggleMemberVisible: (model: any) => void;
+    // the group or a member whose name is edited in place (null: none)
+    renamingID: string | null;
+    onStartRename: (modelID: string) => void;
+    onRename: (modelID: string, name: string) => void;
+    onCancelRename: () => void;
 }
 
 const GroupIcon: React.FC = () => (
@@ -45,7 +51,8 @@ const GroupIcon: React.FC = () => (
  */
 const GroupRow: React.FC<GroupRowProps> = ({
     group, collapsed, onToggleCollapsed, selected, selectedModelArray, toolPaths, inProgress,
-    onSelectGroup, onSelectMember, onToggleGroupVisible, onToggleMemberVisible
+    onSelectGroup, onSelectMember, onToggleGroupVisible, onToggleMemberVisible,
+    renamingID, onStartRename, onRename, onCancelRename
 }) => {
     const children = group.children || [];
     const visible = children.some(child => child.visible);
@@ -67,16 +74,34 @@ const GroupRow: React.FC<GroupRowProps> = ({
                         <path d={collapsed ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'} />
                     </svg>
                 </button>
-                <button
-                    type="button"
-                    className={styles['group-name']}
-                    onClick={(event) => children.length && onSelectGroup(children[0], event)}
-                    title={group.name}
-                >
-                    <span className={styles['group-icon']}><GroupIcon /></span>
-                    <span className={styles['group-label']}>{group.name}</span>
-                    <span className={styles['group-count']}>{children.length}</span>
-                </button>
+                {renamingID === group.modelID ? (
+                    <div className={styles['group-name']}>
+                        <span className={styles['group-icon']}><GroupIcon /></span>
+                        <NameInput
+                            value={group.name}
+                            onCommit={(value) => onRename(group.modelID, value)}
+                            onCancel={onCancelRename}
+                        />
+                    </div>
+                ) : (
+                    <button
+                        type="button"
+                        className={styles['group-name']}
+                        onClick={(event) => children.length && onSelectGroup(children[0], event)}
+                        title={`${group.name}
+${i18n._('key-CncLaser/ObjectList-Double-click or F2 to rename')}`}
+                        onDoubleClick={(event) => {
+                            // double-click on the name: rename the group (nothing else happens)
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onStartRename(group.modelID);
+                        }}
+                    >
+                        <span className={styles['group-icon']}><GroupIcon /></span>
+                        <span className={styles['group-label']}>{group.name}</span>
+                        <span className={styles['group-count']}>{children.length}</span>
+                    </button>
+                )}
                 {colors.group.length > 0 && (
                     <span className={styles['operation-dots']} aria-hidden="true">
                         {colors.group.map((color, index) => (
@@ -109,6 +134,11 @@ const GroupRow: React.FC<GroupRowProps> = ({
                                 inProgress={inProgress}
                                 placement="right"
                                 dotColors={colors.members.get(child.modelID)}
+                                name={child.modelName}
+                                renaming={renamingID === child.modelID}
+                                onStartRename={onStartRename}
+                                onRename={onRename}
+                                onCancelRename={onCancelRename}
                             />
                         </div>
                     ))}

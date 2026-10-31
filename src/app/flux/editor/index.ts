@@ -78,6 +78,8 @@ import {
     CORNER_KEYS, CornerRadii, ROUNDED_RECT_ATTRIBUTE, clampRadii, flipRadii, planCorners, readCorners, roundedRectPathD
 } from '../../ui/SVGEditor/path-edit/rect-corners';
 import LayerOrderOperation2D from '../operation-history/LayerOrderOperation2D';
+import RenameOperation2D from '../operation-history/RenameOperation2D';
+import { cleanObjectName, getEntityName } from '../../models/object-name';
 import MoveOperation2D from '../operation-history/MoveOperation2D';
 import RotateOperation2D from '../operation-history/RotateOperation2D';
 import ScaleOperation2D from '../operation-history/ScaleOperation2D';
@@ -824,7 +826,10 @@ export const actions = {
      */
     generateModel: (
         headType,
-        { originalName, uploadName, sourceWidth, sourceHeight, mode, sourceType, config, gcodeConfig, transformation, modelID, zIndex, isLimit }
+        {
+            originalName, uploadName, sourceWidth, sourceHeight, mode, sourceType, config, gcodeConfig, transformation, modelID, zIndex, isLimit,
+            modelName
+        }
     ) => async (dispatch, getState) => {
         const { size, promptDamageModel } = getState().machine;
 
@@ -953,6 +958,10 @@ export const actions = {
         };
 
         const model = modelGroup.addModel(options);
+        if (modelName) {
+            // a project is opened: the saved name (it may be renamed); the name counters still count the object
+            model.modelName = modelName;
+        }
         model.setPreSelection(contentGroup.preSelectionGroup);
         model.needRepair = isDamage;
         const promptTasks = [];
@@ -1650,6 +1659,33 @@ export const actions = {
         }
         dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
         dispatch(baseActions.render(headType));
+    },
+
+    /**
+     * Renames an object or a group (object list). Empty input or the same name keeps the old one;
+     * one undo step. The name is saved with the project (modelName / group name).
+     */
+    renameEntity: (headType, modelID: string, input: string) => (dispatch, getState) => {
+        const { modelGroup } = getState()[headType];
+        const target = modelGroup.getModel(modelID);
+        if (!target) {
+            return false;
+        }
+        const before = getEntityName(target);
+        const after = cleanObjectName(input, before);
+        if (after === null) {
+            return false;
+        }
+        const onChange = () => {
+            dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
+            dispatch(baseActions.render(headType));
+        };
+        const operation = new RenameOperation2D({ target, before, after, onChange });
+        operation.redo();
+        const operations = new CompoundOperation();
+        operations.push(operation);
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+        return true;
     },
 
     arrangeAllModels2D: headType => (dispatch, getState) => {

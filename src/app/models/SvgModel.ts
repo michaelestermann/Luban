@@ -1322,10 +1322,12 @@ class SvgModel extends BaseModel {
     public getSerializableConfig() {
         const {
             modelID, limitSize, headType, sourceType, originalName, config, mode,
-            transformation, visible, sourceHeight, sourceWidth
+            transformation, visible, sourceHeight, sourceWidth, modelName
         } = this;
         return {
             modelID,
+            // the shown name (it may be renamed in the object list)
+            modelName,
             limitSize,
             headType,
             sourceType,

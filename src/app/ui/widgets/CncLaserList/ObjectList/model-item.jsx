@@ -6,6 +6,7 @@ import { normalizeNameDisplay } from '../../../../lib/normalize-range';
 import Anchor from '../../../components/Anchor';
 import SvgIcon from '../../../components/SvgIcon';
 import TipTrigger from '../../../components/TipTrigger';
+import NameInput from './NameInput';
 
 let svgName = '';
 let modelName = '';
@@ -35,6 +36,8 @@ function ModelItem(
     {
         model, visible, isSelected, styles, onSelect, onToggleVisible,
         inProgress, placement, disabled = false, dotColors = [],
+        // the shown name (a prop, so a rename re-renders the memoized row)
+        name, renaming = false, onStartRename, onRename, onCancelRename,
     }
 ) {
     const [tipTriggerVisible, setTipVisible] = useState('');
@@ -44,7 +47,7 @@ function ModelItem(
     }
 
     const taskInfo = model.getTaskInfo();
-    modelName = taskInfo.modelName;
+    modelName = name ?? taskInfo.modelName;
     svgName = (() => {
         if (taskInfo.sourceType === 'text') {
             return objectListShape;
@@ -64,9 +67,14 @@ function ModelItem(
             <TipTrigger
                 key={model.modelID}
                 title={i18n._('key-PrintingCncLaser/ObjectList-Object')}
-                content={model.modelName}
+                content={(
+                    <>
+                        <div>{modelName}</div>
+                        <div style={{ opacity: 0.7 }}>{i18n._('key-CncLaser/ObjectList-Double-click or F2 to rename')}</div>
+                    </>
+                )}
                 placement={placement || undefined}
-                visible={!hasChildren && model.modelID === tipTriggerVisible && tipTriggerVisible}
+                visible={!renaming && !hasChildren && model.modelID === tipTriggerVisible && tipTriggerVisible}
             >
                 <div
                     className={classNames(
@@ -79,32 +87,49 @@ function ModelItem(
                         },
                     )}
                 >
-                    <Anchor
-                        className={classNames(
-                            'height-24',
-                            'sm-flex-width',
-                            'margin-left-8',
-                            'sm-flex',
-                        )}
-                        style={{ color: disabled ? '#D5D6D9' : '' }}
-                        onClick={(event) => onSelect(model, event)}
-                        onMouseEnter={() => {
-                            setTipVisible(true);
-                        }}
-                        onMouseLeave={() => {
-                            setTipVisible(false);
-                        }}
-                    >
+                    {renaming ? (
+                        <div className={classNames('height-24', 'sm-flex-width', 'margin-left-8', 'sm-flex')} style={{ alignItems: 'center' }}>
+                            <ModelIcon name={svgName} model={model} disabled={disabled} />
+                            <NameInput
+                                value={modelName}
+                                onCommit={(value) => onRename(model.modelID, value)}
+                                onCancel={onCancelRename}
+                            />
+                        </div>
+                    ) : (
+                        <Anchor
+                            className={classNames(
+                                'height-24',
+                                'sm-flex-width',
+                                'margin-left-8',
+                                'sm-flex',
+                            )}
+                            style={{ color: disabled ? '#D5D6D9' : '' }}
+                            onClick={(event) => onSelect(model, event)}
+                            onDoubleClick={(event) => {
+                                // double-click on the name: rename (nothing else happens)
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onStartRename && onStartRename(model.modelID);
+                            }}
+                            onMouseEnter={() => {
+                                setTipVisible(true);
+                            }}
+                            onMouseLeave={() => {
+                                setTipVisible(false);
+                            }}
+                        >
 
-                        <ModelIcon name={svgName} model={model} disabled={disabled} />
+                            <ModelIcon name={svgName} model={model} disabled={disabled} />
 
-                        <span className={classNames(styles['prefix-name'])}>
-                            {prefixName}
-                        </span>
-                        <span className={classNames(styles['suffix-name'])}>
-                            {suffixName}
-                        </span>
-                    </Anchor>
+                            <span className={classNames(styles['prefix-name'])}>
+                                {prefixName}
+                            </span>
+                            <span className={classNames(styles['suffix-name'])}>
+                                {suffixName}
+                            </span>
+                        </Anchor>
+                    )}
                     {dotColors.length > 0 && (
                         <span className={styles['operation-dots']} aria-hidden="true">
                             {dotColors.map((color, index) => (
@@ -141,6 +166,12 @@ ModelItem.propTypes = {
     placement: PropTypes.string,
     // colours of the toolpaths the object is in (milling order)
     dotColors: PropTypes.arrayOf(PropTypes.string),
+    name: PropTypes.string,
+    // the name is edited in place
+    renaming: PropTypes.bool,
+    onStartRename: PropTypes.func,
+    onRename: PropTypes.func,
+    onCancelRename: PropTypes.func,
 };
 
 export default React.memo(ModelItem);

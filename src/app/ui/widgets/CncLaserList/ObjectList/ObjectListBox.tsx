@@ -1,8 +1,11 @@
 import classNames from 'classnames';
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
+import { PAGE_EDITOR } from '../../../../constants';
 import { actions as editorActions } from '../../../../flux/editor';
+import { ShortcutHandlerPriority, ShortcutManager } from '../../../../lib/shortcut';
+import { renameTargetID } from '../../../../models/object-name';
 import i18n from '../../../../lib/i18n';
 import { getModelOperationColors } from '../../../../toolpaths/operations-panel';
 import modal from '../../../../lib/modal';
@@ -30,6 +33,10 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
 
     const inProgress = useSelector(state => state[headType]?.inProgress, shallowEqual);
     const previewFailed = useSelector(state => state[headType]?.previewFailed, shallowEqual);
+
+    const page = useSelector(state => state[headType]?.page);
+    const SVGCanvasMode = useSelector(state => state[headType]?.SVGCanvasMode);
+    const pointEditing = useSelector(state => !!state[headType]?.SVGCanvasExt?.elem);
 
     const dispatch = useDispatch();
 
@@ -91,6 +98,58 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
         setCollapsedGroups((prev) => ({ ...prev, [groupID]: !prev[groupID] }));
     }, []);
 
+    // the object or group whose name is edited in place (double-click on the name, F2)
+    const [renamingID, setRenamingID] = useState<string | null>(null);
+    const startRename = useCallback((modelID: string) => {
+        if (inProgress) {
+            return;
+        }
+        // a member of a folded group: unfold it, so its row is there
+        const parent = (models || []).find(entity => entity.type === '2d-group' && entity.children?.some(child => child.modelID === modelID));
+        if (parent) {
+            setCollapsedGroups((prev) => ({ ...prev, [parent.modelID]: false }));
+        }
+        setRenamingID(modelID);
+    }, [models, inProgress]);
+    const cancelRename = useCallback(() => setRenamingID(null), []);
+    const commitRename = useCallback((modelID: string, name: string) => {
+        setRenamingID(null);
+        dispatch(editorActions.renameEntity(headType, modelID, name));
+    }, [dispatch, headType]);
+
+    // F2 renames the selected group or object (step 1, select mode; never while typing: the shortcut
+    // manager skips text fields, text editing is another mode)
+    const f2 = useRef({ active: false, start: startRename, target: null as string | null });
+    f2.current = {
+        active: page === PAGE_EDITOR && SVGCanvasMode === 'select' && !pointEditing && !inProgress
+            && window.location.hash.startsWith(`#/${headType}`),
+        start: startRename,
+        target: renameTargetID(selectedModelArray, selectedGroupID),
+    };
+    useEffect(() => {
+        const handler = {
+            title: `ObjectListRename-${headType}`,
+            priority: ShortcutHandlerPriority.Widget,
+            isActive: () => f2.current.active && !!f2.current.target,
+            shortcuts: {
+                RENAME: {
+                    keys: ['f2'],
+                    callback: () => f2.current.target && f2.current.start(f2.current.target),
+                },
+            },
+        };
+        ShortcutManager.register(handler);
+        return () => ShortcutManager.unregister(handler);
+    }, [headType]);
+    // the renamed object is gone (deleted, undone): nothing to edit
+    useEffect(() => {
+        if (renamingID && !(models || []).some(entity => entity.modelID === renamingID
+            || entity.children?.some(child => child.modelID === renamingID))) {
+            setRenamingID(null);
+        }
+    }, [models, renamingID]);
+    const renameProps = { renamingID, onStartRename: startRename, onRename: commitRename, onCancelRename: cancelRename };
+
     return (
         <div
             className={classNames(
@@ -101,9 +160,12 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
                 {
                     // layer order: the front object on top; drag a row up or down to change it
                     allModels && allModels.slice().reverse().map((entity, index) => {
+                        // no drag while a name in the row is edited (text selection in the field)
+                        const renamingHere = !!renamingID && (renamingID === entity.modelID
+                            || !!entity.children?.some(child => child.modelID === renamingID));
                         const rowProps = {
                             key: entity.modelID,
-                            ...reorder.cardProps(index),
+                            ...(renamingHere ? {} : reorder.cardProps(index)),
                             className: classNames(styles['layer-row'], {
                                 [styles['layer-dragging']]: reorder.draggingIndex === index,
                                 [styles['layer-drop-before']]: reorder.dropSide(index) === 'before',
@@ -125,6 +187,7 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
                                         onSelectMember={onSelectMember}
                                         onToggleGroupVisible={actions.onToggleGroupVisible}
                                         onToggleMemberVisible={actions.onToggleMemberVisible}
+                                        {...renameProps}
                                     />
                                 </div>
                             );
@@ -142,6 +205,11 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
                                     inProgress={inProgress}
                                     placement="right"
                                     dotColors={getModelOperationColors(toolPaths, model.modelID)}
+                                    name={model.modelName}
+                                    renaming={renamingID === model.modelID}
+                                    onStartRename={startRename}
+                                    onRename={commitRename}
+                                    onCancelRename={cancelRename}
                                 />
                             </div>
                         );
