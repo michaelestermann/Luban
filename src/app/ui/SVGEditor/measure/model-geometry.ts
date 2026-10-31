@@ -141,3 +141,19 @@ export function modelGeometry(model: GeometryModel, onLoaded: () => void): Geome
             return [{ kind: 'image' }];
     }
 }
+
+/**
+ * Parsed shapes and view box of an imported SVG file (for hovering its outline in the measure tool);
+ * null while loading (onLoaded is called then) or when it cannot be parsed.
+ */
+export function svgSource(model: GeometryModel, onLoaded: () => void): ParsedSvg | null {
+    const url = model.resource?.originalFile?.path;
+    if (!url || !/\.svg$/i.test(url)) {
+        return null;
+    }
+    if (!parsedSources.has(url)) {
+        loadSource(url, onLoaded);
+        return null;
+    }
+    return parsedSources.get(url) || null;
+}

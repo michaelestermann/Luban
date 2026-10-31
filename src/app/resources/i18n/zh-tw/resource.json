@@ -2544,7 +2544,7 @@
     "key-CncLaser/Geometry-Height": "Height",
     "key-CncLaser/Measure-Measure": "Measure",
     "key-CncLaser/Measure-Measure (M)": "Measure (M)",
-    "key-CncLaser/Measure-Click two points · Esc to finish": "Click two points · Esc to finish",
+    "key-CncLaser/Measure-Click an object or two points · Esc to finish": "Click an object or two points · Esc to finish",
     "key-CncLaser/Measure-Leave the measure tool (Esc)": "Leave the measure tool (Esc)",
     "key-CncLaser/Dimensions-Dimensions (D) · right-click: options": "Dimensions (D) · right-click: options",
     "key-CncLaser/Dimensions-Dimensions · options": "Dimensions · options",
