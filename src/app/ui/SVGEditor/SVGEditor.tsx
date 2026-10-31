@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import { PREDEFINED_SHORTCUT_ACTIONS, ShortcutHandlerPriority, ShortcutManager } from '../../lib/shortcut';
@@ -10,6 +10,7 @@ import { Materials, Origin, Workpiece } from '../../constants/coordinate';
 import { library } from './lib/ext-shapes';
 import Modal from '../components/Modal/tileModal';
 import SVGShapeLibrary from './SVGShapeLibrary';
+import PointEditOverlay from './path-edit/PointEditOverlay';
 
 
 export type SVGEditorHandle = {
@@ -83,6 +84,7 @@ type SVGEditorProps = {
 
 const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
     const [isFirstShow, setIsFirstShow] = useState(false);
+    const [drawGroup, setDrawGroup] = useState(null);
 
     const canvas = useRef(null);
     const leftBarRef = useRef(null);
@@ -254,6 +256,11 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
 
         // Init, Setup SVGContentGroup
         props.initContentGroup(canvas.current.svgContentGroup);
+        setDrawGroup(canvas.current.svgContentGroup.drawGroup);
+    }, []);
+
+    const getCanvasScreenCTM = useCallback(() => {
+        return canvas.current ? canvas.current.svgContentGroup.getScreenCTM() : null;
     }, []);
 
     const insertDefaultTextVector = async () => {
@@ -407,6 +414,12 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             setMode={changeCanvasMode}
                             editorActions={props.editorActions}
                             modelGroup={props.modelGroup}
+                        />
+                        <PointEditOverlay
+                            drawGroup={drawGroup}
+                            getScreenCTM={getCanvasScreenCTM}
+                            isActive={props.isActive}
+                            onExit={() => onStopDraw(true)}
                         />
                     </div>
                     <SVGLeftBar

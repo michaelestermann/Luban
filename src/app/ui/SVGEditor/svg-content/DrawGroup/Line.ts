@@ -4,6 +4,31 @@ import { createSVGElement } from '../../element-utils';
 import { POINT_RADIUS, POINT_SIZE, THEME_COLOR, MINIMUM_SPACING } from './constants';
 import { TCoordinate } from './types';
 
+export function createEndPointElement([x, y]: TCoordinate, scale: number): SVGRectElement {
+    const pointRadiusWithScale = POINT_RADIUS / scale;
+
+    return createSVGElement({
+        element: 'rect',
+        attr: {
+            type: 'end-point',
+            fill: '',
+            'fill-opacity': 1,
+            rx: `${pointRadiusWithScale}`,
+            ry: `${pointRadiusWithScale}`,
+            width: POINT_SIZE / scale,
+            height: POINT_SIZE / scale,
+            x: x - pointRadiusWithScale,
+            cx: x,
+            y: y - pointRadiusWithScale,
+            cy: y,
+            stroke: THEME_COLOR,
+            'stroke-width': 1 / scale,
+            'pointer-events': 'all',
+            id: uuid()
+        }
+    }) as SVGRectElement;
+}
+
 class Line {
     public points: TCoordinate[];
 
@@ -21,7 +46,8 @@ class Line {
 
     private model: Bezier;
 
-    public constructor(data: TCoordinate[] | SVGPathElement, scale: number, closedLoop = false, fragmentID: number) {
+    // endPointsEle: end point elements to use (point editing), otherwise found by coordinates or created
+    public constructor(data: TCoordinate[] | SVGPathElement, scale: number, closedLoop = false, fragmentID: number, endPointsEle?: SVGRectElement[]) {
         this.scale = scale;
         this.closedLoop = closedLoop;
         this.fragmentID = fragmentID;
@@ -47,7 +73,11 @@ class Line {
             this.points[0],
             this.points[this.points.length - 1]
         ];
-        this.generateEndPointEle();
+        if (endPointsEle) {
+            this.EndPointsEle = endPointsEle;
+        } else {
+            this.generateEndPointEle();
+        }
         this.updateModel(this.points);
     }
 
@@ -151,29 +181,8 @@ class Line {
         });
     }
 
-    private createCircle([x, y]: TCoordinate) {
-        const pointRadiusWithScale = POINT_RADIUS / this.scale;
-
-        return createSVGElement({
-            element: 'rect',
-            attr: {
-                type: 'end-point',
-                fill: '',
-                'fill-opacity': 1,
-                rx: `${pointRadiusWithScale}`,
-                ry: `${pointRadiusWithScale}`,
-                width: POINT_SIZE / this.scale,
-                height: POINT_SIZE / this.scale,
-                x: x - pointRadiusWithScale,
-                cx: x,
-                y: y - pointRadiusWithScale,
-                cy: y,
-                stroke: THEME_COLOR,
-                'stroke-width': 1 / this.scale,
-                'pointer-events': 'all',
-                id: uuid()
-            }
-        });
+    private createCircle(point: TCoordinate) {
+        return createEndPointElement(point, this.scale);
     }
 
     private calcSymmetryPoint([x, y]: TCoordinate, [x1, y1]: TCoordinate): TCoordinate {

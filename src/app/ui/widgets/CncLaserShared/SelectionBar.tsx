@@ -8,6 +8,7 @@ import { actions as editorActions } from '../../../flux/editor';
 import i18n from '../../../lib/i18n';
 import { canDecomposeSelection } from '../../../lib/svg-decompose';
 import SvgIcon from '../../components/SvgIcon';
+import PointEditBar from './PointEditBar';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 import styles from './selection-bar.styl';
 
@@ -41,7 +42,7 @@ const ALIGN_ITEMS = [
  * Align, Duplicate, Delete for the current selection. All buttons dispatch the existing
  * actions (same enable rules as the main toolbar, the alignment row and the context menu).
  * Hidden when nothing is selected, outside step 1, while drawing and in A-B position /
- * SVG clipping mode.
+ * SVG clipping mode. While the points of a path are edited the mode bar takes its place.
  */
 const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = false }) => {
     const dispatch = useDispatch();
@@ -58,6 +59,10 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
 
     const selectedModels = modelGroup?.getSelectedModelArray?.() || [];
     const drawing = SVGCanvasMode === 'draw' || !!SVGCanvasExt?.elem;
+    const drawGroup = SVGActions?.svgContentGroup?.drawGroup;
+    if (page === PAGE_EDITOR && !modeBlocked && !isOnABPosition && SVGCanvasMode === 'select' && SVGCanvasExt?.elem && drawGroup) {
+        return <PointEditBar drawGroup={drawGroup} SVGActions={SVGActions} />;
+    }
     if (page !== PAGE_EDITOR || modeBlocked || isOnABPosition || drawing || selectedModels.length === 0) {
         return null;
     }

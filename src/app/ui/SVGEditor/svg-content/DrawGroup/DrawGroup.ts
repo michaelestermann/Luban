@@ -6,10 +6,18 @@ import { createSVGElement, setAttributes } from '../../element-utils';
 import { MODE, THEME_COLOR, ATTACH_SPACE, POINT_RADIUS } from './constants';
 import { TCoordinate } from './types';
 import { EndPoint, ControlPoint } from './Point';
-import Line from './Line';
+import Line, { createEndPointElement } from './Line';
 import OperationGroup from './OperationGroup';
 import CursorGroup from './CursorGroup';
 import { ModelTransformation } from '../../../../models/BaseModel';
+import {
+    PathData, PointType, parsePath, serializePath, nearestSegment, insertPoint, deletePoint, splitAt, splitSegment,
+    setPointPosition, getPointType, setPointType
+} from '../../path-edit/path-geometry';
+import {
+    NodeRef, PointEditState, SegmentPoints, TPoint, normalizePenPath, segmentPoints, readPathFromSegments, parseNumbers,
+    nodeOrdinal, stepNode, countNodes, joinDraggedEnd, listNodes
+} from '../../path-edit/point-edit';
 
 export type TransformRecord = {
     fragmentID: number,
@@ -89,6 +97,20 @@ class DrawGroup {
 
     private isAttached: boolean;
 
+    // point editing (MODE.SELECT): the edited path in canvas coordinates, one line per segment,
+    // one end point element per node
+    private editPath: PathData = null;
+
+    private editSegments: { line: Line, segment: SegmentPoints }[] = [];
+
+    private nodeRects: SVGRectElement[][] = [];
+
+    private cardOpen = false;
+
+    private insertMode = false;
+
+    private pointEditListeners = new Set<(state: PointEditState) => void>();
+
     public constructor(contentGroup: SVGGElement, scale: number) {
         this.scale = scale;
         this.init();
@@ -140,6 +162,7 @@ class DrawGroup {
                 this.graph.remove();
                 this.graph = null;
             }
+            this.resetPointEdit();
             return null;
         } else {
             if (this.mode === MODE.DRAW) {
@@ -253,7 +276,11 @@ class DrawGroup {
             this.originGraphPath = this.originGraph.getAttribute('d');
             this.originGraph.setAttribute('visibility', 'hidden');
             this.originTransformation = { ...transformation };
-            this.generatelines();
+            this.cardOpen = false;
+            this.insertMode = false;
+            this.updateCursor();
+            this.loadEditPath(this.readElementPath());
+            this.emitPointEdit();
         }
     }
 
@@ -303,24 +330,15 @@ class DrawGroup {
     }
 
     private generatelines() {
-        this.applyTransform(this.originGraphPath).iterate((segment, _, x, y) => {
-            const arr = cloneDeep(segment);
-            const mark = arr.shift();
-
-            if (mark !== 'M' && mark !== 'Z') {
-                const points: TCoordinate[] = [];
-                for (let index = 0; index < arr.length; index += 2) {
-                    points.push([
-                        Number(arr[index]),
-                        Number(arr[index + 1])
-                    ]);
-                }
-                this.appendLine([
-                    [x, y],
-                    ...points
-                ]);
-            }
+        // one line per segment; closing segments of closed subpaths included
+        segmentPoints(this.readElementPath()).forEach((segment) => {
+            this.appendLine(segment.points);
         });
+    }
+
+    // the edited element's path in canvas coordinates, pen tool segments chained
+    private readElementPath(): PathData {
+        return normalizePenPath(parsePath(this.applyTransform(this.originGraphPath).toString()));
     }
 
     public appendLine(data: TCoordinate[] | SVGPathElement, closedLoop = false, fragmentID?: number) {
@@ -363,6 +381,9 @@ class DrawGroup {
             if (mark instanceof SVGPathElement) {
                 return item.elem === mark;
             } else if (mark instanceof SVGRectElement) {
+                if (item.EndPointsEle.includes(mark)) {
+                    return true;
+                }
                 const { x, y } = this.getPointCoordinate(mark);
                 return item.points.some((p) => p[0] === x && p[1] === y);
             } else {
@@ -374,6 +395,11 @@ class DrawGroup {
 
 
     public onDelete() {
+        if (this.mode === MODE.SELECT && this.editPath) {
+            // point editing deletes end points, never lines
+            this.deleteSelectedPoint();
+            return [];
+        }
         if (this.selected.line) {
             let deleteLines;
             if (this.selected.pointIndex) {
@@ -408,7 +434,24 @@ class DrawGroup {
         return [];
     }
 
-    public onMouseDown() {
+    public onMouseDown(_target?: unknown, x?: number, y?: number, event?: MouseEvent) {
+        if (this.mode !== MODE.SELECT || !this.editPath) {
+            this.handleMouseDown();
+            return;
+        }
+        const before = this.getSelectedNode();
+        if (!(event && typeof x === 'number' && this.pointEditMouseDown(event, x, y))) {
+            this.handleMouseDown();
+        }
+        const after = this.getSelectedNode();
+        if (!after || !before || after.subpathIndex !== before.subpathIndex || after.nodeIndex !== before.nodeIndex) {
+            // another point: the card closes, a double-click opens it again
+            this.cardOpen = false;
+        }
+        this.emitPointEdit();
+    }
+
+    private handleMouseDown() {
         const [x, y] = this.cursorPosition;
         this.unSelectAllPoint();
         this.clearAllConnectLine();
@@ -517,6 +560,14 @@ class DrawGroup {
                 latestLine && latestLine.updatePosition([]);
             }
             this.redrawLatestLine = false;
+            return;
+        }
+        if (this.mode === MODE.SELECT && this.editPath) {
+            if (this.hasTransform) {
+                this.hasTransform = false;
+                this.commitDrag();
+            }
+            this.setGuideLineVisibility(false);
             return;
         }
         if (this.mode === MODE.SELECT) {
@@ -666,8 +717,16 @@ class DrawGroup {
             this.drawedLine.forEach((p) => {
                 const index = p.EndPointsEle.findIndex((elem) => elem === this.selected.point);
                 if (index !== -1) {
+                    const dx = x - p.EndPoins[index][0];
+                    const dy = y - p.EndPoins[index][1];
                     p.EndPoins[index][0] = x;
                     p.EndPoins[index][1] = y;
+                    if (this.editPath && p.points.length === 4) {
+                        // point editing: the attached control point moves along
+                        const control = index === 0 ? p.points[1] : p.points[2];
+                        control[0] += dx;
+                        control[1] += dy;
+                    }
                     p.updatePosition(p.points);
                 }
             });
@@ -736,10 +795,13 @@ class DrawGroup {
                 nearestLine = line;
             }
         });
-        nearest = ATTACH_SPACE;
+        // point editing: points are picked within a few screen pixels, so segments near them stay reachable
+        nearest = this.editPath ? ATTACH_SPACE / this.scale : ATTACH_SPACE;
+        // point editing measures from the point centre
+        const centre = this.editPath ? POINT_RADIUS / this.scale : 0;
         (Array.from(this.endPointsGroup.children) as unknown[] as SVGRectElement[]).forEach((elem) => {
-            const pointX = Number(elem.getAttribute('x'));
-            const pointY = Number(elem.getAttribute('y'));
+            const pointX = Number(elem.getAttribute('x')) + centre;
+            const pointY = Number(elem.getAttribute('y')) + centre;
             const space = Math.sqrt((pointX - x) ** 2 + (pointY - y) ** 2);
             elem.setAttribute('stroke', THEME_COLOR);
             elem.setAttribute('stroke-opacity', '1');
@@ -756,8 +818,8 @@ class DrawGroup {
             }
         });
         Array.from(this.operationGroup.controlPoints.querySelectorAll<SVGRectElement>('[visibility="visible"]')).forEach((elem) => {
-            const pointX = Number(elem.getAttribute('x'));
-            const pointY = Number(elem.getAttribute('y'));
+            const pointX = Number(elem.getAttribute('x')) + centre;
+            const pointY = Number(elem.getAttribute('y')) + centre;
             const space = Math.sqrt((pointX - x) ** 2 + (pointY - y) ** 2);
             elem.setAttribute('stroke', THEME_COLOR);
             elem.setAttribute('stroke-opacity', '1');
@@ -941,6 +1003,13 @@ class DrawGroup {
         this.setMode(MODE.NONE);
 
         this.originGraph.setAttribute('visibility', 'visible');
+        if (this.editPath) {
+            // point editing writes every change to the element at once
+            this.drawedLine = [];
+            this.graph.remove();
+            this.resetPointEdit();
+            return;
+        }
         const path = this.generatePath();
         this.drawedLine = [];
         if (path) {
@@ -997,6 +1066,365 @@ class DrawGroup {
             });
         }
         return pointRecords;
+    }
+
+    // ---- point editing ----
+
+    public subscribePointEdit(listener: (state: PointEditState) => void): () => void {
+        this.pointEditListeners.add(listener);
+        return () => {
+            this.pointEditListeners.delete(listener);
+        };
+    }
+
+    public getPointEditState(): PointEditState {
+        if (this.mode !== MODE.SELECT || !this.editPath) {
+            return { active: false, elem: null, pointCount: 0, selected: null, cardOpen: false, insertMode: false };
+        }
+        const node = this.getSelectedNode();
+        let selected: PointEditState['selected'] = null;
+        if (node) {
+            const { subpathIndex, nodeIndex } = node;
+            const pathNode = this.editPath[subpathIndex].nodes[nodeIndex];
+            selected = {
+                ordinal: nodeOrdinal(this.editPath, subpathIndex, nodeIndex),
+                subpathIndex,
+                nodeIndex,
+                x: pathNode.x,
+                y: pathNode.y,
+                type: getPointType(this.editPath, subpathIndex, nodeIndex),
+                canDelete: !!deletePoint(this.editPath, subpathIndex, nodeIndex),
+                canSplit: !!splitAt(this.editPath, subpathIndex, nodeIndex)
+            };
+        }
+        return {
+            active: true,
+            elem: this.originGraph,
+            pointCount: countNodes(this.editPath),
+            selected,
+            cardOpen: this.cardOpen && !!selected,
+            insertMode: this.insertMode
+        };
+    }
+
+    /** Is the element (or any element) edited point by point right now? */
+    public isEditingPoints(elem?: Element): boolean {
+        return this.mode === MODE.SELECT && !!this.editPath && (!elem || elem === this.originGraph);
+    }
+
+    public setInsertMode(on: boolean) {
+        this.insertMode = on;
+        this.updateCursor();
+        this.emitPointEdit();
+    }
+
+    public openPointCard(): boolean {
+        if (!this.getSelectedNode()) {
+            return false;
+        }
+        this.cardOpen = true;
+        this.emitPointEdit();
+        return true;
+    }
+
+    public closePointCard(): boolean {
+        if (!this.cardOpen) {
+            return false;
+        }
+        this.cardOpen = false;
+        this.emitPointEdit();
+        return true;
+    }
+
+    /** Selects the next (1) or previous (-1) end point; an open card moves along. */
+    public selectStep(step: number) {
+        if (!this.editPath) {
+            return;
+        }
+        const current = this.getSelectedNode();
+        const next = stepNode(this.editPath, current ? current.subpathIndex : null, current ? current.nodeIndex : null, step);
+        this.selectNode(next);
+        this.emitPointEdit();
+    }
+
+    public deleteSelectedPoint(): boolean {
+        const node = this.getSelectedNode();
+        const result = node && deletePoint(this.editPath, node.subpathIndex, node.nodeIndex);
+        if (!result) {
+            return false;
+        }
+        this.commitEdit(result, null);
+        return true;
+    }
+
+    public splitSelectedPoint(): boolean {
+        const node = this.getSelectedNode();
+        return !!node && this.splitNode(node);
+    }
+
+    /** Moves the selected end point to canvas coordinates; its control points move along. */
+    public setSelectedPointPosition(x: number, y: number) {
+        const node = this.getSelectedNode();
+        if (!node || !Number.isFinite(x) || !Number.isFinite(y)) {
+            return;
+        }
+        this.commitEdit(setPointPosition(this.editPath, node.subpathIndex, node.nodeIndex, x, y), node, true);
+    }
+
+    public setSelectedPointType(type: PointType) {
+        const node = this.getSelectedNode();
+        if (!node) {
+            return;
+        }
+        this.commitEdit(setPointType(this.editPath, node.subpathIndex, node.nodeIndex, type), node, true);
+    }
+
+    /** Canvas position of the selected end point, follows a running drag. */
+    public getSelectedPointPosition(): { x: number, y: number } | null {
+        const rect = this.getSelectedNode() && this.selected.point;
+        if (!rect) {
+            return null;
+        }
+        return { x: Number(rect.getAttribute('cx')), y: Number(rect.getAttribute('cy')) };
+    }
+
+    /** Double-click on an end point opens its card. Returns false if the target is not an end point. */
+    public onPointDblClick(target: Element): boolean {
+        if (!this.isEditingPoints()) {
+            return false;
+        }
+        const node = this.findNodeByRect(target);
+        if (!node) {
+            return false;
+        }
+        this.selectNode(node);
+        this.cardOpen = true;
+        this.emitPointEdit();
+        return true;
+    }
+
+    /** Undo / redo changed the element: show its path again, the selected point stays if it exists. */
+    public reloadPointEdit(elem: Element) {
+        if (!this.isEditingPoints(elem)) {
+            return;
+        }
+        const current = this.getSelectedNode();
+        const ordinal = current ? nodeOrdinal(this.editPath, current.subpathIndex, current.nodeIndex) : -1;
+        this.originGraphPath = this.originGraph.getAttribute('d');
+        const path = this.readElementPath();
+        const nodes = listNodes(path);
+        this.loadEditPath(path, ordinal >= 0 && ordinal < nodes.length ? nodes[ordinal] : null);
+        this.emitPointEdit();
+    }
+
+    private emitPointEdit() {
+        const state = this.getPointEditState();
+        this.pointEditListeners.forEach((listener) => listener(state));
+    }
+
+    private resetPointEdit() {
+        this.editPath = null;
+        this.editSegments = [];
+        this.nodeRects = [];
+        this.cardOpen = false;
+        this.insertMode = false;
+        this.selected = {};
+        this.updateCursor();
+        this.emitPointEdit();
+    }
+
+    private updateCursor() {
+        const svg = this.container.ownerSVGElement;
+        if (svg) {
+            svg.style.cursor = this.insertMode && this.editPath ? 'crosshair' : '';
+        }
+    }
+
+    private findNodeByRect(rect: Element): NodeRef | null {
+        if (!rect) {
+            return null;
+        }
+        for (let subpathIndex = 0; subpathIndex < this.nodeRects.length; subpathIndex++) {
+            const nodeIndex = this.nodeRects[subpathIndex].indexOf(rect as SVGRectElement);
+            if (nodeIndex !== -1) {
+                return { subpathIndex, nodeIndex };
+            }
+        }
+        return null;
+    }
+
+    private getSelectedNode(): NodeRef | null {
+        if (!this.editPath) {
+            return null;
+        }
+        return this.findNodeByRect(this.selected.point);
+    }
+
+    // the end point under the cursor (a few screen pixels)
+    private findNodeAt(x: number, y: number): NodeRef | null {
+        let best: NodeRef = null;
+        let bestDistance = ATTACH_SPACE / this.scale;
+        this.editPath.forEach((sub, subpathIndex) => {
+            sub.nodes.forEach((n, nodeIndex) => {
+                const d = Math.hypot(n.x - x, n.y - y);
+                if (d <= bestDistance) {
+                    bestDistance = d;
+                    best = { subpathIndex, nodeIndex };
+                }
+            });
+        });
+        return best;
+    }
+
+    private findSegmentAt(x: number, y: number) {
+        const hit = nearestSegment(this.editPath, { x, y });
+        return hit && hit.distance <= ATTACH_SPACE / this.scale ? hit : null;
+    }
+
+    // Alt + click splits, a click with "Add point" on inserts; returns true if the click was used
+    private pointEditMouseDown(event: MouseEvent, x: number, y: number): boolean {
+        const node = this.findNodeAt(x, y);
+        if (event.altKey) {
+            if (node) {
+                this.splitNode(node);
+                return true;
+            }
+            const hit = this.findSegmentAt(x, y);
+            if (hit) {
+                const result = splitSegment(this.editPath, hit.subpathIndex, hit.segmentIndex, hit.t);
+                result && this.commitEdit(result, null);
+                return true;
+            }
+            return false;
+        }
+        const onControlPoint = !!this.preSelectPoint
+            && this.preSelectPoint.parentElement as unknown === this.operationGroup.controlPoints;
+        if (this.insertMode && !node && !onControlPoint) {
+            const hit = this.findSegmentAt(x, y);
+            if (hit) {
+                const result = insertPoint(this.editPath, hit.subpathIndex, hit.segmentIndex, hit.t);
+                // the new point is selected, so it can be dragged right away
+                this.commitEdit(result, { subpathIndex: hit.subpathIndex, nodeIndex: hit.segmentIndex + 1 });
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private splitNode(node: NodeRef): boolean {
+        const result = splitAt(this.editPath, node.subpathIndex, node.nodeIndex);
+        if (!result) {
+            return false;
+        }
+        this.commitEdit(result, null);
+        return true;
+    }
+
+    // shows a path: one line per segment, one end point element per node
+    private loadEditPath(path: PathData, select: NodeRef | null = null) {
+        this.drawedLine.forEach((line) => line.del());
+        this.drawedLine = [];
+        this.editSegments = [];
+        this.clearAllEndPoint();
+        this.operationGroup.clearOperation();
+        this.clearAllConnectLine();
+        this.preSelectLine = null;
+        this.preSelectPoint = null;
+
+        this.editPath = path;
+        this.nodeRects = path.map((sub) => sub.nodes.map((n) => createEndPointElement([n.x, n.y], this.scale)));
+        segmentPoints(path).forEach((segment) => {
+            const rects = this.nodeRects[segment.subpathIndex];
+            const line = new Line(segment.points, this.scale, false, this.drawedLine.length, [rects[segment.fromIndex], rects[segment.toIndex]]);
+            this.drawedLine.push(line);
+            this.graph.appendChild(line.elem);
+            this.editSegments.push({ line, segment });
+        });
+        this.nodeRects.forEach((rects) => this.endPointsGroup.append(...rects));
+        this.selectNode(select);
+    }
+
+    private selectNode(node: NodeRef | null) {
+        this.unSelectAllPoint();
+        this.drawedLine.forEach((line) => {
+            line.elem.setAttribute('stroke', 'black');
+            line.elem.setAttribute('stroke-opacity', '1');
+        });
+        const rect = node && this.nodeRects[node.subpathIndex] && this.nodeRects[node.subpathIndex][node.nodeIndex];
+        if (!rect) {
+            this.selected = {};
+            this.operationGroup.clearOperation();
+            return;
+        }
+        rect.setAttribute('fill', THEME_COLOR);
+        const lines = this.drawedLine.filter((line) => line.EndPointsEle.includes(rect));
+        this.selected = { line: lines[0], point: rect, pointIndex: null };
+        if (lines.length > 0) {
+            this.operationGroup.updateOperation(lines.map((line) => line.elem));
+        } else {
+            this.operationGroup.clearOperation();
+        }
+    }
+
+    // the path as the lines show it now (after a drag)
+    private readEditPath(): PathData {
+        const segments = this.editSegments.map(({ line, segment }) => {
+            const numbers = parseNumbers(line.elem.getAttribute('d'));
+            const points: TPoint[] = [];
+            for (let i = 0; i + 1 < numbers.length; i += 2) {
+                points.push([numbers[i], numbers[i + 1]]);
+            }
+            return { ...segment, points };
+        });
+        return readPathFromSegments(this.editPath, segments);
+    }
+
+    private commitDrag() {
+        const node = this.getSelectedNode();
+        const path = this.readEditPath();
+        if (node) {
+            const joined = joinDraggedEnd(path, node.subpathIndex, node.nodeIndex);
+            if (joined !== path) {
+                this.commitEdit(joined, { subpathIndex: node.subpathIndex, nodeIndex: 0 }, true);
+                return;
+            }
+        }
+        // same points and lines: keep them (and the selected line or control point)
+        this.writeElement(path);
+        this.editPath = path;
+        this.emitPointEdit();
+    }
+
+    // writes the path to the element (one undo step) and shows it again
+    private commitEdit(path: PathData, select: NodeRef | null, keepCard = false) {
+        this.writeElement(path);
+        this.cardOpen = keepCard && this.cardOpen;
+        this.loadEditPath(path, select);
+        this.emitPointEdit();
+    }
+
+    private writeElement(path: PathData) {
+        const before = this.originGraph.getAttribute('d');
+        const after = this.toElementPath(serializePath(path));
+        if (after === before) {
+            return;
+        }
+        this.originGraph.setAttribute('d', after);
+        this.onDrawTransformComplete({ elem: this.originGraph, before, after });
+        // the element is normalized afterwards (SvgModel.completeElementTransform)
+        this.originGraphPath = this.originGraph.getAttribute('d');
+    }
+
+    // canvas coordinates to the element's own coordinates (inverse of its transform)
+    private toElementPath(d: string): string {
+        const list = this.originGraph.transform.baseVal;
+        let matrix = new DOMMatrix();
+        for (let i = 0; i < list.numberOfItems; i++) {
+            const m = list.getItem(i).matrix;
+            matrix = matrix.multiply(new DOMMatrix([m.a, m.b, m.c, m.d, m.e, m.f]));
+        }
+        const inverse = matrix.inverse();
+        return svgPath(d).matrix([inverse.a, inverse.b, inverse.c, inverse.d, inverse.e, inverse.f]).round(4).toString();
     }
 
     private clearAllEndPoint() {

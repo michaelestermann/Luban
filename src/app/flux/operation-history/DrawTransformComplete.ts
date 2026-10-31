@@ -6,7 +6,9 @@ type DrawTransformCompleteProp = {
     before: string,
     after: string,
     drawGroup: DrawGroup,
-    svgModel: SvgModel
+    svgModel: SvgModel,
+    // element transform both paths belong to (taken when the operation is created)
+    transform?: string
 }
 
 export default class DrawTransformComplete extends Operation<DrawTransformCompleteProp> {
@@ -16,19 +18,29 @@ export default class DrawTransformComplete extends Operation<DrawTransformComple
             svgModel: props.svgModel,
             before: props.before,
             after: props.after,
-            drawGroup: props.drawGroup
+            drawGroup: props.drawGroup,
+            transform: props.transform ?? props.svgModel.elem.getAttribute('transform')
         };
     }
 
+    private apply(d: string) {
+        const { svgModel, transform, drawGroup } = this.state;
+        if (transform) {
+            svgModel.elem.setAttribute('transform', transform);
+        }
+        svgModel.elem.setAttribute('d', d);
+        SvgModel.completeElementTransform(svgModel.elem);
+        svgModel.onTransform();
+        svgModel.updateSource();
+        // point editing shows the changed path
+        drawGroup && drawGroup.reloadPointEdit(svgModel.elem);
+    }
+
     public redo() {
-        this.state.svgModel.elem.setAttribute('d', this.state.after);
-        this.state.svgModel.updateSource();
-        SvgModel.completeElementTransform(this.state.svgModel.elem);
+        this.apply(this.state.after);
     }
 
     public undo() {
-        this.state.svgModel.elem.setAttribute('d', this.state.before);
-        this.state.svgModel.updateSource();
-        SvgModel.completeElementTransform(this.state.svgModel.elem);
+        this.apply(this.state.before);
     }
 }

@@ -585,7 +585,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                     draw.started = true;
                     draw.startX = x;
                     draw.startY = y;
-                    this.svgContentGroup.drawGroup.onMouseDown(mouseTarget, x, y);
+                    this.svgContentGroup.drawGroup.onMouseDown(mouseTarget, x, y, event);
                 } else if (!rightClick) {
                     if (mouseTarget && mouseTarget.parentNode?.id === 'svg-data') {
                         draw.selectedTarget = mouseTarget;
@@ -1407,6 +1407,10 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         if (!mouseTarget) {
             return;
         }
+        // point editing: a double-click on an end point opens its card
+        if (this.mode === 'select' && this.editingElem && this.svgContentGroup.drawGroup.onPointDblClick(evt.target)) {
+            return;
+        }
         const { tagName } = mouseTarget;
 
         // Double-click on a grouped element (the click before selected the
@@ -1454,16 +1458,27 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         if (this.props.editable && tagName === 'text' && this.mode !== 'textedit') {
             this.textActions.select(mouseTarget, x, y);
             this.setMode('textedit');
-        } else if (tagName === 'path' && mouseTarget.getAttribute('id')?.includes('graph')) {
-            SvgModel.completeElementTransform(mouseTarget);
-            this.clearSelection();
-            this.editingElem = mouseTarget;
-            this.addToSelection([mouseTarget]);
-            this.setMode('select', {
-                elem: mouseTarget
-            });
+        } else if (this.isPointEditable(mouseTarget)) {
+            this.enterPointEditing(mouseTarget);
         }
     };
+
+    // paths drawn with the pen tool
+    public isPointEditable(elem: Element) {
+        return elem.tagName === 'path' && !!elem.getAttribute('id')?.includes('graph');
+    }
+
+    // Starts point editing of a path element: its points can be moved, inserted, deleted and split,
+    // the mode bar replaces the selection bar.
+    public enterPointEditing(elem: SVGPathElement) {
+        SvgModel.completeElementTransform(elem);
+        this.clearSelection();
+        this.editingElem = elem;
+        this.addToSelection([elem]);
+        this.setMode('select', {
+            elem
+        });
+    }
 
     public onMouseWheel = (event) => {
         event.preventDefault();
