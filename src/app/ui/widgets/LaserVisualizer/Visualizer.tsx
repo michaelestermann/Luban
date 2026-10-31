@@ -21,7 +21,7 @@ import {
     SELECTEVENT,
     VISUALIZER_CAMERA_HEIGHT
 } from '../../../constants';
-import { Origin, Workpiece, WorkpieceShape, convertMaterialsToWorkpiece } from '../../../constants/coordinate';
+import { CoordinateMode, Origin, Workpiece, WorkpieceShape, convertMaterialsToWorkpiece } from '../../../constants/coordinate';
 import { actions as editorActions } from '../../../flux/editor';
 import { actions as operationHistoryActions } from '../../../flux/operation-history';
 import { actions as laserActions } from '../../../flux/laser';
@@ -42,6 +42,7 @@ import { PageMode } from '../../pages/PageMode';
 import SVGClippingOverlay from '../../views/model-operation-overlay/SVGClippingOverlay';
 import ABPositionOverlay from '../../views/model-operation-overlay/ABPositionOverlay';
 import PrintablePlate from '../CncLaserShared/PrintablePlate';
+import { plateOrigin } from '../../../lib/object-origin';
 import VisualizerBottomLeft from '../CncLaserShared/VisualizerBottomLeft';
 import SelectionBar from '../CncLaserShared/SelectionBar';
 import { ContextMenuItem, shapeContextMenuItems } from '../CncLaserShared/shape-actions';
@@ -59,6 +60,8 @@ interface VisualizerProps {
     modelGroup: ModelGroup;
     toolPathGroup: ToolPathGroup;
     printableArea: PrintablePlate;
+    // canvas coordinate mode (where the workpiece origin is)
+    coordinateMode?: CoordinateMode;
 
     // a `Group` contains background objects
     backgroundGroup: Group;
@@ -424,7 +427,8 @@ class Visualizer extends React.Component<VisualizerProps> {
 
         const { materials, origin } = props;
         const workpiece = convertMaterialsToWorkpiece(materials);
-        this.printableArea = new PrintablePlate(workpiece, origin);
+        // an object origin keeps the workpiece where the canvas has it
+        this.printableArea = new PrintablePlate(workpiece, plateOrigin(origin, props.coordinateMode?.value));
         this.state = {
             limitPicModalShow: false,
             file: null,
@@ -483,12 +487,15 @@ class Visualizer extends React.Component<VisualizerProps> {
             this.canvas.current.setCamera(new THREE.Vector3(0, 0, VISUALIZER_CAMERA_HEIGHT), new THREE.Vector3());
         }
 
-        if (!isEqual(nextProps.workpiece, this.props.workpiece) || !isEqual(nextProps.origin, this.props.origin)) {
+        if (!isEqual(nextProps.workpiece, this.props.workpiece) || !isEqual(nextProps.origin, this.props.origin)
+            || nextProps.coordinateMode !== this.props.coordinateMode) {
             const { workpiece, origin } = nextProps;
 
-            this.printableArea = new PrintablePlate(workpiece, origin);
+            this.printableArea = new PrintablePlate(workpiece, plateOrigin(origin, nextProps.coordinateMode?.value));
             this.actions.autoFocus();
         }
+        // the red origin point of the preview follows an object origin
+        this.printableArea.setTargetPoint(nextProps.toolPathGroup?.getObjectOriginPoint?.(nextProps.origin) || null);
 
         if (isOverSize !== this.props.isOverSize) {
             this.setState({

@@ -6,6 +6,7 @@ import { Origin } from '../constants/coordinate';
 import { ViewPathRenderer } from '../lib/renderer/ViewPathRenderer';
 import { generateModelDefaultConfigs } from '../models/ModelInfoUtils';
 import ThreeModel from '../models/ThreeModel';
+import { BoxLike, Point, objectReferenceBox, referencePoint } from '../lib/object-origin';
 import ToolPath from './ToolPath';
 import { moveItem } from './reorder';
 import { SUCCESS, createToolPathNameByType, getModelsByToolPathType, getToolPathType } from './utils';
@@ -438,20 +439,39 @@ class ToolPathGroup {
      */
     public computeReferenceBox(): void {
         const toolPaths = this.toolPaths.filter(toolpath => toolpath.visible);
+        const box = this.getObjectReferenceBox();
 
-        // compute bounding box of all visible tool paths
-        const bbox = new Box2();
+        // set bbox as reference box of each tool path (none: the workpiece origin)
         for (const toolPath of toolPaths) {
-            const bbox2 = toolPath.getBoundingBox();
-
-            bbox.expandByPoint(bbox2.min);
-            bbox.expandByPoint(bbox2.max);
+            toolPath.setReferenceBox(box ? new Box2(new THREE.Vector2(box.min.x, box.min.y), new THREE.Vector2(box.max.x, box.max.y)) : null);
         }
+    }
 
-        // set bbox as reference box of each tool path
-        for (const toolPath of toolPaths) {
-            toolPath.setReferenceBox(bbox);
-        }
+    /**
+     * Box of an object origin: the objects it is bound to, else (laser semantics) all objects of the
+     * visible tool paths. Null for a workpiece origin or when the bound objects are gone.
+     */
+    public getObjectReferenceBox(origin: Origin = this.origin): BoxLike | null {
+        const leafs = (typeof this.modelGroup?.getModels === 'function' ? this.modelGroup.getModels() : []) as {
+            modelID: string; computeBoundingBox?: () => void; boundingBox?: BoxLike;
+        }[];
+        const getBox = (modelID: string): BoxLike | null => {
+            const model = leafs.find(leaf => leaf.modelID === modelID);
+            if (!model || !model.computeBoundingBox) {
+                return null;
+            }
+            model.computeBoundingBox();
+            return model.boundingBox;
+        };
+        const allBoxes = (): BoxLike[] => this.toolPaths
+            .filter(toolpath => toolpath.visible)
+            .map(toolPath => toolPath.getBoundingBox());
+        return objectReferenceBox(origin, getBox, allBoxes);
+    }
+
+    /** The point (model coordinates) of an object origin, null when the workpiece origin applies. */
+    public getObjectOriginPoint(origin: Origin = this.origin): Point | null {
+        return origin ? referencePoint(this.getObjectReferenceBox(origin), origin.reference) : null;
     }
 
     public getGenerateToolPathTask(toolPathId: string) {
@@ -524,6 +544,8 @@ class ToolPathGroup {
         for (const toolPath of this.toolPaths) {
             toolPath.setOrigin(origin);
         }
+        // the tool paths compare their offsets: a new origin point changes them
+        this.computeReferenceBox();
     }
 
     public updateLaserMaterialsBackground(materials) {

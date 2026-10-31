@@ -4,6 +4,10 @@ import PropTypes from 'prop-types';
 import '../../../styles/contextmenu.styl';
 
 
+// own content in the menu; the props the menu hands to its items (event, trigger props) are not passed on
+const CustomItem = ({ render }) => <div>{render()}</div>;
+CustomItem.propTypes = { render: PropTypes.func.isRequired };
+
 // ref: https://fkhadra.github.io/react-contexify/api/context-menu
 class ContextMenu extends PureComponent {
     static hide() {
@@ -28,8 +32,13 @@ class ContextMenu extends PureComponent {
                         if (!menuItem) {
                             return null;
                         }
-                        const { type, label, disabled = false, onClick, items } = menuItem;
+                        const { type, label, disabled = false, onClick, items, render } = menuItem;
                         switch (type) {
+                            case 'custom':
+                                // own content (e.g. a point picker); it closes the menu itself
+                                return (
+                                    <CustomItem key={key++} render={render} />
+                                );
                             case 'separator':
                                 return (
                                     <Separator key={key++} />
@@ -50,6 +59,10 @@ class ContextMenu extends PureComponent {
                                                 case 'item':
                                                     return (
                                                         <Item key={key++} onClick={item.onClick}>{item.label}</Item>
+                                                    );
+                                                case 'custom':
+                                                    return (
+                                                        <CustomItem key={key++} render={item.render} />
                                                     );
                                                 default:
                                                     return null;

@@ -35,6 +35,7 @@ import Canvas from '../../components/SMCanvas';
 import Space from '../../components/Space';
 import { repairModelPopup } from '../../views/repair-model/repair-model-popup';
 import PrintablePlate from '../CncLaserShared/PrintablePlate';
+import { plateOrigin } from '../../../lib/object-origin';
 import VisualizerBottomLeft from '../CncLaserShared/VisualizerBottomLeft';
 import SelectionBar from '../CncLaserShared/SelectionBar';
 import { ContextMenuItem, shapeContextMenuItems } from '../CncLaserShared/shape-actions';
@@ -463,7 +464,8 @@ class Visualizer extends React.Component<VisualizerProps> {
         const { materials, origin } = props;
 
         const workpiece = convertMaterialsToWorkpiece(materials);
-        this.printableArea = new PrintablePlate(workpiece, origin);
+        // an object origin keeps the workpiece where the canvas has it
+        this.printableArea = new PrintablePlate(workpiece, plateOrigin(origin, props.coordinateMode?.value));
         this.state = {
             limitPicModalShow: false,
             file: null,
@@ -521,12 +523,15 @@ class Visualizer extends React.Component<VisualizerProps> {
 
         if (!isEqual(nextProps.materials, this.props.materials)
             || !isEqual(nextProps.origin, this.props.origin)
+            || nextProps.coordinateMode !== this.props.coordinateMode
         ) {
             const { materials, origin } = nextProps;
             const workpiece = convertMaterialsToWorkpiece(materials);
-            this.printableArea = new PrintablePlate(workpiece, origin);
+            this.printableArea = new PrintablePlate(workpiece, plateOrigin(origin, nextProps.coordinateMode?.value));
             this.actions.autoFocus();
         }
+        // the red origin point of the preview follows an object origin
+        this.printableArea.setTargetPoint(nextProps.toolPathGroup?.getObjectOriginPoint?.(nextProps.origin) || null);
 
         if (isOverSize !== this.props.isOverSize) {
             this.setState({

@@ -114,12 +114,18 @@ export enum ObjectReference {
     TopRight = 'top-right',
     BottomLeft = 'bottom-left',
     BottomRight = 'bottom-right',
+    // edge middles (origin on an object)
+    TopCenter = 'top-center',
+    BottomCenter = 'bottom-center',
+    CenterLeft = 'center-left',
+    CenterRight = 'center-right',
 }
 
 export type OriginReference = RectangleWorkpieceReference | CylinderWorkpieceReference | ObjectReference;
 
 export type OriginReferenceMetadata = {
-
+    // object origin: the objects it is bound to (their bounding box); none = all objects of the operations
+    modelIDs?: string[];
 };
 
 

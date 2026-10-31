@@ -37,7 +37,9 @@ import {
 } from '../../constants/coordinate';
 import CompoundOperation from '../../core/CompoundOperation';
 import OperationHistory from '../../core/OperationHistory';
+import i18n from '../../lib/i18n';
 import log from '../../lib/log';
+import { createObjectOrigin, isOriginBoundToMissingObject, rememberOrigin } from '../../lib/object-origin';
 import {
     computePartTransformation,
     createAllOrNone,
@@ -81,6 +83,7 @@ import LayerOrderOperation2D from '../operation-history/LayerOrderOperation2D';
 import RoundCornersOperation2D from '../operation-history/RoundCornersOperation2D';
 import { RoundTarget, initialRoundRadius, roundTargetResult, roundTargets } from '../../ui/SVGEditor/path-edit/round-corners';
 import RenameOperation2D from '../operation-history/RenameOperation2D';
+import OriginOperation2D from '../operation-history/OriginOperation2D';
 import { cleanObjectName, getEntityName } from '../../models/object-name';
 import MoveOperation2D from '../operation-history/MoveOperation2D';
 import RotateOperation2D from '../operation-history/RotateOperation2D';
@@ -1445,7 +1448,9 @@ export const actions = {
     },
 
     removeSelectedModel: headType => (dispatch, getState) => {
-        const { modelGroup, SVGActions, toolPathGroup } = getState()[headType];
+        const { modelGroup, SVGActions, toolPathGroup, origin } = getState()[headType];
+        const leafExists = (modelID: string) => modelGroup.getModels().some(model => model.modelID === modelID);
+        const originWasOnObject = !isOriginBoundToMissingObject(origin, leafExists);
         const operations = new CompoundOperation();
         // Snapshot parent group before deletion so undo can restore it
         const parentGroup = modelGroup.selectedGroupID
@@ -1502,6 +1507,11 @@ export const actions = {
                     progress: 0
                 })
             );
+        }
+        if (originWasOnObject && isOriginBoundToMissingObject(origin, leafExists)) {
+            // the origin was on the deleted objects: the workpiece origin applies (undo brings it back)
+            toolPathGroup.computeReferenceBox();
+            toast(makeSceneToast('info', i18n._('key-CncLaser/Origin-The object of the work origin was deleted. The workpiece origin is used.')));
         }
         dispatch(actions.resetProcessState(headType));
         dispatch(baseActions.render(headType));
@@ -2900,12 +2910,42 @@ export const actions = {
                 origin,
             }));
 
-            machineStore.set(`${headType}.origin.type`, origin.type);
-            machineStore.set('origin.reference', origin.reference);
+            // an origin on certain objects belongs to the project (saved with it), not to new projects
+            if (rememberOrigin(headType, origin)) {
+                machineStore.set(`${headType}.origin.type`, origin.type);
+                machineStore.set('origin.reference', origin.reference);
+            }
 
             // Update origin of tool path object
             const toolPathGroup = getState()[headType].toolPathGroup as ToolPathGroup;
             toolPathGroup.setOrigin(origin);
+        };
+    },
+
+    /**
+     * "Set origin here": the work origin goes to a point (corner, edge middle, centre) of the
+     * selected objects and stays bound to them. One undo step.
+     */
+    setOriginOnSelection: (headType: HeadType, reference: ObjectReference) => {
+        return (dispatch, getState) => {
+            const { modelGroup, origin } = getState()[headType];
+            const ids = (modelGroup.getSelectedModelArray() as SvgModel[])
+                .filter(model => model.visible !== false)
+                .map(model => model.modelID);
+            if (!ids.length) {
+                return false;
+            }
+            const apply = (next: Origin) => {
+                dispatch(actions.setOrigin(headType, next));
+                dispatch(actions.resetProcessState(headType));
+                dispatch(baseActions.render(headType));
+            };
+            const operation = new OriginOperation2D({ before: origin, after: createObjectOrigin(reference, ids), apply });
+            operation.redo();
+            const operations = new CompoundOperation();
+            operations.push(operation);
+            dispatch(operationHistoryActions.setOperations(headType, operations));
+            return true;
         };
     },
 

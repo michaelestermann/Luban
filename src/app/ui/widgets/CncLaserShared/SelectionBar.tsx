@@ -11,7 +11,8 @@ import SvgIcon from '../../components/SvgIcon';
 import PointEditBar from './PointEditBar';
 import MeasureBar from './MeasureBar';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
-import { COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, ROUND_CORNERS_ACTION, ShapeAction } from './shape-actions';
+import { canSetOriginOnSelection, COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, ROUND_CORNERS_ACTION, setOriginLabel, ShapeAction } from './shape-actions';
+import OriginPointPicker from './OriginPointPicker';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 import styles from './selection-bar.styl';
 
@@ -102,6 +103,8 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const moreActions = fittingActions(MORE_ACTIONS, store.getState(), headType);
     // rectangles (or editable paths with sharp corners) in the selection
     const canRoundCorners = ROUND_CORNERS_ACTION.fits(store.getState(), headType);
+    // "⋯" also holds "Set origin here" with its point picker
+    const canSetOrigin = canSetOriginOnSelection(store.getState(), headType);
 
     const onGroup = () => {
         if (canUngroup) {
@@ -148,7 +151,7 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
         </div>
     );
 
-    const renderActionMenu = (menu: string, items: ShapeAction[], button: React.ReactNode) => (
+    const renderActionMenu = (menu: string, items: ShapeAction[], button: React.ReactNode, extra?: React.ReactNode) => (
         <Popover
             content={(
                 <div className={styles['action-menu']} role="menu">
@@ -167,6 +170,7 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                             {item.keyHint && <span className={styles['menu-key']}>{item.keyHint}</span>}
                         </button>
                     ))}
+                    {extra}
                 </div>
             )}
             trigger="click"
@@ -280,12 +284,22 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     </span>
                 </Popover>
             )}
-            {moreActions.length > 0 && renderActionMenu('more', moreActions, (
+            {(moreActions.length > 0 || canSetOrigin) && renderActionMenu('more', moreActions, (
                 <span className={styles['tip-wrapper']}>
                     <button type="button" className={styles['icon-button']} aria-label={i18n._('key-CncLaser/SelectionBar-More actions')} title={i18n._('key-CncLaser/SelectionBar-More actions')}>
                         <svg {...stroke}><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></svg>
                     </button>
                 </span>
+            ), canSetOrigin && (
+                <div className={styles['origin-section']} data-set-origin="true">
+                    <div className={styles['origin-title']}>{setOriginLabel()}</div>
+                    <OriginPointPicker
+                        onPick={(reference) => {
+                            setMenuOpen(null);
+                            dispatch(editorActions.setOriginOnSelection(headType, reference));
+                        }}
+                    />
+                </div>
             ))}
             {renderIconButton(i18n._('key-App/Menu-Duplicate'), !canDuplicate, () => {
                 dispatch(editorActions.duplicateSelectedModel(headType));

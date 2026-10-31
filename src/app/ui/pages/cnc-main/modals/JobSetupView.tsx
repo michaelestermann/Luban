@@ -28,6 +28,9 @@ import i18n from '../../../../lib/i18n';
 import { toFixed } from '../../../../lib/numeric-utils';
 import { NumberInput as Input } from '../../../components/Input';
 import Select from '../../../components/Select';
+import OriginPointPicker from '../../../widgets/CncLaserShared/OriginPointPicker';
+import { localizedAnchorName } from '../../../widgets/CncLaserShared/FramePicker';
+import { boundModelIds, createObjectOrigin, isObjectReference, referenceAnchor } from '../../../../lib/object-origin';
 
 
 type OriginTypeOption = {
@@ -40,11 +43,15 @@ function getOriginTypeOptions(workpieceShape: WorkpieceShape): OriginTypeOption[
         return [
             {
                 value: OriginType.Workpiece,
-                label: i18n._('key-Printing/LeftBar/Support-No'),
+                label: i18n._('key-Term/Workpiece'),
+            },
+            {
+                value: OriginType.Object,
+                label: i18n._('key-Term/Object'),
             },
             {
                 value: OriginType.CNCLockingBlock,
-                label: i18n._('key-Printing/LeftBar/Support-Yes'),
+                label: i18n._('key-CncLaser/JobSetup-Locking block'),
             },
         ];
     } else {
@@ -147,6 +154,11 @@ function getOriginReferenceOptions(workpieceShape: WorkpieceShape, originType: O
     return [];
 }
 
+function localizedReference(reference: string): string {
+    const anchor = referenceAnchor(reference);
+    return anchor ? localizedAnchorName(anchor) : reference;
+}
+
 export type JobSetupViewHandle = {
     onChange: () => void;
 }
@@ -157,7 +169,15 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
     const materials = useSelector((state: RootState) => state[HEAD_CNC]?.materials, shallowEqual) as Materials;
     const origin = useSelector((state: RootState) => state[HEAD_CNC].origin, shallowEqual) as Origin;
 
-    const { inProgress, useBackground } = useSelector((state: RootState) => state[HEAD_CNC]);
+    const { inProgress, useBackground, coordinateMode } = useSelector((state: RootState) => state[HEAD_CNC]);
+    // origin on an object: the selected objects, else the ones it is set to, else all objects of the operations
+    const modelGroup = useSelector((state: RootState) => state[HEAD_CNC].modelGroup);
+    const selectedIds: string[] = (modelGroup?.getSelectedModelArray?.() || [])
+        .filter(model => model.visible !== false)
+        .map(model => model.modelID);
+    const existingIds: string[] = boundModelIds(origin)
+        .filter(id => (modelGroup?.getModels?.() || []).some(model => model.modelID === id));
+    const objectIds = selectedIds.length ? selectedIds : existingIds;
 
     // workpiece
     const [workpiece, updateWorkpiece] = useSetState<Workpiece>({
@@ -234,8 +254,13 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
     }, [workpiece.shape]);
 
     const onChangeOriginType = useCallback((option: OriginTypeOption) => {
-        updateSelectedOrigin({ type: option.value });
-    }, [updateSelectedOrigin]);
+        if (option.value === OriginType.Workpiece && selectedOrigin.type === OriginType.Object && coordinateMode) {
+            // back from an object origin: the workpiece reference the canvas has
+            updateSelectedOrigin({ type: option.value, reference: coordinateMode.value });
+        } else {
+            updateSelectedOrigin({ type: option.value });
+        }
+    }, [updateSelectedOrigin, selectedOrigin.type, coordinateMode]);
 
     // origin reference
     const setOriginReference = useCallback((reference: OriginReference) => {
@@ -257,15 +282,20 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
     }, [setOriginReference]);
 
     // In case default reference is not an option, select an available one as reference
+    // (an object origin offers all nine points of the object)
     useEffect(() => {
+        if (selectedOrigin.type === OriginType.Object && isObjectReference(selectedOrigin.reference)) {
+            return;
+        }
         const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
         if (!targetOption && originReferenceOptions.length > 0) {
-            const firstOption = originReferenceOptions[0];
-            setOriginReference(firstOption.mode.value as OriginReference);
+            // back from an object origin: the workpiece reference of the canvas
+            const current = originReferenceOptions.find(option => option.value === coordinateMode?.value);
+            setOriginReference((current || originReferenceOptions[0]).mode.value as OriginReference);
         }
     }, [
-        setOriginReference,
-        originReferenceOptions, selectedOrigin.reference,
+        setOriginReference, coordinateMode,
+        originReferenceOptions, selectedOrigin.type, selectedOrigin.reference,
     ]);
 
     // Locking Block (Artisan Only, L Bracket)
@@ -334,15 +364,20 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
 
                 dispatch(editorActions.updateWorkpieceObject(HEAD_CNC));
 
-                dispatch(editorActions.setOrigin(HEAD_CNC, selectedOrigin));
+                const isObjectOrigin = workpiece.shape === WorkpieceShape.Rectangle && selectedOrigin.type === OriginType.Object;
+                dispatch(editorActions.setOrigin(
+                    HEAD_CNC,
+                    isObjectOrigin ? createObjectOrigin(selectedOrigin.reference, objectIds) : { ...selectedOrigin, referenceMetadata: {} },
+                ));
 
                 // TODO
                 // Call change coordinate mode to move elements accordingly
+                // (an object origin keeps the workpiece where it is on the canvas)
                 const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
                 if (workpiece.shape === WorkpieceShape.Rectangle) {
                     dispatch(editorActions.changeCoordinateMode(
                         HEAD_CNC,
-                        targetOption.mode,
+                        isObjectOrigin ? coordinateMode : targetOption.mode,
                         {
                             x: (workpiece.size as RectangleWorkpieceSize).x,
                             y: (workpiece.size as RectangleWorkpieceSize).y,
@@ -377,6 +412,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
 
         selectedOrigin,
         lockingBlockPosition,
+        coordinateMode, objectIds,
     ]);
 
     return (
@@ -497,20 +533,30 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
             {
                 workpiece.shape === WorkpieceShape.Rectangle && (
                     <div className="sm-flex">
-                        <img
-                            draggable="false"
-                            style={{
-                                width: '100px',
-                                height: '100px'
-                            }}
-                            src={selectedOrigin.type === OriginType.CNCLockingBlock ? imgLockingBlockPosition : imgOF3axisCoordinateMode}
-                            role="presentation"
-                            alt="3 Axis"
-                        />
+                        {selectedOrigin.type === OriginType.Object ? (
+                            <div style={{ width: '100px', textAlign: 'center' }}>
+                                <OriginPointPicker
+                                    value={selectedOrigin.reference}
+                                    onPick={setOriginReference}
+                                    disabled={inProgress || settingSizeDisabled}
+                                />
+                            </div>
+                        ) : (
+                            <img
+                                draggable="false"
+                                style={{
+                                    width: '100px',
+                                    height: '100px'
+                                }}
+                                src={selectedOrigin.type === OriginType.CNCLockingBlock ? imgLockingBlockPosition : imgOF3axisCoordinateMode}
+                                role="presentation"
+                                alt="3 Axis"
+                            />
+                        )}
                         <div className="margin-left-16">
-                            {/* CNC locking block */}
+                            {/* workpiece, object or CNC locking block */}
                             <div className="height-32 sm-flex">
-                                <span className="width-144 margin-right-8 text-overflow-ellipsis">{i18n._('key-CncLaser/JobSetup-Use Locking block')}</span>
+                                <span className="width-144 margin-right-8 text-overflow-ellipsis">{i18n._('key-CncLaser/JobSetup-Origin on')}</span>
                                 <Select
                                     backspaceRemoves={false}
                                     size="120px"
@@ -538,6 +584,18 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                             onChange={onChangeOriginReference}
                                             disabled={inProgress || settingSizeDisabled}
                                         />
+                                    </div>
+                                )
+                            }
+                            {
+                                selectedOrigin.type === OriginType.Object && (
+                                    <div className="margin-top-16" style={{ width: 272, color: '#5b6170', fontSize: 12, lineHeight: '18px' }}>
+                                        <div className="font-weight-bold" style={{ color: '#1f2430' }}>
+                                            {i18n._('key-CncLaser/JobSetup-Origin point')}: {localizedReference(selectedOrigin.reference)}
+                                        </div>
+                                        {selectedIds.length > 0 && i18n._('key-CncLaser/JobSetup-On the selected objects ({{count}})', { count: selectedIds.length })}
+                                        {selectedIds.length === 0 && existingIds.length > 0 && i18n._('key-CncLaser/JobSetup-On the objects the origin is set to')}
+                                        {objectIds.length === 0 && i18n._('key-CncLaser/JobSetup-Nothing selected: on all objects of the operations')}
                                     </div>
                                 )
                             }

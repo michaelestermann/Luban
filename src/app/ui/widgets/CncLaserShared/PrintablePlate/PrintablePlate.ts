@@ -232,6 +232,14 @@ class PrintablePlate extends Object3D {
         }
     }
 
+    /** Moves the red origin point to an object origin (model coordinates); null: the workpiece origin. */
+    public setTargetPoint(point: { x: number; y: number } | null) {
+        if (this.targetPoint) {
+            this.targetPoint.position.setX(point ? point.x : 0);
+            this.targetPoint.position.setY(point ? point.y : 0);
+        }
+    }
+
     public changeCoordinateVisibility(value: boolean) {
         this.coordinateSystem && (this.coordinateSystem.visible = value);
     }

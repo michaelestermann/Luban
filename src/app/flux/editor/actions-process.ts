@@ -450,6 +450,11 @@ export const processActions = {
                 motorMode = (setupCoordinateMethod === SetupCoordinateMethod.Manually || !isConnected) ? MotorPowerMode.SHUTAll : MotorPowerMode.STAYPOWER;
             }
 
+            // G-code header: locking block, object origin point or the workpiece reference
+            let headerOrigin = toolPathGroup.getObjectOriginPoint(origin) ? `object-${origin.reference}` : coordinateMode.value;
+            if (origin.type === OriginType.CNCLockingBlock) {
+                headerOrigin = `position${lockingBlockPosition}`;
+            }
             controller.commitGcodeTask({
                 taskId: uuid(),
                 headType: headType,
@@ -457,7 +462,7 @@ export const processActions = {
                     toolPaths,
                     size,
                     toolHead: currentToolHead,
-                    origin: (origin.type === OriginType.CNCLockingBlock ? `position${lockingBlockPosition}` : coordinateMode.value),
+                    origin: headerOrigin,
                     jobOffsetMode,
                     series: activeMachine?.identifier,
                     metadata: activeMachine?.metadata,

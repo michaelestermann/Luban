@@ -77,6 +77,8 @@ const CURRENTDRAWING_INIT = {
 
 interface SVGCanvasProps {
     origin: Origin;
+    // object origin point (model coordinates), null: the workpiece origin
+    originPoint?: { x: number; y: number } | null;
 }
 
 class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
@@ -120,6 +122,8 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         updateScale: PropTypes.func.isRequired,
         updateTarget: PropTypes.func.isRequired,
         materials: PropTypes.object,
+        // object origin point (model coordinates), null: the workpiece origin
+        originPoint: PropTypes.object,
         editable: PropTypes.bool.isRequired,
         hideLeftBarOverlay: PropTypes.func.isRequired,
 
@@ -232,6 +236,10 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         if (nextProps.materials !== this.props.materials) {
             materials = nextProps.materials;
             shouldUpdateCanvas = true;
+        }
+        if (nextProps.originPoint !== this.props.originPoint) {
+            // the object origin moved (or the workpiece origin applies again)
+            this.printableArea.setOriginPoint(nextProps.originPoint || null);
         }
         if (nextProps.coordinateMode !== this.props.coordinateMode
             || nextProps.coordinateSize.x !== this.props.coordinateSize.x
@@ -453,6 +461,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
             scale: this.scale,
             getRoot,
             coordinateMode: this.props.coordinateMode,
+            originPoint: this.props.originPoint || null,
         });
     }
 

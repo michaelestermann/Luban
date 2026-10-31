@@ -39,6 +39,8 @@ interface Workpiece2dOptions {
     scale: number;
     // CSS px per (mm x scale), see SVGCanvas.updateCanvas
     pxPerScale?: number;
+    // object origin: its point in model coordinates (null: the workpiece origin)
+    originPoint?: { x: number; y: number } | null;
     getRoot: () => Element;
 }
 
@@ -63,6 +65,8 @@ class Workpiece2d {
     private coorDelta: { x: number; y: number } = { x: 0, y: 0 };
     private scale: number = 1;
     private pxPerScale: number = DEFAULT_PX_PER_SCALE;
+    // object origin point (model coordinates, y up), null: the origin of the coordinate mode
+    private originPoint: { x: number; y: number } | null = null;
 
     public constructor(options: Workpiece2dOptions) {
         this.id = uuid();
@@ -90,6 +94,7 @@ class Workpiece2d {
         if (options.pxPerScale > 0) {
             this.pxPerScale = options.pxPerScale;
         }
+        this.originPoint = options.originPoint || null;
         this.printableAreaGroup = createSVGElement({
             element: 'g',
             attr: {
@@ -150,6 +155,34 @@ class Workpiece2d {
         }
     }
 
+    /** Moves the origin (dot, axes, labels) to an object origin point; null: the workpiece origin. */
+    public setOriginPoint(point: { x: number; y: number } | null) {
+        const old = this.originPoint;
+        const same = (!old && !point) || (old && point && Math.abs(old.x - point.x) < 1e-6 && Math.abs(old.y - point.y) < 1e-6);
+        if (same) {
+            return;
+        }
+        this.originPoint = point ? { x: point.x, y: point.y } : null;
+        this._redraw();
+    }
+
+    private _redraw() {
+        while (this.printableAreaGroup.firstChild) {
+            this.printableAreaGroup.removeChild(this.printableAreaGroup.lastChild);
+        }
+        this._setCoordinateAxes();
+        this._setGridLine();
+        this._setMaterialsRect();
+        this._setOriginPoint();
+    }
+
+    // the origin on the canvas (SVG coordinates)
+    private _originAt(): { x: number; y: number } {
+        const { x, y } = this.size;
+        const p = this.originPoint;
+        return p ? { x: x + p.x, y: y - p.y } : { x, y };
+    }
+
     public updateCoordinateMode(origin, coordinateMode, coordinateSize) {
         while (this.printableAreaGroup.firstChild) {
             this.printableAreaGroup.removeChild(this.printableAreaGroup.lastChild);
@@ -188,16 +221,17 @@ class Workpiece2d {
      * strokes and offsets keep a constant on-screen size (sizes are given in screen px).
      */
     public _setGridLine() {
-        const drawAxis = !(this.origin && this.origin.type === OriginType.Object);
+        // axes and labels run through the origin: the workpiece origin or the object origin point
+        const drawAxis = true;
         const drawScale = drawAxis;
 
-        const { x, y } = this.size;
+        const size = this.size;
+        const { x, y } = this._originAt();
         const { x: cx, y: cy } = this.coordinateSize;
-        const xMin = x - cx / 2 + this.coorDelta.x;
-        const xMax = x + cx / 2 + this.coorDelta.x;
-        const yMin = y - cy / 2 + this.coorDelta.y;
-        const yMax = y + cy / 2 + this.coorDelta.y;
-        const coordinateModeName = this.coordinateMode.value;
+        const xMin = size.x - cx / 2 + this.coorDelta.x;
+        const xMax = size.x + cx / 2 + this.coorDelta.x;
+        const yMin = size.y - cy / 2 + this.coorDelta.y;
+        const yMax = size.y + cy / 2 + this.coorDelta.y;
 
         const pxPerMm = this._pxPerMm();
         const mm = (px: number) => px / pxPerMm;
@@ -283,8 +317,9 @@ class Workpiece2d {
             const xLabelsInside = yFrom < 0 && yTo > 0;
             const yLabelsInside = xFrom < 0 && xTo > 0;
 
-            // X labels below the axis (above it for a top origin); "0" is labelled on the Y axis
-            const xLabelY = coordinateModeName.indexOf('top') !== -1 ? y - mm(X_LABEL_ABOVE_PX) : y + mm(X_LABEL_BELOW_PX);
+            // X labels below the axis (above it for an origin on the top border); "0" is labelled on the Y axis
+            const top = Math.abs(y - yMin) < 1e-6;
+            const xLabelY = top ? y - mm(X_LABEL_ABOVE_PX) : y + mm(X_LABEL_BELOW_PX);
             for (const v of axisLabelValues(xFrom, xTo, labelStep, pxPerMm, LABEL_MIN_GAP_PX)) {
                 if (v === 0) {
                     continue;
@@ -297,8 +332,8 @@ class Workpiece2d {
                     addLabel(x + v, xLabelY, v, 'middle');
                 }
             }
-            // Y labels left of the axis (right of it for a right origin)
-            const right = coordinateModeName.indexOf('right') !== -1;
+            // Y labels left of the axis (right of it for an origin on the right border)
+            const right = Math.abs(x - xMax) < 1e-6;
             const yLabelX = right ? x + mm(Y_LABEL_SIDE_PX) : x - mm(Y_LABEL_SIDE_PX);
             for (const v of axisLabelValues(yFrom, yTo, labelStep, pxPerMm, LABEL_MIN_GAP_PX)) {
                 let baseline = y - v + mm(LABEL_BASELINE_SHIFT_PX);
@@ -394,11 +429,7 @@ class Workpiece2d {
         if (this.materials.isRotate) {
             return;
         }
-        if (this.origin && this.origin.type === OriginType.Object) {
-            return;
-        }
-
-        const { x, y } = this.size;
+        const { x, y } = this._originAt();
         let originElement = null;
         // console.log('createOrigin, origin =', this.origin);
 

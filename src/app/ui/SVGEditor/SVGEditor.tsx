@@ -18,6 +18,7 @@ import ShapeActionKeys from './combine/ShapeActionKeys';
 import RoundCorners from './combine/RoundCorners';
 import OffsetPreview from './combine/OffsetPreview';
 import ArrayPreview from './combine/ArrayPreview';
+import { useObjectOriginPoint } from './origin/use-object-origin-point';
 
 
 export type SVGEditorHandle = {
@@ -94,6 +95,8 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
     const [drawGroup, setDrawGroup] = useState(null);
 
     const canvas = useRef(null);
+    // the red origin dot and the rulers follow an object origin
+    const originPoint = useObjectOriginPoint(props.headType);
     const leftBarRef = useRef(null);
     const extRef = useRef(props.SVGCanvasExt);
     extRef.current = props.SVGCanvasExt;
@@ -412,6 +415,7 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             coordinateSize={props.coordinateSize}
                             workpiece={props.workpiece}
                             origin={props.origin}
+                            originPoint={originPoint}
                             ref={canvas}
                             onCreateElement={props.onCreateElement}
                             onSelectElements={props.onSelectElements}

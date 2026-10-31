@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { v4 as uuid } from 'uuid';
 import { Box2, Group } from 'three';
 
-import { ObjectReference, Origin, OriginType, RectangleWorkpieceReference } from '../constants/coordinate';
+import { Origin, OriginType, RectangleWorkpieceReference } from '../constants/coordinate';
+import { referencePoint } from '../lib/object-origin';
 import { MINIMUM_WIDTH_AND_HEIGHT } from '../constants';
 import log from '../lib/log';
 import ModelGroup from '../models/ModelGroup';
@@ -333,39 +334,12 @@ class ToolPath {
         const modelInfos = this._getModelTaskInfos();
 
         // Deal with origin, if origin type is object, we add offsets to the model transformation here
-        if (this.referenceBox && this.origin.type === OriginType.Object) {
-            const box = this.referenceBox;
-
+        // (the point of the reference box; no box: the workpiece origin)
+        const point = this.origin.type === OriginType.Object ? referencePoint(this.referenceBox, this.origin.reference) : null;
+        if (point) {
             for (const modelInfo of modelInfos) {
-                switch (this.origin.reference) {
-                    case ObjectReference.Center: {
-                        modelInfo.transformation.positionX -= (box.min.x + box.max.x) * 0.5;
-                        modelInfo.transformation.positionY -= (box.min.y + box.max.y) * 0.5;
-                        break;
-                    }
-                    case ObjectReference.BottomLeft: {
-                        modelInfo.transformation.positionX -= box.min.x;
-                        modelInfo.transformation.positionY -= box.min.y;
-                        break;
-                    }
-                    case ObjectReference.BottomRight: {
-                        modelInfo.transformation.positionX -= box.max.x;
-                        modelInfo.transformation.positionY -= box.min.y;
-                        break;
-                    }
-                    case ObjectReference.TopLeft: {
-                        modelInfo.transformation.positionX -= box.min.x;
-                        modelInfo.transformation.positionY -= box.max.y;
-                        break;
-                    }
-                    case ObjectReference.TopRight: {
-                        modelInfo.transformation.positionX -= box.max.x;
-                        modelInfo.transformation.positionY -= box.max.y;
-                        break;
-                    }
-                    default:
-                        break;
-                }
+                modelInfo.transformation.positionX -= point.x;
+                modelInfo.transformation.positionY -= point.y;
             }
         }
 
