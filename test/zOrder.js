@@ -1,5 +1,5 @@
 import test from 'tape';
-import { frontmostAt, moveToEdge, orderedMemberIds, reorderFromDisplay, replaceInLayers } from '../src/app/models/z-order';
+import { frontmostAt, indexWithout, insertAt, moveToEdge, orderedMemberIds, reorderFromDisplay, replaceInLayers } from '../src/app/models/z-order';
 import LayerOrderOperation2D from '../src/app/flux/operation-history/LayerOrderOperation2D';
 
 const e = id => ({ modelID: id });
@@ -68,5 +68,20 @@ test('a layer order change is one undo step: undo restores the order before, red
     operation.redo();
     t.deepEqual(applied, ['abc', 'bca']);
     t.equal(changes, 2, 'the view is refreshed each time');
+    t.end();
+});
+
+test('objects deleted in one step go back to their places when undone one after the other', (t) => {
+    const [a, b, c, d, f] = ['a', 'b', 'c', 'd', 'f'].map(e);
+    const list = [a, b, c, d, f];
+    // delete b and d in one step; undo puts b back first, then d
+    const ib = indexWithout(list, b, [d]);
+    const id = indexWithout(list, d, []);
+    t.deepEqual([ib, id], [1, 3]);
+    let now = [a, c, f];
+    now = insertAt(now, b, ib);
+    now = insertAt(now, d, id);
+    t.deepEqual(now.map(x => x.modelID), ['a', 'b', 'c', 'd', 'f']);
+    t.deepEqual(insertAt([a, c], b, -1).map(x => x.modelID), ['a', 'c', 'b'], 'no place: at the front (end)');
     t.end();
 });

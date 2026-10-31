@@ -1362,6 +1362,9 @@ export const actions = {
             ? modelGroup.models.find(m => m.modelID === modelGroup.selectedGroupID) ?? null
             : null;
 
+        // undo puts each object back in its place (layer order, group, operation members)
+        const membersBefore = new Map(toolPathGroup.toolPaths.map(item => [item, [...item.modelMap.keys()]]));
+        const selectedModels = modelGroup.getSelectedModelArray();
         for (const svgModel of modelGroup.getSelectedModelArray()) {
             const operation = new DeleteOperation2D({
                 target: svgModel,
@@ -1376,6 +1379,7 @@ export const actions = {
                     return false;
                 })
             });
+            operation.capturePlace(selectedModels.slice(selectedModels.indexOf(svgModel) + 1), membersBefore);
             operations.push(operation);
         }
 

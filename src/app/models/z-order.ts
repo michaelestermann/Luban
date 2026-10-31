@@ -45,3 +45,18 @@ export function replaceInLayers<T>(models: T[], removed: T[], added: T[], anchor
     const above = (index === -1 ? [] : models.slice(index + 1)).filter(keep);
     return [...below, ...added, ...above];
 }
+
+/**
+ * Where an item sits when the items put back after it are left out (undo of a delete step puts
+ * the items back one after the other), so each goes back to this index.
+ */
+export function indexWithout<T>(list: T[], item: T, putBackLater: T[]): number {
+    return list.filter(other => other === item || !putBackLater.includes(other)).indexOf(item);
+}
+
+/** A copy of list with item inserted at index (at the end when index is -1 or past the end). */
+export function insertAt<T>(list: T[], item: T, index: number): T[] {
+    const rest = list.filter(other => other !== item);
+    const at = index < 0 ? rest.length : Math.min(index, rest.length);
+    return [...rest.slice(0, at), item, ...rest.slice(at)];
+}
