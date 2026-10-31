@@ -168,32 +168,30 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     </Tooltip>
                 </>
             )}
-            {renderIconButton(groupTitle, !canGroup && !canUngroup, onGroup, (
+            {/* only the buttons that fit the selection are shown */}
+            {(canGroup || canUngroup) && renderIconButton(groupTitle, false, onGroup, (
                 canUngroup ? (
                     <svg {...stroke}><rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" /></svg>
                 ) : (
                     <svg {...stroke}><rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" /><path d="M11 7h4v6" /></svg>
                 )
             ))}
-            <button
-                type="button"
-                className={classNames(styles['text-button'])}
-                disabled={!canDecomposeSelected}
-                onClick={() => {
-                    if (canDecomposeSelected) {
-                        dispatch(editorActions.decomposeSelectedSVG(headType));
-                    }
-                }}
-            >
-                <svg {...stroke}>
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
-                {i18n._('key-CncLaser/MainToolBar-Decompose')}
-            </button>
-            {canAlign ? (
+            {canDecomposeSelected && (
+                <button
+                    type="button"
+                    className={classNames(styles['text-button'])}
+                    onClick={() => dispatch(editorActions.decomposeSelectedSVG(headType))}
+                >
+                    <svg {...stroke}>
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                    {i18n._('key-CncLaser/MainToolBar-Decompose')}
+                </button>
+            )}
+            {canAlign && (
                 <Popover
                     content={alignMenu}
                     trigger="click"
@@ -207,9 +205,7 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                         </button>
                     </span>
                 </Popover>
-            ) : renderIconButton(alignTitle, true, () => undefined, (
-                <svg {...stroke}><path d="M4 4v16M8 7h12M8 12h8M8 17h10" /></svg>
-            ))}
+            )}
             {renderIconButton(i18n._('key-App/Menu-Duplicate'), !canDuplicate, () => {
                 dispatch(editorActions.duplicateSelectedModel(headType));
             }, (
