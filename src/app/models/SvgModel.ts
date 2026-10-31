@@ -11,7 +11,7 @@ import { NS } from '../ui/SVGEditor/lib/namespaces';
 import api from '../api';
 import { checkIsImageSuffix } from '../../shared/lib/utils';
 import Resource from './Resource';
-import { SOURCE_TYPE, SVG_MOVE_MINI_DISTANCE } from '../constants';
+import { MINIMUM_WIDTH_AND_HEIGHT, SOURCE_TYPE, SVG_MOVE_MINI_DISTANCE } from '../constants';
 import BaseModel, { ModelTransformation, ModelInfo, TSize, SvgModelElement, TMode } from './BaseModel';
 import ModelGroup2D from './ModelGroup2D';
 
@@ -1215,8 +1215,10 @@ class SvgModel extends BaseModel {
             rotationX: 0,
             rotationY: 0,
             rotationZ: -t.angle / 180 * Math.PI,
-            width: t.width * Math.abs(t.scaleX),
-            height: t.height * Math.abs(t.scaleY)
+            // a flat path (a straight line after point editing) keeps the minimum size like a new one,
+            // a size of 0 would not be stored and leave the old size
+            width: t.width * Math.abs(t.scaleX) || MINIMUM_WIDTH_AND_HEIGHT,
+            height: t.height * Math.abs(t.scaleY) || MINIMUM_WIDTH_AND_HEIGHT
         };
 
         this.width = transformation.width;
