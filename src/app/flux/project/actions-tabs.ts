@@ -278,15 +278,16 @@ const isPristine = (state, id: string | undefined): boolean => {
 
 /**
  * Gives `headType` a new empty live document in a new tab (the current live doc is parked), or reuses
- * a pristine one. The doc is active afterwards and the mode's page is shown. Returns the doc id.
+ * a pristine one (`reusePristine`, used when a file is opened). The doc is active afterwards and the
+ * mode's page is shown. Returns the doc id.
  */
-const startDocument = (headType: EditorHeadType, init: RegisterInit, history: HistoryLike) => (dispatch, getState): string => {
+const startDocument = (headType: EditorHeadType, init: RegisterInit, history: HistoryLike, reusePristine = true) => (dispatch, getState): string => {
     const state = getState();
     const liveId = getTabsState(state).activeDocByHead[headType];
     // the tab shows the file name while the project loads (the live meta is synced into the tab)
     const fileMeta = init.openedFile ? { openedFile: { name: init.openedFile.name, path: init.openedFile.path } } : {};
     let id: string;
-    if (liveId && isPristine(state, liveId)) {
+    if (reusePristine && liveId && isPristine(state, liveId)) {
         id = liveId;
         dispatch(setTabs((s) => {
             const meta = s.documents[liveId];
@@ -404,8 +405,8 @@ const openProjectInTab = (file: ProjectFileLike, history: HistoryLike) => async 
 };
 
 /**
- * A new, empty project of `headType` in its own tab (an empty untitled tab of that mode is reused):
- * the 4.16 new-file steps (tool head, workpiece, origin, fit) run on the new document.
+ * A new, empty project of `headType` in its own tab (always a new tab, also next to an empty untitled
+ * one): the 4.16 new-file steps (tool head, workpiece, origin, fit) run on the new document.
  */
 const newDocument = (headType: EditorHeadType, opts: { isRotate?: boolean }, history: HistoryLike) => async (dispatch, getState): Promise<string | null> => {
     const isRotate = !!opts?.isRotate;
@@ -416,7 +417,7 @@ const newDocument = (headType: EditorHeadType, opts: { isRotate?: boolean }, his
     await dispatch(leaveCurrentPage(history));
     documentStore.setLoading(headType, true);
     try {
-        const id = dispatch(startDocument(headType, { isRotate }, history)) as unknown as string;
+        const id = dispatch(startDocument(headType, { isRotate }, history, false)) as unknown as string;
         await dispatch(projectActions.clearEnvironmentsForNewProject(headType));
         if (isEditor2D(headType)) {
             dispatch(editorActions.updateState(headType, {

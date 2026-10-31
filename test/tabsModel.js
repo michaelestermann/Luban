@@ -18,6 +18,8 @@ import {
     parseSession,
     planRestore,
     pickDocumentToUnload,
+    filterRecentByMode,
+    projectHeadTypeOf,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -315,5 +317,37 @@ test('pathForTab and tabIdForPath are inverse for home, workspace and live docs'
     t.equal(pathForTab(s, 'c'), '/cnc', 'parked doc → head route');
     t.equal(tabIdForPath(s, '/cnc'), 'a', 'head route → live doc');
     t.equal(tabIdForPath(s, '/printing'), null, 'no live printing doc');
+    t.end();
+});
+
+test('filterRecentByMode keeps only the extension of the mode and marks open files', (t) => {
+    let s = withDocs(doc('a', 'cnc', { openedFile: { name: 'pcb-a.snapcnc', path: 'C:/Fx/pcb-a.snapcnc' } }));
+    s = activateTab(s, 'a', 1);
+    const recent = [
+        { name: 'pcb-a.snapcnc', path: 'c:\\fx\\PCB-A.snapcnc' },
+        { name: 'ruler.snaplzr', path: 'C:/Fx/ruler.snaplzr' },
+        { name: 'Board.SNAPCNC', path: 'C:/Fx/Board.SNAPCNC' },
+        { name: 'p1.snap3dp', path: 'C:/Fx/p1.snap3dp' },
+        { name: 'job.gcode', path: 'C:/Fx/job.gcode' },
+        null,
+        { name: 'pcb-a.snapcnc', path: 'C:/Fx/pcb-a.snapcnc' },
+    ];
+    const cnc = filterRecentByMode(recent, 'cnc', s);
+    t.deepEqual(cnc, [
+        { name: 'pcb-a.snapcnc', path: 'c:\\fx\\PCB-A.snapcnc', isOpen: true },
+        { name: 'Board.SNAPCNC', path: 'C:/Fx/Board.SNAPCNC', isOpen: false },
+    ], 'cnc only, case-insensitive extension, open file marked, duplicate path dropped');
+    t.deepEqual(filterRecentByMode(recent, 'laser', s).map((r) => r.name), ['ruler.snaplzr'], 'laser');
+    t.deepEqual(filterRecentByMode(recent, 'printing', s).map((r) => r.name), ['p1.snap3dp'], 'printing');
+    t.deepEqual(filterRecentByMode(undefined, 'cnc', s), [], 'no recent list');
+    t.end();
+});
+
+test('projectHeadTypeOf maps project extensions to modes', (t) => {
+    t.equal(projectHeadTypeOf('a.SNAPLZR'), 'laser');
+    t.equal(projectHeadTypeOf('C:/x/b.snapcnc'), 'cnc');
+    t.equal(projectHeadTypeOf('c.snap3dp'), 'printing');
+    t.equal(projectHeadTypeOf('d.gcode'), null);
+    t.equal(projectHeadTypeOf(''), null);
     t.end();
 });

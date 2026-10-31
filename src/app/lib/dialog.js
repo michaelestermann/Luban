@@ -23,6 +23,16 @@ const Dialog = {
             case 'workspace':
                 extensions = ['gcode', 'nc', 'cnc'];
                 break;
+            // project files of one mode (4.17 tabs: "+" → mode → Open file…)
+            case 'project-printing':
+                extensions = ['snap3dp'];
+                break;
+            case 'project-laser':
+                extensions = ['snaplzr'];
+                break;
+            case 'project-cnc':
+                extensions = ['snapcnc'];
+                break;
             default: break;
         }
 

@@ -253,6 +253,55 @@ export function pathForTab(s: TabsState, tabId: string): string {
     return '/';
 }
 
+/** Project file extension of each mode (lower case). */
+export const PROJECT_EXTENSIONS: Record<EditorHeadType, string> = {
+    printing: '.snap3dp',
+    laser: '.snaplzr',
+    cnc: '.snapcnc',
+};
+
+/** The mode of a project file name or path by its extension (case-insensitive), null for other files. */
+export function projectHeadTypeOf(nameOrPath: string | null | undefined): EditorHeadType | null {
+    const lower = (nameOrPath || '').toLowerCase();
+    for (const head of EDITOR_HEAD_TYPES) {
+        if (lower.endsWith(PROJECT_EXTENSIONS[head])) {
+            return head;
+        }
+    }
+    return null;
+}
+
+export interface RecentFileRef {
+    name: string;
+    path: string;
+}
+
+/**
+ * The recent files of one mode (by extension), in the given order, without duplicates (same path).
+ * `isOpen` marks files that are open in a tab.
+ */
+export function filterRecentByMode(
+    recent: Array<RecentFileRef | null | undefined> | null | undefined,
+    headType: EditorHeadType,
+    s: TabsState,
+): Array<RecentFileRef & { isOpen: boolean }> {
+    const out: Array<RecentFileRef & { isOpen: boolean }> = [];
+    const seen = new Set<string>();
+    for (const item of recent || []) {
+        if (!item || typeof item.name !== 'string' || projectHeadTypeOf(item.name) !== headType) {
+            continue;
+        }
+        const path = typeof item.path === 'string' ? item.path : '';
+        const key = path ? normalizeDocumentPath(path) : `name:${item.name.toLowerCase()}`;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        out.push({ name: item.name, path, isOpen: !!findDocumentByPath(s, path) });
+    }
+    return out;
+}
+
 export function documentDisplayName(meta: DocumentMeta, untitledLabel: string): string {
     if (meta.openedFile?.name) {
         return meta.openedFile.name;

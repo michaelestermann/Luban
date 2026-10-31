@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 
 import { tabsActions } from '../../../flux/project/actions-tabs';
 import { TabsState } from '../../../flux/project/tabs-model';
 import UniApi from '../../../lib/uni-api';
+import ModeChooser from './ModeChooser';
 import TabStrip, { tabDisplayName } from './TabStrip';
 import { useTabRouteSync } from './useTabRouteSync';
 import styles from './tab-shell.styl';
@@ -67,12 +68,18 @@ const TabShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         activateTab(tabId);
     }, [activateTab]);
 
+    // "+" asks the mode first (ModeChooser)
+    const [chooserOpen, setChooserOpen] = useState(false);
+    const onAdd = useCallback(() => setChooserOpen(true), []);
+    const closeChooser = useCallback(() => setChooserOpen(false), []);
+
     return (
         <div className={styles['tab-shell']}>
-            <TabStrip onActivate={onActivate} />
+            <TabStrip onActivate={onActivate} onAdd={onAdd} />
             <div className={styles['tab-content']}>
                 {children}
             </div>
+            {chooserOpen && <ModeChooser onClose={closeChooser} />}
         </div>
     );
 };
