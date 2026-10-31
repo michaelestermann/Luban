@@ -432,7 +432,7 @@ export const actions = {
     },
 
     __initEditorParameters: (headType: string) => {
-        return (dispatch) => {
+        return (dispatch, getState) => {
             const originType = machineStore.get(`${headType}.origin.type`, headType === HEAD_LASER ? OriginType.Object : OriginType.Workpiece);
             const originReference = machineStore.get('origin.reference', ObjectReference.BottomLeft);
 
@@ -445,6 +445,8 @@ export const actions = {
             dispatch(baseActions.updateState(headType, {
                 origin,
             }));
+            // the tool paths take their object origin point from the group: it needs the origin too
+            (getState()[headType]?.toolPathGroup as ToolPathGroup)?.setOrigin(origin);
         };
     },
 
