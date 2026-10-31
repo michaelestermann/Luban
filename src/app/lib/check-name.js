@@ -1,7 +1,8 @@
 import { isNil, lt } from 'lodash';
 
-const projectRegex = /\.snap(lzr|3dp|cnc)$/;
-const gcodeRegex = /\.(gcode|nc|cnc)$/;
+// extensions are matched ignoring case: Windows and macOS file systems do (X.SNAPCNC is a project file)
+const projectRegex = /\.snap(lzr|3dp|cnc)$/i;
+const gcodeRegex = /\.(gcode|nc|cnc)$/i;
 const checkIsSnapmakerProjectFile = (file) => {
     return projectRegex.test(file);
 };
