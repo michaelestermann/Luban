@@ -200,12 +200,16 @@ export function routeAutosaveResult(activeId: string | undefined, docId: string 
     return activeId === docId ? 'slice' : 'parked';
 }
 
+// STEP_STAGE.PRINTING_PREVIEWING
+const PRINTING_PREVIEWING_STAGE = 30;
+
 // STEP_STAGE values (lib/manager/ProgressManager) of running printing tasks: loading models, slicing,
 // G-code preview, rotate analysis, support, arrange, auto rotate, scale to fit, simplify, repair, split, mesh coloring
 export const PRINTING_BUSY_STAGES: readonly number[] = [23, 26, 27, 30, 33, 37, 38, 42, 43, 45, 48, 51, 10150, 10160];
 
 interface BusySliceLike {
     stage?: number;
+    progress?: number;
     inProgress?: boolean;
     isGcodeGenerating?: boolean;
     progressStatesManager?: { inProgress?: () => boolean };
@@ -233,7 +237,11 @@ export function isHeadBusy(
     }
     if (headType === 'printing') {
         // the printing progress manager is started by every project load (also laser/cnc) and not always
-        // finished, so the step stage tells whether a printing task runs
+        // finished, so the step stage tells whether a printing task runs. After slicing the stage stays
+        // "previewing" (30) with progress 1 when the preview is done (4.16 behaviour): that is idle.
+        if (slice.stage === PRINTING_PREVIEWING_STAGE && (slice.progress ?? 0) >= 1) {
+            return false;
+        }
         return PRINTING_BUSY_STAGES.includes(slice.stage as number);
     }
     if (typeof slice.progressStatesManager?.inProgress === 'function' && slice.progressStatesManager.inProgress()) {

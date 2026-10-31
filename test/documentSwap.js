@@ -278,5 +278,8 @@ test('isHeadBusy: progress, G-code generation, running toolpath, project opening
     t.equal(isHeadBusy(printing(24), 'printing'), false, 'printing: a stuck progress manager after a load does not count, stage "load complete"');
     t.equal(isHeadBusy(printing(27), 'printing'), true, 'printing: slicing');
     t.equal(isHeadBusy(printing(23), 'printing'), true, 'printing: loading models');
+    const previewing = (progress) => ({ printing: { stage: 30, progress, inProgress: false }, project: { general: {} } });
+    t.equal(isHeadBusy(previewing(0.6), 'printing'), true, 'printing: G-code preview running');
+    t.equal(isHeadBusy(previewing(1), 'printing'), false, 'printing: preview done (the stage stays "previewing" after slicing)');
     t.end();
 });
