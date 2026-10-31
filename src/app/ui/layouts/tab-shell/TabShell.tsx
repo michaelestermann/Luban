@@ -56,6 +56,26 @@ const TabShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         dispatch(tabsActions.syncLiveDocumentMeta());
     }, [dispatch, liveMetaKey, tabs.activeDocByHead]);
 
+    // the open tabs are stored for the next start (after the last session was restored)
+    useEffect(() => {
+        dispatch(tabsActions.persistSession());
+    }, [dispatch, tabs]);
+
+    // E2E hook of development builds: unload a background tab as memory pressure would
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'production') {
+            return undefined;
+        }
+        const w = window as unknown as { __lubanTabs?: unknown };
+        w.__lubanTabs = {
+            unloadDocument: async (docId: string) => dispatch(tabsActions.unloadDocument(docId)),
+            unloadBackgroundDocumentsIfNeeded: async () => dispatch(tabsActions.unloadBackgroundDocumentsIfNeeded()),
+        };
+        return () => {
+            delete w.__lubanTabs;
+        };
+    }, [dispatch]);
+
     // window title and the Save menu entry follow the active tab
     const activeMeta = tabs.documents[tabs.activeTabId];
     const isDocTab = !!activeMeta;

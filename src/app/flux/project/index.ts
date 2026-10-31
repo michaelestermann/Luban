@@ -112,19 +112,6 @@ export const actions = {
         };
     },
 
-    initRecoverService: () => (dispatch, getState) => {
-        const startService = async (envHeadType) => {
-            // disable auto recovery if openedFile set
-            const { openedFile } = getState().project[envHeadType];
-            if (!openedFile) {
-                await dispatch(actions.getLastEnvironment(envHeadType));
-            }
-        };
-        startService(HEAD_LASER);
-        startService(HEAD_CNC);
-        startService(HEAD_PRINTING);
-    },
-
     autoSaveEnvironment: (headType, isSaveEditor = false) => (dispatch, getState) => {
         // the document this autosave belongs to (taken before the mesh syncs are awaited)
         const docId = activeDocId(getState(), headType);
@@ -245,6 +232,8 @@ export const actions = {
         await api.env.saveEnv({ content, docId });
     },
 
+    // 4.16 recovery prompt (HomePage). 4.17 tabs restore the session instead (tabsActions.restoreSession, which
+    // also migrates the 4.16 auto-saves); nothing calls this at start anymore.
     getLastEnvironment: (headType) => async (dispatch, getState) => {
         const { body: { content } } = await api.env.getEnv({ headType, docId: activeDocId(getState(), headType) });
 

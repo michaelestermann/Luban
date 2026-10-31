@@ -334,7 +334,7 @@ function toSessionDocument(meta: DocumentMeta): SessionDocument {
         headType: meta.headType,
         openedFile: meta.openedFile ? { name: meta.openedFile.name, path: meta.openedFile.path } : null,
         untitledIndex: meta.untitledIndex,
-        unSaved: meta.unSaved,
+        unSaved: !!meta.unSaved,
         isRotate: meta.isRotate,
         machineSeries: meta.machineSeries,
         machineToolHead: meta.machineToolHead,
@@ -425,38 +425,66 @@ export function parseSession(json: unknown): SessionManifest | null {
     };
 }
 
+export interface RestorePlan {
+    state: TabsState;
+    /** documents that could not come back (their file and autosave are gone) */
+    dropped: SessionDocument[];
+    /** documents that come back with autosaved changes */
+    autosaved: DocumentMeta[];
+    /** documents whose file is gone but whose autosave is there (restored from it, unsaved) */
+    missingFile: DocumentMeta[];
+    /** clean untitled documents without autosave: nothing to restore, no message */
+    skipped: SessionDocument[];
+}
+
 /**
- * Restore plan: unsaved docs with an env dir come back from the env, others
- * from their file if it exists; all others are dropped. Nothing is loaded yet.
+ * Restore plan: unsaved docs with an env dir come back from the env, others from their file if it
+ * exists. A doc whose file is gone comes back from its env (unsaved, the file name is kept so Save
+ * writes it again). Clean untitled docs without env are skipped; all others are dropped. Nothing is
+ * loaded yet; the tab order and the active tab of the manifest are kept.
  */
-export function planRestore(
-    m: SessionManifest,
-    envDocIds: string[],
-    fileExists: (path: string) => boolean,
-): { state: TabsState; dropped: SessionDocument[]; autosaved: DocumentMeta[] } {
+export function planRestore(m: SessionManifest, envDocIds: string[], fileExists: (path: string) => boolean): RestorePlan {
     const envIds = new Set(envDocIds);
     const dropped: SessionDocument[] = [];
     const autosaved: DocumentMeta[] = [];
+    const missingFile: DocumentMeta[] = [];
+    const skipped: SessionDocument[] = [];
     let state = createTabsState();
     for (const d of m.documents) {
+        const hasEnv = envIds.has(d.id);
+        const fileThere = !!d.openedFile && fileExists(d.openedFile.path);
         let source: DocumentSource | null = null;
-        if (d.unSaved && envIds.has(d.id)) {
+        let unSaved = d.unSaved;
+        let lostFile = false;
+        if (hasEnv && (d.unSaved || !d.openedFile)) {
             source = 'env';
-        } else if (d.openedFile && fileExists(d.openedFile.path)) {
+        } else if (fileThere) {
             source = 'file';
+        } else if (hasEnv) {
+            // the file was moved or deleted: its autosave is all there is
+            source = 'env';
+            unSaved = true;
+            lostFile = true;
         }
         if (!source) {
-            dropped.push(d);
+            if (!d.openedFile && !d.unSaved) {
+                skipped.push(d);
+            } else {
+                dropped.push(d);
+            }
             continue;
         }
         const meta: DocumentMeta = {
             ...d,
+            unSaved,
             loaded: false,
             source,
             status: 'design',
             lastActiveAt: 0,
         };
-        if (source === 'env') {
+        if (lostFile) {
+            missingFile.push(meta);
+        } else if (source === 'env' && unSaved) {
             autosaved.push(meta);
         }
         state = addDocument(state, meta);
@@ -467,7 +495,57 @@ export function planRestore(
     } else if (state.documents[m.activeTabId]) {
         state = activateTab(state, m.activeTabId, 0);
     }
-    return { state, dropped, autosaved };
+    return { state, dropped, autosaved, missingFile, skipped };
+}
+
+/**
+ * First start without a session manifest: every head type with a 4.16 auto-save (`env/{head}`) becomes an
+ * untitled, unsaved, not yet loaded document (`source 'legacy-env'`). The first one is the active tab.
+ */
+export function planLegacyMigration(heads: readonly string[], newId: () => string): TabsState {
+    let state = createTabsState();
+    const seen = new Set<string>();
+    for (const head of heads) {
+        if (!isEditorHeadType(head) || seen.has(head)) {
+            continue;
+        }
+        seen.add(head);
+        state = addDocument(state, {
+            id: newId(),
+            headType: head,
+            openedFile: null,
+            untitledIndex: nextUntitledIndex(state, head),
+            unSaved: true,
+            loaded: false,
+            source: 'legacy-env',
+            isRotate: false,
+            machineSeries: null,
+            machineToolHead: null,
+            status: 'design',
+            lastActiveAt: 0,
+        });
+    }
+    return state.order.length ? activateTab(state, state.order[0], 0) : state;
+}
+
+/**
+ * The restored registry starts on Home with no live document (nothing is loaded yet); `activate` is the
+ * tab to activate next (that loads it).
+ */
+export function restoreEntryPoint(s: TabsState): { state: TabsState; activate: string } {
+    return {
+        state: { ...s, activeTabId: HOME_TAB, activeDocByHead: {} },
+        activate: s.activeTabId,
+    };
+}
+
+/** Meta patch of a document that is unloaded: unsaved or untitled docs reload from their env, saved files from the file. */
+export function unloadedMeta(meta: DocumentMeta, unSaved: boolean): Pick<DocumentMeta, 'loaded' | 'source' | 'unSaved'> {
+    return {
+        loaded: false,
+        source: unSaved || !meta.openedFile ? 'env' : 'file',
+        unSaved,
+    };
 }
 
 /**

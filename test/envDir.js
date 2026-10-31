@@ -1,5 +1,5 @@
 import { test } from 'tape';
-import { isValidDocId, resolveEnvDir } from '../src/server/lib/env-dir';
+import { isValidDocId, orphanDocDirs, resolveEnvDir } from '../src/server/lib/env-dir';
 
 const ID = '3b241101-e2bb-4255-8caf-4136c566a962';
 
@@ -31,5 +31,16 @@ test('isValidDocId accepts a v4 uuid and rejects cnc', (t) => {
     t.notOk(isValidDocId(`${ID}x`));
     t.notOk(isValidDocId(undefined));
     t.notOk(isValidDocId({}));
+    t.end();
+});
+
+test('orphanDocDirs lists doc folders that no session document keeps, never other names', (t) => {
+    const B = '0f5c1d6e-1111-4222-8333-444455556666';
+    const names = [ID, B, 'cnc', '..', 'notes.txt', ID.toUpperCase()];
+    t.deepEqual(orphanDocDirs(names, [B]), [ID]);
+    t.deepEqual(orphanDocDirs(names, [ID, B]), [], 'all kept');
+    t.deepEqual(orphanDocDirs(names, []), [ID, B], 'no session: every doc folder is an orphan');
+    t.deepEqual(orphanDocDirs(names, null), [ID, B], 'keep list may be missing');
+    t.deepEqual(orphanDocDirs(null, [B]), []);
     t.end();
 });

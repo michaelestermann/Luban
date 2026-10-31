@@ -2687,5 +2687,11 @@
     "key-Tabs/Pick what to save. Untitled projects ask for a name. All open tabs come back on next start.": "Pick what to save. Untitled projects ask for a name. All open tabs come back on next start.",
     "key-Tabs/Save selected and quit": "Save selected and quit",
     "key-Tabs/Don’t save any": "Don’t save any",
-    "key-Tabs/never saved": "never saved"
+    "key-Tabs/never saved": "never saved",
+    "key-Tabs/Restored {{count}} projects from your last session.": "Restored {{count}} projects from your last session.",
+    "key-Tabs/Restored 1 project from your last session.": "Restored 1 project from your last session.",
+    "key-Tabs/{{name}} has autosaved changes.": "{{name}} has autosaved changes.",
+    "key-Tabs/{{name}} could not be found and was not reopened.": "{{name}} could not be found and was not reopened.",
+    "key-Tabs/{{name}} was not found. It was restored from its autosave.": "{{name}} was not found. It was restored from its autosave.",
+    "key-Tabs/{{name}} could not be opened.": "{{name}} could not be opened."
 }

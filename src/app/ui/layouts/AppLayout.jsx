@@ -62,7 +62,7 @@ class AppLayout extends React.PureComponent {
         newDocument: PropTypes.func.isRequired,
         closeActiveDocument: PropTypes.func.isRequired,
         confirmQuit: PropTypes.func.isRequired,
-        initRecoverService: PropTypes.func.isRequired,
+        restoreSession: PropTypes.func.isRequired,
         save: PropTypes.func.isRequired,
         saveAsFile: PropTypes.func.isRequired,
         updateRecentProject: PropTypes.func.isRequired,
@@ -508,13 +508,12 @@ class AppLayout extends React.PureComponent {
             await this.props.save(headType);
         },
         initFileOpen: async () => {
+            // 4.17 tabs: the tabs of the last session come back first (they replace the 4.16 recovery service)
+            await this.props.restoreSession(this.props.history);
             const file = await UniApi.File.popFile();
             if (file) {
                 await this.actions.openProject(file);
             }
-            // start recover service after file opened on startup
-            // to ensure opened file set before service run
-            this.props.initRecoverService();
         },
         exportModel: (filePath) => {
             const isBinary = true;
@@ -1018,7 +1017,7 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
     return {
         clearOperationHistory: (headType) => dispatch(operationHistoryActions.clear(headType)),
-        initRecoverService: () => dispatch(projectActions.initRecoverService()),
+        restoreSession: (history) => dispatch(tabsActions.restoreSession(history)),
         saveAsFile: (headType) => dispatch(projectActions.saveAsFile(headType)),
         save: (headType, dialogOptions) => dispatch(projectActions.save(headType, dialogOptions)),
         openProject: (file, history) => dispatch(projectActions.openProject(file, history)),

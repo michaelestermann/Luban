@@ -4,7 +4,9 @@ import renderRecoveryModal from './renderRecoveryModal';
 
 // this is an example of hooks plugin
 export function useRecoveringProject(headType) {
-    const findLastEnvironment = useSelector(state => state?.project[headType].findLastEnvironment, shallowEqual);
+    // 4.17 tabs: open tabs (restored session) replace the 4.16 recovery prompt
+    const hasTabs = useSelector(state => (state?.project?.tabs?.order?.length || 0) > 0);
+    const findLastEnvironment = useSelector(state => state?.project[headType].findLastEnvironment, shallowEqual) && !hasTabs;
 
     const [recoveringProject, setRecoveringProject] = useState(findLastEnvironment);
 

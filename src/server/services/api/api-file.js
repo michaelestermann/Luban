@@ -23,7 +23,7 @@ import { parseLubanGcodeHeader } from '../../lib/parseGcodeHeader';
 import { pathWithRandomSuffix } from '../../lib/random-utils';
 import { textSerialChannel } from '../machine/channels/TextSerialChannel';
 import serializeByKey from '../../lib/serialize-by-key';
-import { ENV_DOCS_DIR, isValidDocId, resolveEnvDir } from '../../lib/env-dir';
+import { ENV_DOCS_DIR, isValidDocId, orphanDocDirs, resolveEnvDir } from '../../lib/env-dir';
 
 const log = logger('api:file');
 
@@ -506,9 +506,9 @@ export const recoverEnv = async (req, res) => {
             copyFileSync(`${envDir}/${config.defaultMaterialIdRight}.def.json`, `${configDir}/${config.defaultMaterialIdRight}.def.json`);
         }
 
-        // recover quality presets
+        // recover quality presets (laser / cnc environments have none)
         for (const stackId of [LEFT_EXTRUDER, RIGHT_EXTRUDER]) {
-            const presetId = activePresetIds[stackId];
+            const presetId = activePresetIds?.[stackId];
             if (presetId && /^quality.([0-9_]+)$/.test(presetId)) {
                 copyFileSync(`${envDir}/${presetId}.def.json`, `${configDir}/${presetId}.def.json`);
             }
@@ -590,6 +590,35 @@ export const listEnvDocs = async (req, res) => {
         log.error(`Failed to list environments: ${e}`);
         res.status(ERR_INTERNAL_SERVER_ERROR).send({
             msg: `Failed to list environments: ${e}`
+        });
+    }
+};
+
+/**
+ * Removes the auto-saves of documents that no restored session document keeps (`body.keep`: doc ids).
+ * Only `env/docs/{uuid}` folders are touched; each removal is queued with the writes of that document.
+ */
+export const pruneEnvDocs = async (req, res) => {
+    const keep = Array.isArray(req.body?.keep) ? req.body.keep.filter((id) => isValidDocId(id)) : [];
+    const docsDir = `${DataStorage.envDir}/${ENV_DOCS_DIR}`;
+    try {
+        const names = fs.existsSync(docsDir) ? fs.readdirSync(docsDir) : [];
+        const removed = [];
+        for (const docId of orphanDocDirs(names, keep)) {
+            const envDir = resolveEnvDir(DataStorage.envDir, '', docId);
+            await envWriteQueue(docId, async () => {
+                if (fs.existsSync(envDir)) {
+                    rmDir(envDir, true);
+                    removed.push(docId);
+                }
+            });
+        }
+        res.send({ removed });
+        res.end();
+    } catch (e) {
+        log.error(`Failed to prune environments: ${e}`);
+        res.status(ERR_INTERNAL_SERVER_ERROR).send({
+            msg: `Failed to prune environments: ${e}`
         });
     }
 };

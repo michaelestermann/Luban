@@ -17,6 +17,7 @@ import i18n from '../../lib/i18n';
 import log from '../../lib/log';
 import { requestQuitSelection, requestSaveChanges } from '../../lib/tab-dialogs';
 import workerManager from '../../lib/manager/workerManager';
+import { machineStore } from '../../store/local-storage';
 import { toast } from '../../ui/components/Toast';
 import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
 /* eslint-disable import/no-cycle */
@@ -44,10 +45,18 @@ import {
     findDocumentByPath,
     isEditorHeadType,
     nextTabAfterClose,
+    RestorePlan,
     nextUntitledIndex,
+    parseSession,
     pathForTab,
+    pickDocumentToUnload,
+    planLegacyMigration,
+    planRestore,
     removeDocument,
+    restoreEntryPoint,
+    serializeSession,
     tabIdForPath,
+    unloadedMeta,
     updateDocument,
 } from './tabs-model';
 
@@ -241,12 +250,15 @@ const activateTab = (tabId: string, history: HistoryLike) => async (dispatch, ge
         showBusyToast(getState, plan.blockedBy);
         return false;
     }
-    if (plan.kind === 'load') {
-        // unloaded documents come with session restore (Task 9)
-        log.warn(`tabs: document ${tabId} is not loaded`);
-        return false;
-    }
     await dispatch(leaveCurrentPage(history));
+    if (plan.kind === 'load') {
+        // restored or unloaded document: it is loaded now (from its file or its auto-save)
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        const loaded: boolean = await dispatch(loadDocument(tabId, history));
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        loaded && dispatch(unloadBackgroundDocumentsIfNeeded());
+        return loaded;
+    }
     if (plan.kind === 'swap') {
         const head = tabs.documents[tabId].headType;
         // the live document of that mode may still have an edit open although its page is not shown
@@ -264,6 +276,8 @@ const activateTab = (tabId: string, history: HistoryLike) => async (dispatch, ge
     if (history.location.pathname !== pathname) {
         history.push(pathname);
     }
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    dispatch(unloadBackgroundDocumentsIfNeeded());
     return true;
 };
 
@@ -453,7 +467,7 @@ const newDocument = (headType: EditorHeadType, opts: { isRotate?: boolean }, his
 };
 
 interface ModelGroupLike {
-    hasModelWhole?: () => boolean;
+    hasModelWhole?: () => boolean | unknown[];
     getModels?: () => unknown[];
 }
 
@@ -462,7 +476,9 @@ const hasModels = (modelGroup: ModelGroupLike | undefined): boolean => {
         return false;
     }
     if (typeof modelGroup.hasModelWhole === 'function') {
-        return modelGroup.hasModelWhole();
+        // ModelGroup2D.hasModelWhole returns its model array, ModelGroup a boolean
+        const whole: unknown = modelGroup.hasModelWhole();
+        return Array.isArray(whole) ? whole.length > 0 : !!whole;
     }
     return (modelGroup.getModels?.() || []).length > 0;
 };
@@ -583,6 +599,247 @@ const closeDocument = (docId: string, history: HistoryLike) => async (dispatch):
     }
 };
 
+// ---- session restore, lazy load and unload (memory pressure) ----
+
+const SESSION_KEY = 'tabs.session';
+
+// the manifest is written only after the last session was restored (else a start would overwrite it)
+let sessionRestored = false;
+let lastPersisted: string | null = null;
+
+/**
+ * Stores the open tabs (order, active tab, file, unsaved flag) for the next start in `machine.json`
+ * (`tabs.session`). Written when the stored part changed; nothing before the last session is restored.
+ */
+const persistSession = () => async (dispatch, getState): Promise<void> => {
+    if (!sessionRestored) {
+        return;
+    }
+    const json = serializeSession(getTabsState(getState()));
+    if (json === lastPersisted) {
+        return;
+    }
+    try {
+        machineStore.set(SESSION_KEY, json);
+        lastPersisted = json;
+    } catch (e) {
+        log.warn(`tabs: could not store the session: ${e}`);
+    }
+};
+
+/** Whether a file exists on disk (Electron); in a browser every path counts as there. */
+const fileExistsOnDisk = (path: string): boolean => {
+    try {
+        const req = (window as unknown as { require?: (m: string) => { existsSync: (p: string) => boolean } }).require;
+        return req ? req('fs').existsSync(path) : true;
+    } catch (e) {
+        return true;
+    }
+};
+
+const displayName = (meta: { openedFile: OpenedFileRef | null; untitledIndex: number }) => documentDisplayName(meta as DocumentMeta, i18n._('key-Tabs/Untitled'));
+
+interface EnvApiBody {
+    content?: string;
+    docIds?: string[];
+    removed?: string[];
+}
+
+const bodyOf = (response: unknown): EnvApiBody => (response as { body?: EnvApiBody } | undefined)?.body || {};
+
+/** Ids of the documents with an auto-save folder (env/docs/<id>/config.json). */
+const listEnvDocIds = async (): Promise<string[]> => bodyOf(await api.env.listEnvDocs()).docIds || [];
+
+const readEnv = async (params: { headType: string; docId?: string }): Promise<string | null> => {
+    const body = bodyOf(await api.env.getEnv(params));
+    return typeof body.content === 'string' && body.content ? body.content : null;
+};
+
+const envHasModels = (content: string | null): boolean => {
+    if (!content) {
+        return false;
+    }
+    try {
+        const env = JSON.parse(content) as { models?: unknown[] };
+        return Array.isArray(env.models) && env.models.length > 0;
+    } catch (e) {
+        return false;
+    }
+};
+
+/**
+ * Loads the content of a document that is now live in its (empty) slice. `env`: its auto-save, restored
+ * unsaved with its file name; `file`: the project file; `legacy-env`: the 4.16 auto-save of the mode,
+ * which is emptied afterwards. False when nothing could be loaded.
+ */
+const loadDocumentContent = (meta: DocumentMeta) => async (dispatch): Promise<boolean> => {
+    const head = meta.headType;
+    const loadFile = async (): Promise<boolean> => {
+        if (!meta.openedFile || !fileExistsOnDisk(meta.openedFile.path)) {
+            return false;
+        }
+        const parsed = await dispatch(projectActions.parseProjectFile({ name: meta.openedFile.name, path: meta.openedFile.path }));
+        if (!parsed || parsed.headType !== head) {
+            return false;
+        }
+        await dispatch(projectActions.loadParsedProject(parsed));
+        return true;
+    };
+    if (meta.source === 'file') {
+        return loadFile();
+    }
+    const legacy = meta.source === 'legacy-env';
+    const content = await readEnv(legacy ? { headType: head } : { headType: head, docId: meta.id });
+    if (!content) {
+        // no auto-save (anymore): the file, or an empty untitled project
+        if (meta.openedFile) {
+            return loadFile();
+        }
+        return !meta.unSaved;
+    }
+    const envObj = JSON.parse(content);
+    if (legacy) {
+        // the files of a 4.16 auto-save are in env/{head}; copy them to Tmp here (onRecovery would use the doc env)
+        await api.env.recoverEnv({ content });
+    }
+    await dispatch(projectActions.onRecovery(head, envObj, !legacy, false));
+    await dispatch(projectActions.updateState(head, {
+        findLastEnvironment: false,
+        openedFile: meta.openedFile ? { ...meta.openedFile } : null,
+        unSaved: true,
+        initState: false,
+        content,
+    }));
+    if (legacy) {
+        await api.env.removeEnv({ headType: head });
+    }
+    return true;
+};
+
+/**
+ * Loads a document that is not loaded (restored session, or unloaded under memory pressure): the live
+ * document of its mode is parked, fresh objects go live, the page is shown, then the content is loaded
+ * from its source. A failed load drops the tab with a toast. Returns true when it is shown.
+ */
+const loadDocument = (docId: string, history: HistoryLike) => async (dispatch, getState): Promise<boolean> => {
+    const tabs = getTabsState(getState());
+    const meta = tabs.documents[docId];
+    if (!meta || meta.loaded) {
+        return false;
+    }
+    const head = meta.headType;
+    let ok = false;
+    documentStore.setLoading(head, true);
+    try {
+        const liveId = tabs.activeDocByHead[head];
+        if (liveId && liveId !== docId && tabs.documents[liveId]) {
+            const objects = createDocumentObjects(head, getState()[head]);
+            dispatch(installDocument(head, liveId, docId, { slice: objects, projectMeta: {} }));
+        } else {
+            // no document of this mode is live: empty the objects the slice holds
+            dispatch(projectActions.closeProject(head));
+            dispatch(projectActions.updateState(head, { ...EMPTY_PROJECT_META }));
+            documentStore.resetEditorReady(docId);
+            dispatch(setTabs((s) => activateTabInModel(s, docId, Date.now())));
+        }
+        dispatch(setTabs((s) => updateDocument(s, docId, { loaded: true, source: 'live' })));
+        if (!isOnPage(history, head)) {
+            history.push(`/${head}`);
+        }
+        if (isEditor2D(head)) {
+            await editorReady(docId);
+        }
+        ok = await dispatch(loadDocumentContent(meta));
+    } catch (e) {
+        log.error(`tabs: could not load ${docId}: ${e}`);
+        ok = false;
+    } finally {
+        documentStore.setLoading(head, false);
+    }
+    if (!ok) {
+        toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} could not be opened.', { name: displayName(meta) })));
+        // nothing of it was loaded: closing must not ask
+        dispatch(projectActions.updateState(head, { unSaved: false }));
+        dispatch(setTabs((s) => updateDocument(s, docId, { unSaved: false })));
+        await dispatch(closeDocument(docId, history));
+        return false;
+    }
+    return true;
+};
+
+/**
+ * Unloads a parked (background) document: its objects and undo history are freed, the tab stays and is
+ * loaded again from its auto-save (unsaved) or its file on the next activation. The live document of a
+ * mode is never unloaded. An unsaved document without an auto-save is kept. Returns true when unloaded.
+ */
+const unloadDocument = (docId: string) => async (dispatch, getState): Promise<boolean> => {
+    const isUnloadable = () => {
+        const tabs = getTabsState(getState());
+        const m = tabs.documents[docId];
+        return !!m && m.loaded && tabs.activeDocByHead[m.headType] !== docId && !!documentStore.peek(docId);
+    };
+    if (!isUnloadable()) {
+        return false;
+    }
+    await documentStore.lastAutosave(docId);
+    if (!isUnloadable()) {
+        return false;
+    }
+    const meta = getTabsState(getState()).documents[docId];
+    const parked = documentStore.peek(docId);
+    const unSaved = !!(parked.projectMeta.unSaved ?? meta.unSaved) && hasModels(parked.slice.modelGroup as ModelGroupLike);
+    const patch = unloadedMeta(meta, unSaved);
+    if (patch.source === 'env' && unSaved) {
+        // the auto-save is all that is left of it: make sure it is there
+        let envIds: string[] = [];
+        try {
+            envIds = await listEnvDocIds();
+            if (!envIds.includes(docId) && typeof parked.projectMeta.content === 'string') {
+                await api.env.saveEnv({ content: parked.projectMeta.content, docId });
+                envIds = await listEnvDocIds();
+            }
+        } catch (e) {
+            log.warn(`tabs: no auto-save for ${docId}: ${e}`);
+        }
+        if (!envIds.includes(docId) || !isUnloadable()) {
+            log.warn(`tabs: ${docId} is kept loaded (no auto-save)`);
+            return false;
+        }
+    }
+    const taken = documentStore.take(docId);
+    disposeDocumentObjects(taken.slice, meta.headType);
+    documentStore.resetEditorReady(docId);
+    dispatch(setTabs((s) => updateDocument(s, docId, patch)));
+    log.info(`tabs: unloaded ${docId} (${patch.source})`);
+    return true;
+};
+
+// above this share of the JS heap limit one background document is unloaded per tab activation
+const UNLOAD_HEAP_RATIO = 0.75;
+
+/**
+ * After a tab activation: when the JS heap is above 75 % of its limit, the least recently used parked
+ * document is unloaded (one per call: the heap only shrinks after the next GC).
+ */
+const unloadBackgroundDocumentsIfNeeded = () => async (dispatch, getState): Promise<string | null> => {
+    const memory = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+    if (!memory || !memory.jsHeapSizeLimit) {
+        return null;
+    }
+    const tabs = getTabsState(getState());
+    const live = Object.values(tabs.activeDocByHead).filter(Boolean) as string[];
+    const id = pickDocumentToUnload(tabs, live, memory.usedJSHeapSize / memory.jsHeapSizeLimit, UNLOAD_HEAP_RATIO);
+    if (!id) {
+        return null;
+    }
+    try {
+        return (await dispatch(unloadDocument(id))) ? id : null;
+    } catch (e) {
+        log.warn(`tabs: unload of ${id} failed: ${e}`);
+        return null;
+    }
+};
+
 /**
  * Keeps the strip in sync when code still navigates with `history.push('/laser')`: the tab of the route
  * becomes active. An editor route without a document registers an untitled one for the live slice.
@@ -632,9 +889,6 @@ const syncLiveDocumentMeta = () => (dispatch, getState): void => {
         dispatch({ type: ACTION_SET_TABS, tabs: next });
     }
 };
-
-/** Stores the open tabs for the next start (session restore, Task 9). No-op until then. */
-const persistSession = () => async (): Promise<void> => undefined;
 
 /** Saves one document for quitting (it is shown first when it is parked). False when Save / Save As did not complete. */
 const saveDocumentForQuit = (docId: string, history: HistoryLike) => async (dispatch, getState): Promise<boolean> => {
@@ -718,6 +972,114 @@ const confirmQuit = (history: HistoryLike) => async (dispatch): Promise<boolean>
     }
 };
 
+/**
+ * Restores the tabs of the last session (`tabs.session`): the tabs come back in their order, nothing is
+ * loaded but the active tab. A file that is gone comes back from its auto-save, else the tab is dropped
+ * with a toast. Without a manifest, the 4.16 auto-saves of the modes become tabs (migration). Auto-save
+ * folders that no restored tab uses are removed. Runs once at start, before files given to the app open.
+ */
+const restoreSessionNow = (history: HistoryLike) => async (dispatch, getState): Promise<void> => {
+    const current = getTabsState(getState());
+    // a dev reload on an editor route registers an empty untitled doc for the route: it gives way
+    if (current.order.some((id) => !isPristine(getState(), id))) {
+        log.warn('tabs: documents are open already, the last session is not restored');
+        return;
+    }
+    let envIds: string[];
+    try {
+        envIds = await listEnvDocIds();
+    } catch (e) {
+        // without the list an auto-save could be taken for an orphan: restore nothing, remove nothing
+        log.warn(`tabs: could not list the auto-saves: ${e}`);
+        return;
+    }
+    let raw: unknown = null;
+    try {
+        raw = machineStore.get(SESSION_KEY);
+    } catch (e) {
+        raw = null;
+    }
+    const manifest = parseSession(raw);
+    let restored: TabsState;
+    let plan: RestorePlan | null = null;
+    if (manifest) {
+        plan = planRestore(manifest, envIds, fileExistsOnDisk);
+        restored = plan.state;
+    } else {
+        // first start with tabs: the 4.16 auto-saves of the modes become tabs
+        const heads: EditorHeadType[] = [];
+        for (const head of EDITOR_HEAD_TYPES) {
+            try {
+                if (envHasModels(await readEnv({ headType: head }))) {
+                    heads.push(head);
+                }
+            } catch (e) {
+                log.warn(`tabs: could not read the ${head} auto-save: ${e}`);
+            }
+        }
+        restored = planLegacyMigration(heads, uuid);
+    }
+
+    // auto-saves that no restored tab uses are removed (only env/docs/<uuid> folders, on the server)
+    try {
+        const body = bodyOf(await api.env.pruneEnvDocs({ keep: restored.order }));
+        body.removed?.length && log.info(`tabs: removed ${body.removed.length} old auto-saves`);
+    } catch (e) {
+        log.warn(`tabs: could not remove old auto-saves: ${e}`);
+    }
+
+    const { state, activate } = restoreEntryPoint(restored);
+    if (state.order.length > 0) {
+        // the empty route doc of a dev reload is replaced
+        current.order.forEach((id) => documentStore.delete(id));
+        dispatch({ type: ACTION_SET_TABS, tabs: { ...state, workspaceNewCount: current.workspaceNewCount } });
+        if (history.location.pathname !== '/') {
+            history.push('/');
+        }
+        const count = state.order.length;
+        toast(makeSceneToast('info', count === 1
+            ? i18n._('key-Tabs/Restored 1 project from your last session.')
+            : i18n._('key-Tabs/Restored {{count}} projects from your last session.', { count })));
+        if (plan?.autosaved.length) {
+            toast(makeSceneToast('info', i18n._('key-Tabs/{{name}} has autosaved changes.', { name: displayName(plan.autosaved[0]) })));
+        }
+        if (activate !== HOME_TAB) {
+            await dispatch(activateTab(activate, history));
+        }
+    }
+    for (const meta of plan?.missingFile || []) {
+        toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} was not found. It was restored from its autosave.', { name: displayName(meta) })));
+    }
+    for (const d of plan?.dropped || []) {
+        toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} could not be found and was not reopened.', { name: displayName(d) })));
+    }
+};
+
+let restoreRun: Promise<void> | null = null;
+
+/**
+ * Restores the last session once (see restoreSessionNow). Project files opened meanwhile wait for it
+ * (same queue); afterwards the session is stored on every change.
+ */
+const restoreSession = (history: HistoryLike) => async (dispatch): Promise<void> => {
+    if (restoreRun) {
+        return restoreRun;
+    }
+    const job = openQueue.then(async () => {
+        try {
+            await dispatch(restoreSessionNow(history));
+        } catch (e) {
+            log.error(`tabs: session restore failed: ${e}`);
+        } finally {
+            sessionRestored = true;
+            await dispatch(persistSession());
+        }
+    });
+    openQueue = job.catch(() => undefined);
+    restoreRun = job;
+    return job;
+};
+
 export const tabsActions = {
     setTabs,
     registerDocument,
@@ -731,6 +1093,10 @@ export const tabsActions = {
     closeDocument,
     confirmQuit,
     persistSession,
+    restoreSession,
+    loadDocument,
+    unloadDocument,
+    unloadBackgroundDocumentsIfNeeded,
 };
 
 export default tabsActions;

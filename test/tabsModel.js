@@ -21,6 +21,9 @@ import {
     filterRecentByMode,
     projectHeadTypeOf,
     collectUnsavedDocuments,
+    planLegacyMigration,
+    restoreEntryPoint,
+    unloadedMeta,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -382,5 +385,113 @@ test('collectUnsavedDocuments uses the live flag for live docs and the meta for 
     t.deepEqual(out2.map((d) => d.id), ['p1', 'l1', 'c2'], 'grouped printing, laser, cnc; parked c2 keeps its meta');
     t.deepEqual(collectUnsavedDocuments(createTabsState(), { cnc: true }), [], 'no documents');
     t.equal(out2[0].unSaved, true, 'returned meta carries the effective flag');
+    t.end();
+});
+
+const sessionDoc = (id, headType, openedFile, unSaved, untitledIndex = 0) => ({
+    id, headType, openedFile, untitledIndex, unSaved, isRotate: false, machineSeries: null, machineToolHead: null,
+});
+
+test('planRestore restores a moved or deleted file from its autosave, marked unsaved', (t) => {
+    const m = {
+        version: 1,
+        order: ['g', 'h'],
+        activeTabId: 'g',
+        documents: [
+            sessionDoc('g', 'cnc', { name: 'gone.snapcnc', path: '/f/gone.snapcnc' }, false),
+            sessionDoc('h', 'cnc', { name: 'gone2.snapcnc', path: '/f/gone2.snapcnc' }, false),
+        ],
+    };
+    const r = planRestore(m, ['g'], () => false);
+    t.deepEqual(r.state.order, ['g'], 'with env it comes back, without it is dropped');
+    t.equal(r.state.documents.g.source, 'env');
+    t.equal(r.state.documents.g.unSaved, true, 'the file is gone: the tab is unsaved');
+    t.deepEqual(r.state.documents.g.openedFile, { name: 'gone.snapcnc', path: '/f/gone.snapcnc' }, 'Save writes the file again');
+    t.deepEqual(r.missingFile.map((d) => d.id), ['g']);
+    t.deepEqual(r.dropped.map((d) => d.id), ['h']);
+    t.equal(r.state.activeTabId, 'g');
+    t.end();
+});
+
+test('planRestore skips clean untitled tabs without autosave silently, drops unsaved ones', (t) => {
+    const m = {
+        version: 1,
+        order: ['e', 'u', 'w'],
+        activeTabId: 'e',
+        documents: [
+            sessionDoc('e', 'laser', null, false, 1),
+            sessionDoc('u', 'laser', null, true, 2),
+            sessionDoc('w', 'laser', null, false, 3),
+        ],
+    };
+    const r = planRestore(m, ['w'], () => true);
+    t.deepEqual(r.state.order, ['w'], 'an untitled tab with an autosave comes back');
+    t.equal(r.state.documents.w.source, 'env');
+    t.deepEqual(r.skipped.map((d) => d.id), ['e'], 'empty untitled tab: nothing to restore, no toast');
+    t.deepEqual(r.dropped.map((d) => d.id), ['u'], 'unsaved untitled tab whose autosave is gone');
+    t.equal(r.state.activeTabId, HOME_TAB);
+    t.end();
+});
+
+test('planRestore keeps the tab order and the active tab', (t) => {
+    const m = {
+        version: 1,
+        order: ['c', 'a', 'b'],
+        activeTabId: 'a',
+        documents: [
+            sessionDoc('a', 'cnc', { name: 'a.snapcnc', path: '/f/a.snapcnc' }, false),
+            sessionDoc('b', 'laser', { name: 'b.snaplzr', path: '/f/b.snaplzr' }, true),
+            sessionDoc('c', 'cnc', { name: 'c.snapcnc', path: '/f/c.snapcnc' }, true),
+        ],
+    };
+    const r = planRestore(parseSession(m), ['b', 'c'], () => true);
+    t.deepEqual(r.state.order, ['c', 'a', 'b']);
+    t.equal(r.state.activeTabId, 'a');
+    t.deepEqual(r.autosaved.map((d) => d.id), ['c', 'b']);
+    t.end();
+});
+
+test('planRestore migrates legacy envs when there is no manifest (planLegacyMigration)', (t) => {
+    let n = 0;
+    const s = planLegacyMigration(['cnc', 'laser', 'cnc', 'bogus'], () => `id${++n}`);
+    t.deepEqual(s.order, ['id1', 'id2'], 'one doc per head type, unknown heads ignored');
+    t.equal(s.documents.id1.headType, 'cnc');
+    t.equal(s.documents.id1.source, 'legacy-env');
+    t.equal(s.documents.id1.unSaved, true);
+    t.equal(s.documents.id1.loaded, false);
+    t.equal(s.documents.id1.openedFile, null);
+    t.equal(s.documents.id1.untitledIndex, 1);
+    t.equal(s.documents.id2.untitledIndex, 1, 'numbered per head type');
+    t.equal(s.activeTabId, 'id1', 'the first migrated doc is shown');
+    t.equal(s.activeDocByHead.cnc, 'id1');
+    t.equal(planLegacyMigration([], () => 'x').order.length, 0);
+    t.equal(planLegacyMigration([], () => 'x').activeTabId, HOME_TAB);
+    t.end();
+});
+
+test('restoreEntryPoint starts on Home with no live doc and names the tab to activate', (t) => {
+    const s = activateTab(withDocs(doc('a', 'cnc', { loaded: false }), doc('b', 'laser', { loaded: false })), 'b', 0);
+    const r = restoreEntryPoint(s);
+    t.equal(r.state.activeTabId, HOME_TAB);
+    t.deepEqual(r.state.activeDocByHead, {}, 'nothing is live before it is loaded');
+    t.deepEqual(r.state.order, ['a', 'b']);
+    t.equal(r.activate, 'b');
+    t.equal(restoreEntryPoint(activateTab(s, WORKSPACE_TAB, 0)).activate, WORKSPACE_TAB);
+    t.equal(restoreEntryPoint(createTabsState()).activate, HOME_TAB);
+    t.end();
+});
+
+test('unloadedMeta: unsaved or untitled docs come back from the env, saved files from the file', (t) => {
+    const file = { name: 'a.snapcnc', path: '/f/a.snapcnc' };
+    t.deepEqual(unloadedMeta(doc('a', 'cnc', { openedFile: file }), false), { loaded: false, source: 'file', unSaved: false });
+    t.deepEqual(unloadedMeta(doc('a', 'cnc', { openedFile: file }), true), { loaded: false, source: 'env', unSaved: true });
+    t.deepEqual(unloadedMeta(doc('u', 'laser'), false), { loaded: false, source: 'env', unSaved: false });
+    t.end();
+});
+
+test('serializeSession stores the unsaved flag as a boolean', (t) => {
+    const s = withDocs(doc('a', 'cnc', { unSaved: [{}] }), doc('b', 'cnc', { unSaved: undefined }));
+    const m = JSON.parse(serializeSession(s));
+    t.deepEqual(m.documents.map((d) => d.unSaved), [true, false]);
     t.end();
 });

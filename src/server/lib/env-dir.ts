@@ -24,3 +24,12 @@ export function resolveEnvDir(baseEnvDir: string, headType: string, docId?: unkn
     }
     return `${baseEnvDir}/${ENV_DOCS_DIR}/${docId}`;
 }
+
+/**
+ * The folders of `env/docs` to remove at start: valid document ids that no restored session document
+ * keeps. Other names are never returned, so nothing but document auto-saves can be removed.
+ */
+export function orphanDocDirs(names: readonly string[] | null | undefined, keep: readonly string[] | null | undefined): string[] {
+    const kept = new Set(keep || []);
+    return (names || []).filter((name) => isValidDocId(name) && !kept.has(name));
+}
