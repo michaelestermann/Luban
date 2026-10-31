@@ -363,7 +363,11 @@ class TextActions {
         this.jQuery(this.textinput).bind('keyup input', (e) => {
             const text = e.target.value;
             // TODO: remove SVGActions, move to flux
-            const svgModel = this.SVGActions.getSVGModelByElement(this.curtext);
+            const svgModel = this.curtext && this.SVGActions.getSVGModelByElement(this.curtext);
+            // the input can get the focus (and keys) while no text is edited, e.g. by Tab
+            if (!svgModel) {
+                return;
+            }
             svgModel.updateAndRefresh({ config: { text } });
             this.init();
             this.setCursor();
