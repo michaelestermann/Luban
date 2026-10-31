@@ -50,7 +50,58 @@ const DimensionsOptions: React.FC<{ helpers: HelperSwitches }> = ({ helpers }) =
     );
 };
 
-// one entry per switch (Snap: package 6)
+const SnapOptions: React.FC<{ helpers: HelperSwitches }> = ({ helpers }) => {
+    const snap = helpers.snap;
+    const [size, setSize] = useState(String(snap.gridSize));
+    useEffect(() => setSize(String(snap.gridSize)), [snap.gridSize]);
+    const commitSize = () => {
+        const value = Number(size);
+        if (Number.isFinite(value) && value > 0) {
+            updateHelper('snap', { gridSize: value });
+        } else {
+            setSize(String(snap.gridSize));
+        }
+    };
+    const check = (key: 'grid' | 'points' | 'centers' | 'edges' | 'align', label: string) => (
+        <label className={styles.check}>
+            <input type="checkbox" checked={snap[key]} onChange={e => updateHelper('snap', { [key]: e.target.checked })} />
+            {label}
+        </label>
+    );
+    return (
+        <>
+            <div className={styles['check-row']}>
+                {check('grid', i18n._('key-CncLaser/Snap-Grid'))}
+                <span className={styles['grid-size']}>
+                    <input
+                        type="number"
+                        min={0.1}
+                        step={0.5}
+                        value={size}
+                        disabled={!snap.grid}
+                        aria-label={i18n._('key-CncLaser/Snap-Grid size')}
+                        title={i18n._('key-CncLaser/Snap-Grid size')}
+                        onChange={e => setSize(e.target.value)}
+                        onBlur={commitSize}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                commitSize();
+                            }
+                        }}
+                    />
+                    mm
+                </span>
+            </div>
+            {check('points', i18n._('key-CncLaser/Snap-End and mid points'))}
+            {check('centers', i18n._('key-CncLaser/Snap-Centres'))}
+            {check('edges', i18n._('key-CncLaser/Snap-Edges'))}
+            {check('align', i18n._('key-CncLaser/Snap-Align to other objects'))}
+            <div className={styles.note}>{i18n._('key-CncLaser/Snap-Hold Alt to move freely')}</div>
+        </>
+    );
+};
+
+// one entry per switch
 const SWITCHES: SwitchEntry[] = [
     {
         name: 'dimensions',
@@ -64,10 +115,24 @@ const SWITCHES: SwitchEntry[] = [
         ),
         options: helpers => <DimensionsOptions helpers={helpers} />,
     },
+    {
+        name: 'snap',
+        key: 's',
+        title: () => i18n._('key-CncLaser/Snap-Snap (S) · right-click: options'),
+        icon: (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                <path d="M6 4v8a6 6 0 0 0 12 0V4" />
+                <path d="M10 4v8a2 2 0 0 0 4 0V4" />
+                <path d="M6 7h4M14 7h4" />
+            </svg>
+        ),
+        options: helpers => <SnapOptions helpers={helpers} />,
+    },
 ];
 
 const optionTitles: Record<HelperName, () => string> = {
     dimensions: () => i18n._('key-CncLaser/Dimensions-Dimensions · options'),
+    snap: () => i18n._('key-CncLaser/Snap-Snap · options'),
 };
 
 interface RailSwitchesProps {

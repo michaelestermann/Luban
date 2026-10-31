@@ -1,5 +1,5 @@
 /**
- * State of the helper switches of the tool rail (Dimensions; Snap later), kept per user in the
+ * State of the helper switches of the tool rail (Dimensions, Snap), kept per user in the
  * editor settings. Default: all off.
  */
 import { useEffect, useState } from 'react';
@@ -14,8 +14,21 @@ export interface DimensionsSettings {
     between: boolean;
 }
 
+export interface SnapSettings {
+    on: boolean;
+    grid: boolean;
+    // end points of paths, box corners and edge mid points
+    points: boolean;
+    centers: boolean;
+    edges: boolean;
+    align: boolean;
+    // mm
+    gridSize: number;
+}
+
 export interface HelperSwitches {
     dimensions: DimensionsSettings;
+    snap: SnapSettings;
 }
 
 export type HelperName = keyof HelperSwitches;
@@ -24,6 +37,7 @@ const STORE_KEY = 'helperSwitches';
 
 export const DEFAULT_HELPERS: HelperSwitches = {
     dimensions: { on: false, scope: 'selection', edges: true, between: true },
+    snap: { on: false, grid: false, points: true, centers: true, edges: true, align: true, gridSize: 10 },
 };
 
 function load(): HelperSwitches {
@@ -35,6 +49,7 @@ function load(): HelperSwitches {
     }
     return {
         dimensions: { ...DEFAULT_HELPERS.dimensions, ...(stored.dimensions || {}) },
+        snap: { ...DEFAULT_HELPERS.snap, ...(stored.snap || {}) },
     };
 }
 

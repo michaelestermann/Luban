@@ -106,3 +106,34 @@
     font-size: 12px;
     color: #5b6170;
 }
+
+// Snap options: Grid checkbox with the grid size beside it
+.check-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.grid-size {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #5b6170;
+
+    input {
+        width: 56px;
+        height: 24px;
+        padding: 0 4px;
+        border: 1px solid #d5d9e0;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #1f2430;
+    }
+
+    input:disabled {
+        background: #f3f4f6;
+        color: #9aa0ab;
+    }
+}
