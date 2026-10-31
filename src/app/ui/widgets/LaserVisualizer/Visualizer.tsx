@@ -395,6 +395,9 @@ class Visualizer extends React.Component<VisualizerProps> {
         convertShapeToPath: (elem) => {
             return this.props.convertShapeToPath(elem);
         },
+        endPointEditing: (elem) => {
+            this.props.endPointEditing(elem);
+        },
         onDrawTransformComplete: ({ elem, before, after }) => {
             this.props.onDrawTransformComplete(elem, before, after);
         },
@@ -927,6 +930,7 @@ const mapDispatchToProps = (dispatch) => {
         onDrawTransform: (before, after) => dispatch(editorActions.drawTransform('laser', before, after)),
         onDrawTransformComplete: (elem, before, after) => dispatch(editorActions.drawTransformComplete('laser', elem, before, after)),
         convertShapeToPath: (elem) => dispatch(editorActions.convertShapeToPath('laser', elem)),
+        endPointEditing: (elem) => dispatch(editorActions.endPointEditing('laser', elem)),
         onDrawStart: (elem) => dispatch(editorActions.drawStart('laser', elem)),
         onDrawComplete: (elem) => dispatch(editorActions.drawComplete('laser', elem)),
         onBoxSelect: (bbox, onlyContainSelect) => dispatch(editorActions.boxSelect('laser', bbox, onlyContainSelect)),

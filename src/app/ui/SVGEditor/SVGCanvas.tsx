@@ -464,6 +464,12 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
 
     public updateMode(mode, extShape) {
         this.endSnap();
+        // point editing ends: a shape converted for it without an edit gets back (after stopDraw has
+        // selected the path again, so the selection follows the shape)
+        const pointEdited = this.mode === 'select' ? this.editingElem : null;
+        if (pointEdited && extShape?.elem !== pointEdited && this.props.editorActions?.endPointEditing) {
+            setTimeout(() => this.props.editorActions.endPointEditing(pointEdited));
+        }
         if (mode === 'select') {
             jQuery(this.svgContainer).css('cursor', 'auto');
         } else if (mode === 'draw') {

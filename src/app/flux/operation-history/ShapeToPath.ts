@@ -48,6 +48,11 @@ export default class ShapeToPath extends Operation<ShapeToPathProp> {
         }
     }
 
+    // the path the shape was converted to
+    public get pathElem(): SVGPathElement {
+        return this.state.pathElem;
+    }
+
     public redo() {
         this.swap(this.state.pathElem, this.state.pathConfig);
     }

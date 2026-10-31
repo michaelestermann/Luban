@@ -72,6 +72,7 @@ import DrawStart from '../operation-history/DrawStart';
 import DrawTransform from '../operation-history/DrawTransform';
 import DrawTransformComplete from '../operation-history/DrawTransformComplete';
 import ShapeToPath from '../operation-history/ShapeToPath';
+import { dropUnusedConversion, mergeConversion } from './point-edit-history';
 import { SHAPE_GEOMETRY_ATTRIBUTES, closePathD, joinPathEndsD, shapeToPathD } from '../../ui/SVGEditor/path-edit/shape-to-path';
 import {
     CORNER_KEYS, CornerRadii, ROUNDED_RECT_ATTRIBUTE, clampRadii, flipRadii, planCorners, readCorners, roundedRectPathD
@@ -119,6 +120,12 @@ const getSourceType = fileName => {
     }
     return sourceType;
 };
+
+// the conversion of a shape to pathElem for point editing
+const isShapeConversion = (operation, pathElem) => operation instanceof ShapeToPath && operation.pathElem === pathElem;
+// steps that only exist while drawing or point editing
+const isDrawingStep = operation => operation instanceof DrawLine || operation instanceof DrawDelete
+    || operation instanceof DrawTransform || operation instanceof DrawStart;
 
 /**
  * Recalculate model size
@@ -3107,7 +3114,10 @@ export const actions = {
                 drawGroup: contentGroup.drawGroup
             });
             operations.push(operation);
-            history.push(operations);
+            // the first edit of a converted shape: one undo step with the conversion
+            if (!mergeConversion(history, elem, operations, isShapeConversion)) {
+                history.push(operations);
+            }
 
             SvgModel.completeElementTransform(elem);
             model.onTransform();
@@ -3255,6 +3265,20 @@ export const actions = {
         elem.setAttribute('d', after);
         dispatch(actions.drawTransformComplete(headType, elem, before, after));
         dispatch(baseActions.render(headType));
+    },
+
+    /**
+     * Point editing of elem ended: the drawing steps go away; a shape converted for it without any edit
+     * gets its original element back (no step is left).
+     */
+    endPointEditing: (headType, elem) => (dispatch, getState) => {
+        const { history } = getState()[headType];
+        const dropped = dropUnusedConversion(history, elem, isShapeConversion, isDrawingStep);
+        dispatch(actions.updateState(headType, { history }));
+        if (dropped) {
+            dispatch(actions.resetProcessState(headType));
+            dispatch(baseActions.render(headType));
+        }
     },
 
     drawStart: (headType, elem) => (dispatch, getState) => {
