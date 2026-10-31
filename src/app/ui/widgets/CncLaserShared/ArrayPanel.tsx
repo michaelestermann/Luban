@@ -7,6 +7,7 @@ import { arrayBox, arrayProblemText } from '../../../flux/editor/actions-array';
 import i18n from '../../../lib/i18n';
 import { ShortcutHandlerPriority, ShortcutManager } from '../../../lib/shortcut';
 import { arrayCopyCount, arrayProblem, ArraySettings } from '../../SVGEditor/combine/array-layout';
+import { panelKeysActive } from './panel-keys';
 import ps from './properties.styl';
 
 interface ArrayPanelProps {
@@ -82,8 +83,10 @@ const ArrayPanel: React.FC<ArrayPanelProps> = ({ headType }) => {
     const size = useSelector((s: { machine: { size: { x: number, y: number } } }) => s?.machine?.size);
     useSelector(state => state[headType]?.renderingTimestamp);
     const box = useSelector(state => (state[headType]?.arraySession ? arrayBox(state, headType) : null), shallowEqual);
-    const ref = useRef(session);
-    ref.current = session;
+    const canvasMode = useSelector(state => state[headType]?.SVGCanvasMode);
+    const editing = useSelector(state => !!state[headType]?.SVGCanvasExt?.elem);
+    const ref = useRef({ session, canvasMode, editing });
+    ref.current = { session, canvasMode, editing };
 
     // the selection changed to nothing that can be copied: close
     useEffect(() => {
@@ -102,7 +105,8 @@ const ArrayPanel: React.FC<ArrayPanelProps> = ({ headType }) => {
         const handler = {
             title: 'ArrayPanel',
             priority: ShortcutHandlerPriority.Widget,
-            isActive: () => !!ref.current,
+            // not while Measure or point editing has the keys
+            isActive: () => panelKeysActive(!!ref.current.session, ref.current.canvasMode, ref.current.editing),
             shortcuts: {
                 'ARRAY-CANCEL': { keys: ['esc'], callback: cancel },
                 'ARRAY-CREATE': { keys: ['enter'], callback: create },

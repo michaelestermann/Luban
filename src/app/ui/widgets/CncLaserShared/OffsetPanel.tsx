@@ -7,6 +7,7 @@ import { OffsetSettings } from '../../../flux/editor/actions-combine';
 import i18n from '../../../lib/i18n';
 import { ShortcutHandlerPriority, ShortcutManager } from '../../../lib/shortcut';
 import { offsetModels } from '../../SVGEditor/combine/model-outline';
+import { panelKeysActive } from './panel-keys';
 import ps from './properties.styl';
 
 interface OffsetPanelProps {
@@ -35,9 +36,11 @@ const OffsetPanel: React.FC<OffsetPanelProps> = ({ headType }) => {
     const modelGroup = useSelector(state => state[headType]?.modelGroup);
     useSelector(state => state[headType]?.renderingTimestamp);
     const [distanceText, setDistanceText] = useState('');
+    const canvasMode = useSelector(state => state[headType]?.SVGCanvasMode);
+    const editing = useSelector(state => !!state[headType]?.SVGCanvasExt?.elem);
     const count = session ? offsetModels(modelGroup).length : 0;
-    const ref = useRef({ session, count });
-    ref.current = { session, count };
+    const ref = useRef({ session, count, canvasMode, editing });
+    ref.current = { session, count, canvasMode, editing };
 
     useEffect(() => {
         if (session) {
@@ -60,7 +63,8 @@ const OffsetPanel: React.FC<OffsetPanelProps> = ({ headType }) => {
         const handler = {
             title: 'OffsetPanel',
             priority: ShortcutHandlerPriority.Widget,
-            isActive: () => !!ref.current.session,
+            // not while Measure or point editing has the keys
+            isActive: () => panelKeysActive(!!ref.current.session, ref.current.canvasMode, ref.current.editing),
             shortcuts: {
                 'OFFSET-CANCEL': { keys: ['esc'], callback: () => dispatch(editorActions.cancelOffset(headType)) },
                 'OFFSET-CREATE': { keys: ['enter'], callback: () => dispatch(editorActions.applyOffset(headType)) },
