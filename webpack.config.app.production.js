@@ -3,7 +3,6 @@
 const without = require('lodash/without');
 // const crypto = require('crypto');
 const path = require('path');
-const findImports = require('find-imports');
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
@@ -53,11 +52,6 @@ module.exports = {
     },
     entry: {
         polyfill: path.resolve(__dirname, 'src/app/polyfill/index.js'),
-        vendor: findImports([
-            'src/app/**/*.{js,jsx}',
-            '!src/app/polyfill/**/*.js',
-            '!src/app/**/*.development.js'
-        ], { flatten: true }),
         app: path.resolve(__dirname, 'src/app/index.jsx')
     },
     output: {
@@ -69,6 +63,17 @@ module.exports = {
     optimization: {
         minimize: true,
         minimizer: [new TerserPlugin()],
+        // same chunking as the development build: one runtime, node_modules in shared vendor chunks
+        splitChunks: {
+            chunks: 'all',
+            name: false,
+            cacheGroups: {
+                vendors: {
+                    test: /[\\/]node_modules[\\/]/,
+                    priority: -10
+                }
+            },
+        }
     },
     plugins: [
         new stylusLoader.OptionsPlugin({
