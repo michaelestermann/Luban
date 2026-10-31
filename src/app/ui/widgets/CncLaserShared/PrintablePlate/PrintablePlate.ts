@@ -232,12 +232,18 @@ class PrintablePlate extends Object3D {
         }
     }
 
-    /** Moves the red origin point to an object origin (model coordinates); null: the workpiece origin. */
+    /**
+     * Object origin (model coordinates; null: the workpiece origin). The tool paths and the G-code of
+     * the preview are relative to that point, so the plate moves by -point: the red point sits at the
+     * object point of the workpiece and at 0/0 of the tool paths.
+     */
     public setTargetPoint(point: { x: number; y: number } | null) {
         if (this.targetPoint) {
             this.targetPoint.position.setX(point ? point.x : 0);
             this.targetPoint.position.setY(point ? point.y : 0);
         }
+        this.position.setX(point ? -point.x : 0);
+        this.position.setY(point ? -point.y : 0);
     }
 
     public changeCoordinateVisibility(value: boolean) {
