@@ -92,8 +92,11 @@ class OperationHistory {
     }
 
     public filter(fn: (operations: CompoundOperation) => boolean) {
+        // the index keeps pointing to the last applied operation: undone ones stay undone (redo)
+        const applied = this.operations.slice(0, this.index + 1).filter(fn).length;
         this.operations = this.operations.filter(fn);
-        this.index = this.operations.length - 1; // point to tail
+        this.index = applied - 1;
+        this._updateUndoRedo();
     }
 }
 
