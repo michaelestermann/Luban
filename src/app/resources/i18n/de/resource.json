@@ -2703,5 +2703,10 @@
     "key-Tabs/Don't save": "Nicht speichern",
     "key-Tabs/Save": "Speichern",
     "key-Tabs/{{name}} is still busy. Close it when it is done.": "{{name}} ist noch beschäftigt. Schließen Sie es, sobald es fertig ist.",
-    "key-App/Menu-Close Project": "Projekt schließen"
+    "key-App/Menu-Close Project": "Projekt schließen",
+    "key-Tabs/{{count}} projects have unsaved changes": "{{count}} Projekte haben nicht gespeicherte Änderungen",
+    "key-Tabs/Pick what to save. Untitled projects ask for a name. All open tabs come back on next start.": "Wählen Sie, was gespeichert werden soll. Unbenannte Projekte fragen nach einem Namen. Alle offenen Tabs sind beim nächsten Start wieder da.",
+    "key-Tabs/Save selected and quit": "Auswahl speichern und beenden",
+    "key-Tabs/Don’t save any": "Nichts speichern",
+    "key-Tabs/never saved": "nie gespeichert"
 }

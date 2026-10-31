@@ -20,6 +20,7 @@ import {
     pickDocumentToUnload,
     filterRecentByMode,
     projectHeadTypeOf,
+    collectUnsavedDocuments,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -361,5 +362,25 @@ test('closing the last project tab leaves only home and workspace', (t) => {
     t.equal(s.activeTabId, HOME_TAB, 'home is active');
     t.deepEqual(s.activeDocByHead, {}, 'no live document');
     t.equal(pathForTab(s, s.activeTabId), '/', 'home route');
+    t.end();
+});
+
+test('collectUnsavedDocuments uses the live flag for live docs and the meta for parked docs, grouped by mode', (t) => {
+    let s = withDocs(
+        doc('c1', 'cnc', { unSaved: false }),
+        doc('l1', 'laser', { unSaved: true }),
+        doc('c2', 'cnc', { unSaved: true }),
+        doc('p1', 'printing', { unSaved: false }),
+        doc('l2', 'laser', { unSaved: false }),
+    );
+    s = activateTab(s, 'c1', 1); // live cnc: meta says saved, live flag says unsaved
+    s = activateTab(s, 'l1', 2); // live laser: meta says unsaved, live flag says saved
+    s = activateTab(s, 'p1', 3);
+    const out = collectUnsavedDocuments(s, { cnc: true, laser: false });
+    t.deepEqual(out.map((d) => d.id), ['c1', 'c2'], 'laser live flag false wins over meta; printing has no live flag → meta');
+    const out2 = collectUnsavedDocuments(s, { cnc: false, laser: true, printing: true });
+    t.deepEqual(out2.map((d) => d.id), ['p1', 'l1', 'c2'], 'grouped printing, laser, cnc; parked c2 keeps its meta');
+    t.deepEqual(collectUnsavedDocuments(createTabsState(), { cnc: true }), [], 'no documents');
+    t.equal(out2[0].unSaved, true, 'returned meta carries the effective flag');
     t.end();
 });

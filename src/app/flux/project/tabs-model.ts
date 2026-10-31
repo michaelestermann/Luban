@@ -228,6 +228,25 @@ export function groupDocumentsByMode(s: TabsState): Array<{ headType: EditorHead
     return groups;
 }
 
+/**
+ * The documents with unsaved changes, grouped by mode (printing, laser, cnc; tab order inside a mode).
+ * For the document live in a mode, `liveUnsaved[head]` (project meta of the slice) overrides the tab meta
+ * when it is given.
+ */
+export function collectUnsavedDocuments(s: TabsState, liveUnsaved: Partial<Record<EditorHeadType, boolean>>): DocumentMeta[] {
+    const out: DocumentMeta[] = [];
+    for (const group of groupDocumentsByMode(s)) {
+        for (const meta of group.documents) {
+            const live = s.activeDocByHead[meta.headType] === meta.id && typeof liveUnsaved[meta.headType] === 'boolean';
+            const unSaved = live ? !!liveUnsaved[meta.headType] : meta.unSaved;
+            if (unSaved) {
+                out.push(meta.unSaved === unSaved ? meta : { ...meta, unSaved });
+            }
+        }
+    }
+    return out;
+}
+
 export function tabIdForPath(s: TabsState, pathname: string): string | null {
     if (pathname === '/' || pathname === '') {
         return HOME_TAB;

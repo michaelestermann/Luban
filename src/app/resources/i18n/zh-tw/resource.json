@@ -2682,5 +2682,10 @@
     "key-Tabs/Don't save": "Don't save",
     "key-Tabs/Save": "Save",
     "key-Tabs/{{name}} is still busy. Close it when it is done.": "{{name}} is still busy. Close it when it is done.",
-    "key-App/Menu-Close Project": "Close Project"
+    "key-App/Menu-Close Project": "Close Project",
+    "key-Tabs/{{count}} projects have unsaved changes": "{{count}} projects have unsaved changes",
+    "key-Tabs/Pick what to save. Untitled projects ask for a name. All open tabs come back on next start.": "Pick what to save. Untitled projects ask for a name. All open tabs come back on next start.",
+    "key-Tabs/Save selected and quit": "Save selected and quit",
+    "key-Tabs/Don’t save any": "Don’t save any",
+    "key-Tabs/never saved": "never saved"
 }

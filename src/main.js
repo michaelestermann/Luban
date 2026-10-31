@@ -425,9 +425,15 @@ const showMainWindow = async () => {
         };
 
         config.set('winBounds', options);
+        // the renderer asks about unsaved projects and destroys the window, or keeps it open (Cancel):
+        // mainWindow stays valid until the window is really gone, so later open-file events still arrive
         window.webContents.send('save-and-close');
+    });
 
-        mainWindow = null;
+    window.on('closed', () => {
+        if (mainWindow === window) {
+            mainWindow = null;
+        }
     });
 
 

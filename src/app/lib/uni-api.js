@@ -168,8 +168,11 @@ const Menu = {
         if (isElectron()) {
             const { Menu: ElectronMenu } = window.require('@electron/remote');
             const appMenu = ElectronMenu.getApplicationMenu();
-            const item = appMenu.getMenuItemById(id);
-            item.enabled = enabled;
+            // the menu is built after the first render (4.17 tabs: the tab shell sets 'save' right away)
+            const item = appMenu && appMenu.getMenuItemById(id);
+            if (item) {
+                item.enabled = enabled;
+            }
         }
     },
     cleanAllRecentFiles() {

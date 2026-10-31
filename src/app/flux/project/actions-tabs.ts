@@ -15,7 +15,7 @@ import { checkIsGCodeFile, checkIsSnapmakerProjectFile } from '../../lib/check-n
 import { logModuleVisit } from '../../lib/gaEvent';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
-import { requestSaveChanges } from '../../lib/tab-dialogs';
+import { requestQuitSelection, requestSaveChanges } from '../../lib/tab-dialogs';
 import workerManager from '../../lib/manager/workerManager';
 import { toast } from '../../ui/components/Toast';
 import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
@@ -39,6 +39,7 @@ import {
     WORKSPACE_TAB,
     activateTab as activateTabInModel,
     addDocument,
+    collectUnsavedDocuments,
     documentDisplayName,
     findDocumentByPath,
     isEditorHeadType,
@@ -632,6 +633,91 @@ const syncLiveDocumentMeta = () => (dispatch, getState): void => {
     }
 };
 
+/** Stores the open tabs for the next start (session restore, Task 9). No-op until then. */
+const persistSession = () => async (): Promise<void> => undefined;
+
+/** Saves one document for quitting (it is shown first when it is parked). False when Save / Save As did not complete. */
+const saveDocumentForQuit = (docId: string, history: HistoryLike) => async (dispatch, getState): Promise<boolean> => {
+    const meta = getTabsState(getState()).documents[docId];
+    if (!meta) {
+        return true;
+    }
+    if (getTabsState(getState()).activeDocByHead[meta.headType] !== docId || getTabsState(getState()).activeTabId !== docId) {
+        // the user sees which project a Save As dialog is for
+        const shown = await dispatch(activateTab(docId, history));
+        if (!shown) {
+            return false;
+        }
+    }
+    const saved = await dispatch(projectActions.save(meta.headType));
+    return !!saved && !getState().project[meta.headType]?.unSaved;
+};
+
+/** The unsaved documents with models, grouped by mode (the live flag of each mode wins over the tab meta). */
+const unsavedDocuments = () => (dispatch, getState): DocumentMeta[] => {
+    dispatch(syncLiveDocumentMeta());
+    const state = getState();
+    const tabs = getTabsState(state);
+    const liveUnsaved: Partial<Record<EditorHeadType, boolean>> = {};
+    for (const head of EDITOR_HEAD_TYPES) {
+        if (tabs.activeDocByHead[head]) {
+            liveUnsaved[head] = !!state.project[head]?.unSaved;
+        }
+    }
+    return collectUnsavedDocuments(tabs, liveUnsaved).filter((meta) => documentNeedsSave(state, meta.id));
+};
+
+let quitInProgress: Promise<boolean> | null = null;
+
+/**
+ * Asks once before the app quits. No unsaved project → true. One → "Save changes to …?" (Save / Don't
+ * save / Cancel). Several → one list grouped by mode ("Save selected and quit" / "Don’t save any" /
+ * "Cancel"). The selected ones are saved in order; a cancelled Save As or a failed save aborts the quit
+ * (false). Projects that are not saved keep their auto-save, their tabs come back on the next start
+ * (board 9). A second request while the question is open gets the same answer.
+ */
+const confirmQuit = (history: HistoryLike) => async (dispatch): Promise<boolean> => {
+    if (quitInProgress) {
+        return quitInProgress;
+    }
+    const run = async (): Promise<boolean> => {
+        const unsaved: DocumentMeta[] = dispatch(unsavedDocuments());
+        let toSave: string[] = [];
+        if (unsaved.length === 1) {
+            const answer = await requestSaveChanges(documentDisplayName(unsaved[0], i18n._('key-Tabs/Untitled')));
+            if (answer === 'cancel') {
+                return false;
+            }
+            toSave = answer === 'save' ? [unsaved[0].id] : [];
+        } else if (unsaved.length > 1) {
+            const answer = await requestQuitSelection(unsaved.map((meta) => ({
+                id: meta.id,
+                name: documentDisplayName(meta, i18n._('key-Tabs/Untitled')),
+                headType: meta.headType,
+                path: meta.openedFile?.path ?? null,
+            })));
+            if (answer.action === 'cancel') {
+                return false;
+            }
+            toSave = answer.action === 'save' ? unsaved.map((m) => m.id).filter((id) => answer.ids.includes(id)) : [];
+        }
+        for (const id of toSave) {
+            const saved = await dispatch(saveDocumentForQuit(id, history));
+            if (!saved) {
+                return false;
+            }
+        }
+        await dispatch(persistSession());
+        return true;
+    };
+    quitInProgress = run();
+    try {
+        return await quitInProgress;
+    } finally {
+        quitInProgress = null;
+    }
+};
+
 export const tabsActions = {
     setTabs,
     registerDocument,
@@ -643,6 +729,8 @@ export const tabsActions = {
     newDocument,
     installDocument,
     closeDocument,
+    confirmQuit,
+    persistSession,
 };
 
 export default tabsActions;

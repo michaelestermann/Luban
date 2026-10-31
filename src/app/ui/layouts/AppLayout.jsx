@@ -12,7 +12,6 @@ import { Group } from 'three';
 
 import {
     FORUM_URL,
-    HEAD_TYPE_ENV_NAME,
     MARKET_EN_URL,
     MARKET_ZH_URL,
     OFFICIAL_SITE_EN_URL,
@@ -62,9 +61,9 @@ class AppLayout extends React.PureComponent {
         updateCurrentModalPath: PropTypes.func.isRequired,
         newDocument: PropTypes.func.isRequired,
         closeActiveDocument: PropTypes.func.isRequired,
+        confirmQuit: PropTypes.func.isRequired,
         initRecoverService: PropTypes.func.isRequired,
         save: PropTypes.func.isRequired,
-        saveAndClose: PropTypes.func.isRequired,
         saveAsFile: PropTypes.func.isRequired,
         updateRecentProject: PropTypes.func.isRequired,
         openProject: PropTypes.func.isRequired,
@@ -508,18 +507,6 @@ class AppLayout extends React.PureComponent {
             }
             await this.props.save(headType);
         },
-        saveAll: async () => {
-            return this.actions.closeFile();
-        },
-        closeFile: async () => {
-            const currentHeadType = getCurrentHeadType(this.props.history.location.pathname);
-            const message = i18n._('key-Project/Save-Save the changes you made in the {{headType}} G-code Generator? Your changes will be lost if you don’t save them.', { headType: i18n._(HEAD_TYPE_ENV_NAME[currentHeadType]) });
-            if (currentHeadType) {
-                return this.props.saveAndClose(currentHeadType, { message });
-            }
-
-            return true;
-        },
         initFileOpen: async () => {
             const file = await UniApi.File.popFile();
             if (file) {
@@ -621,12 +608,15 @@ class AppLayout extends React.PureComponent {
                 }
             });
             UniApi.Event.on('save-and-close', async () => {
-                logLubanQuit();
-
-                const done = await this.actions.saveAll();
-                if (done) {
-                    UniApi.Window.call('destroy');
+                // 4.17 tabs: one question for all unsaved projects; Cancel keeps the app open
+                if (!this.quitApproved) {
+                    const done = await this.props.confirmQuit(this.props.history);
+                    if (!done) {
+                        return;
+                    }
                 }
+                logLubanQuit();
+                UniApi.Window.call('destroy');
             });
             UniApi.Event.on('close-file', async () => {
                 await this.props.closeActiveDocument(this.props.history);
@@ -641,8 +631,10 @@ class AppLayout extends React.PureComponent {
                 UniApi.Connection.navigateToWorkspace();
             });
             UniApi.Event.on('app-quit', async () => {
-                const done = await this.actions.closeFile();
+                const done = await this.props.confirmQuit(this.props.history);
                 if (done) {
+                    // app.quit closes the window, which asks again (save-and-close) unless approved
+                    this.quitApproved = true;
                     UniApi.APP.quit();
                 }
             });
@@ -1029,10 +1021,10 @@ const mapDispatchToProps = (dispatch) => {
         initRecoverService: () => dispatch(projectActions.initRecoverService()),
         saveAsFile: (headType) => dispatch(projectActions.saveAsFile(headType)),
         save: (headType, dialogOptions) => dispatch(projectActions.save(headType, dialogOptions)),
-        saveAndClose: (headType, opts) => dispatch(projectActions.saveAndClose(headType, opts)),
         openProject: (file, history) => dispatch(projectActions.openProject(file, history)),
         newDocument: (headType, isRotate, history) => dispatch(tabsActions.newDocument(headType, { isRotate }, history)),
         // 4.17 tabs: File > Close Project closes the active project tab (Home and Workspace cannot be closed)
+        confirmQuit: (history) => dispatch(tabsActions.confirmQuit(history)),
         closeActiveDocument: (history) => dispatch((d, getState) => d(tabsActions.closeDocument(getState().project.tabs.activeTabId, history))),
         updateRecentProject: (arr, type) => dispatch(projectActions.updateRecentFile(arr, type)),
         loadCase: (pathConfig, history) => dispatch(projectActions.openProject(pathConfig, history)),
