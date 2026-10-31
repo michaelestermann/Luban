@@ -3,7 +3,7 @@
  */
 import svgPath from 'svgpath';
 
-import { GeometryInfo, ParsedShape, pathDLength, shapesLength } from './geometry-length';
+import { GeometryInfo, outlineDLength, ParsedShape, shapesLength } from './geometry-length';
 
 interface GeometryModel {
     modelID: string;
@@ -53,8 +53,16 @@ function loadSource(url: string, onLoaded: () => void) {
 
 function elementMatrix(elem: SVGElement): [number, number, number, number, number, number] | null {
     const list = (elem as SVGGraphicsElement).transform?.baseVal;
-    const m = list && list.numberOfItems > 0 ? list.consolidate()?.matrix : null;
-    return m ? [m.a, m.b, m.c, m.d, m.e, m.f] : null;
+    if (!list || list.numberOfItems === 0) {
+        return null;
+    }
+    // product of the items; consolidate() would merge the list, and the editor relies on its items
+    let m = new DOMMatrix();
+    for (let i = 0; i < list.numberOfItems; i++) {
+        const t = list.getItem(i).matrix;
+        m = m.multiply(new DOMMatrix([t.a, t.b, t.c, t.d, t.e, t.f]));
+    }
+    return [m.a, m.b, m.c, m.d, m.e, m.f];
 }
 
 // length of a path or line element in canvas units (mm), its transform applied
@@ -71,7 +79,7 @@ function elementLength(elem: SVGElement): number {
     if (d && matrix) {
         d = svgPath(d).matrix(matrix).toString();
     }
-    return pathDLength(d);
+    return outlineDLength(d);
 }
 
 function svgLength(model: GeometryModel, width: number, height: number, onLoaded: () => void): number | null {

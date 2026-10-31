@@ -13,6 +13,7 @@ import {
     sumLengths,
     cutLength,
     selectionGeometry,
+    outlineDLength,
 } from '../src/app/ui/SVGEditor/measure/geometry-length';
 import { parsePath, ellipseToPath } from '../src/app/ui/SVGEditor/path-edit/path-geometry';
 
@@ -110,5 +111,14 @@ test('cutLength and selectionGeometry', (t) => {
     t.deepEqual(selectionGeometry([rect, { kind: 'path', length: 6 }, { kind: 'text' }]), { kind: 'multiple', length: 110 }, 'sum, text ignored');
     t.deepEqual(selectionGeometry([rect, { kind: 'svg', length: null }]), { kind: 'multiple', length: null }, 'pending svg');
     t.equal(selectionGeometry([{ kind: 'image' }, { kind: 'text' }]), null, 'only raster and text');
+    t.end();
+});
+
+test('outlineDLength counts pen tool segments once', (t) => {
+    // pen tool output: each straight segment is a closed 2 point subpath ("M a L b Z")
+    t.equal(pathDLength('M0 0 L10 0 Z M10 0 L10 10 Z'), 40, 'raw: each segment there and back');
+    t.equal(outlineDLength('M0 0 L10 0 Z M10 0 L10 10 Z'), 20, 'pen path: 2 segments');
+    t.equal(outlineDLength('M0 0 L10 0 L10 10 Z'), 10 + 10 + Math.hypot(10, 10), 'normal closed path unchanged');
+    t.equal(outlineDLength(''), 0, 'empty');
     t.end();
 });

@@ -4,6 +4,7 @@
  * All lengths are in the units of the input; the editor uses mm (1 canvas unit = 1 mm).
  */
 import { PathData, Segment, Subpath, getSegment, parsePath, segmentCount } from '../path-edit/path-geometry';
+import { normalizePenPath } from '../path-edit/point-edit';
 
 // SVGParser output: a shape holds polylines (curves are already flattened)
 export interface ParsedShape {
@@ -78,6 +79,14 @@ export function pathDLength(d: string): number {
         return 0;
     }
     return pathLength(parsePath(d));
+}
+
+// length of the outline of a path element: pen tool segments ("M a L b Z") are chained first, so each counts once
+export function outlineDLength(d: string): number {
+    if (!d || !d.trim()) {
+        return 0;
+    }
+    return pathLength(normalizePenPath(parsePath(d)));
 }
 
 // Ramanujan's second approximation
