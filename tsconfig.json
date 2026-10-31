@@ -27,6 +27,9 @@
             "esnext"
         ]
     },
+    "files": [
+        "./src/app/constants/copy.tsx"
+    ],
     "include": [
         "./src/**/*", 
         "packages/luban-platform/**/*.ts"
