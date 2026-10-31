@@ -10,6 +10,26 @@ import {
     RectangleWorkpieceReference,
 } from '../constants/coordinate';
 import { createSVGElement } from '../ui/SVGEditor/element-utils';
+import { axisLabelValues, chooseMinorStep, chooseStep, formatTick, multiplesInRange } from './ruler-ticks';
+
+// On-screen sizes (CSS px) of the rulers; they stay the same at any zoom
+const LABEL_FONT_PX = 11;
+const LABEL_MIN_SPACING_PX = 60; // labels (and major grid lines) at least this far apart
+const LABEL_MIN_GAP_PX = 36; // a step label closer than this to an axis end label is dropped
+const GRID_MIN_SPACING_PX = 8; // minor grid lines at least this far apart
+const X_LABEL_BELOW_PX = 16; // baseline of X labels below the axis
+const X_LABEL_ABOVE_PX = 8; // baseline of X labels above the axis (top origins)
+const Y_LABEL_SIDE_PX = 8; // gap between the Y axis and its labels
+const LABEL_BASELINE_SHIFT_PX = 4; // centres Y labels vertically on their value
+const END_LABEL_INSET_PX = 4; // end labels inside the workpiece keep this distance to the border
+const ORIGIN_RADIUS_PX = 5.5;
+const LOCKING_BLOCK_PX = 14;
+// CSS px per (mm x scale) when the canvas has not reported it yet
+const DEFAULT_PX_PER_SCALE = 5;
+
+const COLOR_MINOR_GRID = '#EEEFF0';
+const COLOR_MAJOR_GRID = '#E3E5E8';
+const COLOR_TEXT = '#85888C';
 
 interface Workpiece2dOptions {
     size: Vector2;
@@ -17,6 +37,8 @@ interface Workpiece2dOptions {
     coordinateSize?;
     materials: Materials;
     scale: number;
+    // CSS px per (mm x scale), see SVGCanvas.updateCanvas
+    pxPerScale?: number;
     getRoot: () => Element;
 }
 
@@ -40,6 +62,7 @@ class Workpiece2d {
     private coordinateSize;
     private coorDelta: { x: number; y: number } = { x: 0, y: 0 };
     private scale: number = 1;
+    private pxPerScale: number = DEFAULT_PX_PER_SCALE;
 
     public constructor(options: Workpiece2dOptions) {
         this.id = uuid();
@@ -64,6 +87,9 @@ class Workpiece2d {
         this._setCoordinateMode(this.coordinateMode);
 
         this.scale = options.scale;
+        if (options.pxPerScale > 0) {
+            this.pxPerScale = options.pxPerScale;
+        }
         this.printableAreaGroup = createSVGElement({
             element: 'g',
             attr: {
@@ -79,24 +105,17 @@ class Workpiece2d {
     }
 
     public updateScale(state) {
-        const { size, materials, scale, origin } = state;
+        const { size, materials, scale, origin, pxPerScale } = state;
 
-
+        // grid steps, labels and their sizes depend on the zoom: re-draw on a zoom change
+        let zoomChange = false;
         if (Math.abs(this.scale - scale) > EPSILON) {
-            const drawAxis = !(this.origin && this.origin.type === OriginType.Object);
-
             this.scale = scale;
-            for (const child of this.printableAreaGroup.childNodes) {
-                if (child.getAttribute('stroke-width') !== '0') {
-                    let realStrokeWidth = 1 / scale;
-
-                    if (drawAxis && (child.getAttribute('virtualX') === '0' || child.getAttribute('virtualY') === '0')) {
-                        realStrokeWidth = 4 / scale;
-                    }
-
-                    child.setAttribute('stroke-width', realStrokeWidth);
-                }
-            }
+            zoomChange = true;
+        }
+        if (pxPerScale > 0 && Math.abs(this.pxPerScale - pxPerScale) > EPSILON) {
+            this.pxPerScale = pxPerScale;
+            zoomChange = true;
         }
 
         // Check size change or material change => re-draw workpiece
@@ -117,7 +136,9 @@ class Workpiece2d {
             };
 
             this.origin = Object.assign({}, origin);
+        }
 
+        if (sizeChange || materialsChange || zoomChange) {
             // Re-create coordinate sytem
             while (this.printableAreaGroup.firstChild) {
                 this.printableAreaGroup.removeChild(this.printableAreaGroup.lastChild);
@@ -144,6 +165,10 @@ class Workpiece2d {
         this._setOriginPoint();
     }
 
+    private _pxPerMm(): number {
+        return Math.max(this.scale * this.pxPerScale, 1e-6);
+    }
+
     public _removeAll() {
         // do nothing
     }
@@ -159,10 +184,10 @@ class Workpiece2d {
     }
 
     /**
-     * Draw grid line, axes, scales.
+     * Draw grid lines, axes and axis labels. Label and grid steps follow the zoom, and labels,
+     * strokes and offsets keep a constant on-screen size (sizes are given in screen px).
      */
     public _setGridLine() {
-        // draw axis and scale
         const drawAxis = !(this.origin && this.origin.type === OriginType.Object);
         const drawScale = drawAxis;
 
@@ -172,325 +197,125 @@ class Workpiece2d {
         const xMax = x + cx / 2 + this.coorDelta.x;
         const yMin = y - cy / 2 + this.coorDelta.y;
         const yMax = y + cy / 2 + this.coorDelta.y;
-        const colorSmallGrid = '#EEEFF0';
-        const colorBigGrid = '#EEEFF0';
-        const colorTextFill = '#85888C';
-        const textSize = 4;
         const coordinateModeName = this.coordinateMode.value;
 
-        // small grid 10x10
-        for (let i = y; i > yMin; i -= 10) {
-            const color = colorSmallGrid;
-            const line = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: xMin,
-                    y1: i,
-                    x2: xMax,
-                    y2: i,
-                    id: uuid(),
-                    stroke: color,
-                    fill: 'none',
-                    virtualY: i - y,
-                    'stroke-width': (i === y && drawAxis) ? (4 / this.scale) : (1 / this.scale),
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line);
-        }
-        for (let i = y + 10; i < yMax; i += 10) {
-            const color = colorSmallGrid;
-            const line = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: xMin,
-                    y1: i,
-                    x2: xMax,
-                    y2: i,
-                    id: uuid(),
-                    stroke: color,
-                    fill: 'none',
-                    virtualY: i - y,
-                    'stroke-width': ((i - y) === 0 && drawAxis) ? (4 / this.scale) : (1 / this.scale),
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line);
-        }
-        for (let i = x; i > xMin; i -= 10) {
-            const color = colorSmallGrid;
-            const line = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: i,
-                    y1: yMin,
-                    x2: i,
-                    y2: yMax,
-                    id: uuid(),
-                    stroke: color,
-                    fill: 'none',
-                    virtualX: i - x,
-                    'stroke-width': ((i - x) === 0 && drawAxis) ? (4 / this.scale) : (1 / this.scale),
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line);
-        }
-        for (let i = x + 10; i < xMax; i += 10) {
-            const color = colorSmallGrid;
-            const line = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: i,
-                    y1: yMin,
-                    x2: i,
-                    y2: yMax,
-                    id: uuid(),
-                    stroke: color,
-                    fill: 'none',
-                    virtualX: i - x,
-                    'stroke-width': ((i - x) === 0 && drawAxis) ? (4 / this.scale) : (1 / this.scale),
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line);
-        }
+        const pxPerMm = this._pxPerMm();
+        const mm = (px: number) => px / pxPerMm;
+        const labelStep = chooseStep(pxPerMm, LABEL_MIN_SPACING_PX);
+        const minorStep = chooseMinorStep(pxPerMm, labelStep, GRID_MIN_SPACING_PX);
+        const isMajor = (v: number) => {
+            const n = v / labelStep;
+            return Math.abs(n - Math.round(n)) < 1e-6;
+        };
 
-        // big grid 50x50 and text
-        for (let i = y; i > yMin; i -= 50) {
-            const color = colorBigGrid;
-            const line = createSVGElement({
+        // coordinate values (relative to the origin) covered by the workpiece
+        const xFrom = xMin - x;
+        const xTo = xMax - x;
+        const yFrom = y - yMax;
+        const yTo = y - yMin;
+
+        const addLine = (x1: number, y1: number, x2: number, y2: number, color: string, strokeWidth: number) => {
+            this.printableAreaGroup.append(createSVGElement({
                 element: 'line',
                 attr: {
-                    x1: xMin,
-                    y1: i,
-                    x2: xMax,
-                    y2: i,
+                    x1,
+                    y1,
+                    x2,
+                    y2,
                     id: uuid(),
                     stroke: color,
                     fill: 'none',
-                    'stroke-width': 1 / this.scale,
+                    'stroke-width': strokeWidth,
                     opacity: 1,
                     'fill-opacity': 1
                 }
-            });
-            this.printableAreaGroup.append(line);
+            }));
+        };
 
-            if (drawScale) {
-                const label = createSVGElement({
-                    element: 'text',
-                    attr: {
-                        x: x + (coordinateModeName.indexOf('right') !== -1 ? 6 : -6),
-                        y: i + 1.2,
-                        id: uuid(),
-                        'font-size': textSize,
-                        fill: colorTextFill,
-                        'text-anchor': 'middle',
-                        'xml:space': 'preserve',
-                        'stroke-width': 1 / this.scale,
-                        'fill-opacity': 1,
-                        'stroke-opacity': 0
-                    }
-                });
-                label.innerHTML = -(i - y);
-                label.style.cursor = 'default';
-                this.printableAreaGroup.append(label);
+        // grid: minor lines first, major lines (at the label step) on top
+        const xs = multiplesInRange(xFrom, xTo, minorStep);
+        const ys = multiplesInRange(yFrom, yTo, minorStep);
+        for (const major of [false, true]) {
+            const color = major ? COLOR_MAJOR_GRID : COLOR_MINOR_GRID;
+            for (const v of xs) {
+                if (isMajor(v) === major && !(drawAxis && v === 0)) {
+                    addLine(x + v, yMin, x + v, yMax, color, 1 / this.scale);
+                }
+            }
+            for (const v of ys) {
+                if (isMajor(v) === major && !(drawAxis && v === 0)) {
+                    addLine(xMin, y - v, xMax, y - v, color, 1 / this.scale);
+                }
             }
         }
-        for (let i = y + 50; i < yMax; i += 50) {
-            const color = colorBigGrid;
-            const line = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: xMin,
-                    y1: i,
-                    x2: xMax,
-                    y2: i,
-                    id: uuid(),
-                    stroke: color,
-                    fill: 'none',
-                    'stroke-width': 1 / this.scale,
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line);
-
-            if (drawScale) {
-                const label = createSVGElement({
-                    element: 'text',
-                    attr: {
-                        x: x + (coordinateModeName.indexOf('right') !== -1 ? 6 : -6),
-                        y: i + 1.2,
-                        id: uuid(),
-                        'font-size': textSize,
-                        fill: colorTextFill,
-                        'text-anchor': 'middle',
-                        'xml:space': 'preserve',
-                        'stroke-width': 1 / this.scale,
-                        'fill-opacity': 1,
-                        'stroke-opacity': 0
-                    }
-                });
-                label.innerHTML = -(i - y);
-                label.style.cursor = 'default';
-                this.printableAreaGroup.append(label);
-            }
+        // axes through the origin
+        if (xFrom <= 0 && xTo >= 0) {
+            addLine(x, yMin, x, yMax, COLOR_MINOR_GRID, (drawAxis ? 4 : 1) / this.scale);
         }
-        for (let i = x; i > xMin; i -= 50) {
-            const color = colorBigGrid;
-            const line = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: i,
-                    y1: yMin,
-                    x2: i,
-                    y2: yMax,
-                    id: uuid(),
-                    stroke: color,
-                    fill: 'none',
-                    'stroke-width': 1 / this.scale,
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line);
-
-            if (drawScale) {
-                const label = createSVGElement({
-                    element: 'text',
-                    attr: {
-                        x: i,
-                        y: y + (coordinateModeName.indexOf('top') !== -1 ? -3 : 6),
-                        id: uuid(),
-                        'font-size': textSize,
-                        fill: colorTextFill,
-                        'text-anchor': 'middle',
-                        'xml:space': 'preserve',
-                        'stroke-width': 1 / this.scale,
-                        'fill-opacity': 1,
-                        'stroke-opacity': 0
-                    }
-                });
-                if (i - x !== 0) {
-                    label.innerHTML = i - x;
-                }
-                this.printableAreaGroup.append(label);
-            }
-        }
-        for (let i = x + 50; i < xMax; i += 50) {
-            const color = colorBigGrid;
-            const line = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: i,
-                    y1: yMin,
-                    x2: i,
-                    y2: yMax,
-                    id: uuid(),
-                    stroke: color,
-                    fill: 'none',
-                    'stroke-width': 1 / this.scale,
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line);
-
-            if (drawScale) {
-                const label = createSVGElement({
-                    element: 'text',
-                    attr: {
-                        x: i,
-                        y: y + (coordinateModeName.indexOf('top') !== -1 ? -3 : 6),
-                        id: uuid(),
-                        'font-size': textSize,
-                        fill: colorTextFill,
-                        'text-anchor': 'middle',
-                        'xml:space': 'preserve',
-                        'stroke-width': 1 / this.scale,
-                        'fill-opacity': 1,
-                        'stroke-opacity': 0
-                    }
-                });
-                if (i - x !== 0) {
-                    label.innerHTML = i - x;
-                }
-                this.printableAreaGroup.append(label);
-            }
+        if (yFrom <= 0 && yTo >= 0) {
+            addLine(xMin, y, xMax, y, COLOR_MINOR_GRID, (drawAxis ? 4 : 1) / this.scale);
         }
 
-        // 4 border lines
         if (drawScale) {
+            const addLabel = (lx: number, ly: number, value: number, anchor: string) => {
+                const label = createSVGElement({
+                    element: 'text',
+                    attr: {
+                        x: lx,
+                        y: ly,
+                        id: uuid(),
+                        'font-size': mm(LABEL_FONT_PX),
+                        fill: COLOR_TEXT,
+                        'text-anchor': anchor,
+                        'xml:space': 'preserve',
+                        'stroke-width': 0,
+                        'fill-opacity': 1,
+                        'stroke-opacity': 0
+                    }
+                });
+                label.textContent = formatTick(value);
+                label.style.cursor = 'default';
+                this.printableAreaGroup.append(label);
+            };
+
+            // An axis through the middle of the workpiece has its labels inside the workpiece:
+            // there the end labels are pulled inwards so that they do not cross the border.
+            const xLabelsInside = yFrom < 0 && yTo > 0;
+            const yLabelsInside = xFrom < 0 && xTo > 0;
+
+            // X labels below the axis (above it for a top origin); "0" is labelled on the Y axis
+            const xLabelY = coordinateModeName.indexOf('top') !== -1 ? y - mm(X_LABEL_ABOVE_PX) : y + mm(X_LABEL_BELOW_PX);
+            for (const v of axisLabelValues(xFrom, xTo, labelStep, pxPerMm, LABEL_MIN_GAP_PX)) {
+                if (v === 0) {
+                    continue;
+                }
+                if (xLabelsInside && Math.abs(v - xFrom) < 1e-6) {
+                    addLabel(x + v + mm(END_LABEL_INSET_PX), xLabelY, v, 'start');
+                } else if (xLabelsInside && Math.abs(v - xTo) < 1e-6) {
+                    addLabel(x + v - mm(END_LABEL_INSET_PX), xLabelY, v, 'end');
+                } else {
+                    addLabel(x + v, xLabelY, v, 'middle');
+                }
+            }
+            // Y labels left of the axis (right of it for a right origin)
+            const right = coordinateModeName.indexOf('right') !== -1;
+            const yLabelX = right ? x + mm(Y_LABEL_SIDE_PX) : x - mm(Y_LABEL_SIDE_PX);
+            for (const v of axisLabelValues(yFrom, yTo, labelStep, pxPerMm, LABEL_MIN_GAP_PX)) {
+                let baseline = y - v + mm(LABEL_BASELINE_SHIFT_PX);
+                if (yLabelsInside && Math.abs(v - yTo) < 1e-6) {
+                    baseline = y - v + mm(LABEL_FONT_PX + END_LABEL_INSET_PX);
+                } else if (yLabelsInside && Math.abs(v - yFrom) < 1e-6) {
+                    baseline = y - v - mm(END_LABEL_INSET_PX);
+                }
+                addLabel(yLabelX, baseline, v, right ? 'start' : 'end');
+            }
+
+            // 4 border lines
             const borderColor = '#B9BCBF';
-            const line1 = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: xMin,
-                    y1: yMin,
-                    x2: xMin,
-                    y2: yMax,
-                    id: uuid(),
-                    stroke: borderColor,
-                    fill: 'none',
-                    'stroke-width': 1 / this.scale,
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            const line2 = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: xMax,
-                    y1: yMin,
-                    x2: xMax,
-                    y2: yMax,
-                    id: uuid(),
-                    stroke: borderColor,
-                    fill: 'none',
-                    'stroke-width': 1 / this.scale,
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            const line3 = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: xMin,
-                    y1: yMin,
-                    x2: xMax,
-                    y2: yMin,
-                    id: uuid(),
-                    stroke: borderColor,
-                    fill: 'none',
-                    'stroke-width': 1 / this.scale,
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            const line4 = createSVGElement({
-                element: 'line',
-                attr: {
-                    x1: xMin,
-                    y1: yMax,
-                    x2: xMax,
-                    y2: yMax,
-                    id: uuid(),
-                    stroke: borderColor,
-                    fill: 'none',
-                    'stroke-width': 1 / this.scale,
-                    opacity: 1,
-                    'fill-opacity': 1
-                }
-            });
-            this.printableAreaGroup.append(line1);
-            this.printableAreaGroup.append(line2);
-            this.printableAreaGroup.append(line3);
-            this.printableAreaGroup.append(line4);
+            addLine(xMin, yMin, xMin, yMax, borderColor, 1 / this.scale);
+            addLine(xMax, yMin, xMax, yMax, borderColor, 1 / this.scale);
+            addLine(xMin, yMin, xMax, yMin, borderColor, 1 / this.scale);
+            addLine(xMin, yMax, xMax, yMax, borderColor, 1 / this.scale);
         }
     }
 
@@ -577,14 +402,15 @@ class Workpiece2d {
         let originElement = null;
         // console.log('createOrigin, origin =', this.origin);
 
+        const blockSize = LOCKING_BLOCK_PX / this._pxPerMm();
         if (this.origin.type === OriginType.CNCLockingBlock) {
             originElement = createSVGElement({
                 element: 'image',
                 attr: {
-                    x: x - (2.5 * this.scale),
-                    y: y - (6 * this.scale),
-                    width: 10 * this.scale,
-                    height: 10 * this.scale,
+                    x: x - blockSize * 0.25,
+                    y: y - blockSize * 0.6,
+                    width: blockSize,
+                    height: blockSize,
                     href: '/resources/images/cnc/locking-block-red.svg',
                     id: 'locking-block',
                     preserveAspectRatio: 'none'
@@ -596,7 +422,7 @@ class Workpiece2d {
                 attr: {
                     cx: x,
                     cy: y,
-                    r: 2,
+                    r: ORIGIN_RADIUS_PX / this._pxPerMm(),
                     fill: '#FF5759',
                     stroke: '#FF5759',
                     'stroke-width': 1 / this.scale,

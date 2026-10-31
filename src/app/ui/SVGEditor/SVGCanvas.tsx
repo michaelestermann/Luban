@@ -1808,6 +1808,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
             materials: materials,
             origin: this.props.origin,
             scale: this.scale,
+            pxPerScale: ratio,
         });
         this.svgContentGroup.updateScale(this.scale);
         this.svgSelector.updateScale(this.scale);
