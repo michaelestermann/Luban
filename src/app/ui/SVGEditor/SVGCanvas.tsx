@@ -596,6 +596,9 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         } else if (!(this.snap && this.currentDrawing.started
             && (this.mode === 'rect' || this.mode === 'ellipse' || (this.mode === 'select' && this.editingElem && event.which === 1)))) {
             return pt;
+        } else if (this.mode === 'select' && !this.snap.isDrag(pt.x - this.currentDrawing.startX, pt.y - this.currentDrawing.startY)) {
+            // a click on a point does not move it
+            return pt;
         }
         return this.snap ? this.snap.point(pt, event) : pt;
     }

@@ -10,6 +10,8 @@ import { Axes, buildCandidates, Guide, snapBox, SnapCandidates, snapPoint, snapR
 
 // snapping reach in screen pixels
 const SNAP_PX = 8;
+// a drag shorter than this (screen pixels) is a click: nothing jumps
+const CLICK_PX = 3;
 
 type Matrix = DOMMatrix | SVGMatrix;
 
@@ -146,9 +148,14 @@ export class SnapSession {
         return getHelpers().snap === this.settings;
     }
 
+    // the pointer moved further than a click jitter
+    public isDrag(dx: number, dy: number): boolean {
+        return Math.hypot(dx, dy) >= (this.tolerance * CLICK_PX) / SNAP_PX;
+    }
+
     // moving a box: snapped delta
     public move(box: Bounds, dx: number, dy: number, event: MouseEvent): { dx: number; dy: number } {
-        if (event.altKey) {
+        if (event.altKey || !this.isDrag(dx, dy)) {
             showGuides(null);
             return { dx, dy };
         }
@@ -159,7 +166,7 @@ export class SnapSession {
 
     // refs moved by (dx, dy) on the given axes: snapped delta
     public refs(refs: SnapRef[], span: Bounds, dx: number, dy: number, event: MouseEvent, axes: Axes): { dx: number; dy: number } {
-        if (event.altKey) {
+        if (event.altKey || !this.isDrag(dx, dy)) {
             showGuides(null);
             return { dx, dy };
         }
