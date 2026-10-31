@@ -142,6 +142,10 @@ abstract class BaseModel {
         this.modelGroup = modelGroup;
 
         Object.keys(modelInfo).forEach((key) => {
+            // a clone passes the source model as modelInfo ({ ...this }): it belongs to the group it is created for
+            if (key === 'modelGroup') {
+                return;
+            }
             this[key] = modelInfo[key];
         });
 

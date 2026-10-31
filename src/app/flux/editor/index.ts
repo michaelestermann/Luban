@@ -397,6 +397,8 @@ function rectCornersOperation(model, SVGActions, radii: CornerRadii): ShapeToPat
 export const ACTION_UPDATE_STATE = 'editor/ACTION_UPDATE_STATE';
 // Head types with a decompose in progress (guards against double clicks)
 const decomposingHeadTypes = new Set<string>();
+// model groups that have the 'update' render listener (initSelectedModelListener)
+const listenedModelGroups = new WeakSet<object>();
 
 export const actions = {
     ...baseActions,
@@ -1552,6 +1554,11 @@ export const actions = {
 
     initSelectedModelListener: (headType) => (dispatch, getState) => {
         const { modelGroup } = getState()[headType];
+        // 4.17 tabs: every document has its own model group; each gets the listener once
+        if (listenedModelGroups.has(modelGroup)) {
+            return;
+        }
+        listenedModelGroups.add(modelGroup);
 
         modelGroup.object.addEventListener('update', () => {
             dispatch(baseActions.render(headType));

@@ -41,6 +41,7 @@ import SelectionBar from '../CncLaserShared/SelectionBar';
 import { ContextMenuItem, shapeContextMenuItems } from '../CncLaserShared/shape-actions';
 import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
+import { isFirstView } from '../CncLaserShared/view-memory';
 
 
 interface VisualizerProps {
@@ -477,7 +478,12 @@ class Visualizer extends React.Component<VisualizerProps> {
         this.canvas.current.resizeWindow();
         // Set the origin to not occlude the model
         this.canvas.current.renderer.setSortObjects(false);
-        this.actions.autoFocus();
+        if (isFirstView(this.props.modelGroup)) {
+            this.actions.autoFocus();
+        } else {
+            // the document was shown before (tab switch): keep its zoom and pan
+            (this.canvas.current as { setCameraOnTop: () => void }).setCameraOnTop();
+        }
         // the undo history belongs to the document and survives a remount (cleared by onRecovery / startProject)
         UniApi.Event.on('appbar-menu:cnc.import', this.actions.importFile);
     }

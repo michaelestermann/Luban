@@ -49,6 +49,7 @@ import { ContextMenuItem, shapeContextMenuItems } from '../CncLaserShared/shape-
 import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
 import ToolPathGroup from '../../../toolpaths/ToolPathGroup';
+import { isFirstView } from '../CncLaserShared/view-memory';
 
 interface VisualizerProps {
     // page: editor or preview
@@ -444,7 +445,12 @@ class Visualizer extends React.Component<VisualizerProps> {
         this.canvas.current.resizeWindow();
         // Set the origin to not occlude the model
         this.canvas.current.renderer.setSortObjects(false);
-        this.actions.autoFocus();
+        if (isFirstView(this.props.modelGroup)) {
+            this.actions.autoFocus();
+        } else {
+            // the document was shown before (tab switch): keep its zoom and pan
+            this.canvas.current.setCameraOnTop();
+        }
         // the undo history belongs to the document and survives a remount (cleared by onRecovery / startProject)
         UniApi.Event.on('appbar-menu:laser.import', this.actions.importFile);
     }

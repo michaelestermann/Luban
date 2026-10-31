@@ -25,6 +25,8 @@ class DocumentStore {
 
     private autosaves = new Map<string, Promise<unknown>>();
 
+    private loading = new Map<string, number>();
+
     public park(id: string, p: ParkedDocument): void {
         this.parked.set(id, p);
     }
@@ -88,6 +90,20 @@ class DocumentStore {
     /** Resolves when the last tracked autosave of the document has settled. */
     public async lastAutosave(id: string): Promise<void> {
         await this.autosaves.get(id);
+    }
+
+    /** A document of `headType` is being loaded into its slice (the mode counts as busy meanwhile). */
+    public setLoading(headType: string, on: boolean): void {
+        const n = (this.loading.get(headType) || 0) + (on ? 1 : -1);
+        if (n > 0) {
+            this.loading.set(headType, n);
+        } else {
+            this.loading.delete(headType);
+        }
+    }
+
+    public loadingHeads(): string[] {
+        return Array.from(this.loading.keys());
     }
 
     private readyEntry(id: string): ReadyEntry {

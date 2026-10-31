@@ -8,7 +8,7 @@
  *
  * Pure functions only: no redux, three.js or DOM imports.
  */
-import type { EditorHeadType } from './tabs-model';
+import { DocumentStatus, EditorHeadType, HOME_TAB, TabsState, WORKSPACE_TAB } from './tabs-model';
 
 const EDITOR_2D_MODE_KEYS = [
     'contentGroup',
@@ -142,4 +142,102 @@ export function adoptSvgChildren(from: SvgGroupsLike | null | undefined, to: Svg
         count += moveChildren(from.backgroundGroup, to.backgroundGroup);
     }
     return count;
+}
+
+export interface ActivationPlan {
+    kind: 'noop' | 'route' | 'live' | 'swap' | 'load';
+    parkId?: string;
+    blockedBy?: EditorHeadType;
+}
+
+/**
+ * What activating `tabId` takes:
+ * - `route`: Home / Workspace (only the route changes)
+ * - `live`: the doc is already live in its slice (another mode, or the mode's page was left)
+ * - `swap`: a parked doc goes live; `parkId` is the doc the slice holds now (it gets parked)
+ * - `load`: the doc is not loaded (session restore / unloaded); `parkId` as for swap
+ * A swap or load would change the doc of a busy mode: `blockedBy` names the mode, the switch must wait.
+ */
+export function planActivation(s: TabsState, tabId: string, opts: { parked: string[]; busyHeads: EditorHeadType[] }): ActivationPlan {
+    if (tabId === HOME_TAB || tabId === WORKSPACE_TAB) {
+        return tabId === s.activeTabId ? { kind: 'noop' } : { kind: 'route' };
+    }
+    const meta = s.documents[tabId];
+    if (!meta) {
+        return { kind: 'noop' };
+    }
+    const head = meta.headType;
+    const liveId = s.activeDocByHead[head];
+    if (liveId === tabId) {
+        return tabId === s.activeTabId ? { kind: 'noop' } : { kind: 'live' };
+    }
+    const plan: ActivationPlan = { kind: meta.loaded && opts.parked.includes(tabId) ? 'swap' : 'load' };
+    if (liveId && s.documents[liveId]) {
+        plan.parkId = liveId;
+    }
+    if (opts.busyHeads.includes(head)) {
+        plan.blockedBy = head;
+    }
+    return plan;
+}
+
+/** Step status of a document for the project panel: sliced (printing G-code), G-code ready (laser/cnc, up to date), design. */
+export function documentStatusOf(slice: Record<string, unknown> | null | undefined, headType: EditorHeadType): DocumentStatus {
+    if (!slice || !slice.gcodeFile) {
+        return 'design';
+    }
+    if (headType === 'printing') {
+        return 'sliced';
+    }
+    return slice.isChangedAfterGcodeGenerating ? 'design' : 'gcode-ready';
+}
+
+/**
+ * Where an auto-save result goes: into the live slice / project meta when its document is still live,
+ * else into the parked document it was started for.
+ */
+export function routeAutosaveResult(activeId: string | undefined, docId: string | undefined): 'slice' | 'parked' {
+    return activeId === docId ? 'slice' : 'parked';
+}
+
+// STEP_STAGE values (lib/manager/ProgressManager) of running printing tasks: loading models, slicing,
+// G-code preview, rotate analysis, support, arrange, auto rotate, scale to fit, simplify, repair, split, mesh coloring
+export const PRINTING_BUSY_STAGES: readonly number[] = [23, 26, 27, 30, 33, 37, 38, 42, 43, 45, 48, 51, 10150, 10160];
+
+interface BusySliceLike {
+    stage?: number;
+    inProgress?: boolean;
+    isGcodeGenerating?: boolean;
+    progressStatesManager?: { inProgress?: () => boolean };
+    toolPathGroup?: { toolPaths?: Array<{ status?: string }> };
+}
+
+/**
+ * A mode is busy while a background result may still arrive for its live document: a running task
+ * (toolpaths, G-code, image processing, slicing), a project being opened, or a pending document load.
+ */
+export function isHeadBusy(
+    state: { project?: { general?: { opening?: boolean } } } & Record<string, unknown>,
+    headType: EditorHeadType,
+    loadingHeads: readonly string[] = [],
+): boolean {
+    if (state.project?.general?.opening || loadingHeads.includes(headType)) {
+        return true;
+    }
+    const slice = state[headType] as BusySliceLike | undefined;
+    if (!slice) {
+        return false;
+    }
+    if (slice.inProgress || slice.isGcodeGenerating) {
+        return true;
+    }
+    if (headType === 'printing') {
+        // the printing progress manager is started by every project load (also laser/cnc) and not always
+        // finished, so the step stage tells whether a printing task runs
+        return PRINTING_BUSY_STAGES.includes(slice.stage as number);
+    }
+    if (typeof slice.progressStatesManager?.inProgress === 'function' && slice.progressStatesManager.inProgress()) {
+        return true;
+    }
+    return !!slice.toolPathGroup?.toolPaths?.some((t) => t && t.status === 'running');
 }

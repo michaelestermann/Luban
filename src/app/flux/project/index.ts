@@ -12,13 +12,10 @@ import {
     COORDINATE_MODE_TOP_RIGHT,
     DISPLAYED_TYPE_MODEL,
     HEAD_TYPE_ENV_NAME,
-    LEFT_EXTRUDER,
     LOAD_MODEL_FROM_OUTER,
     MAX_RECENT_FILES_LENGTH,
     PAGE_EDITOR,
-    PRINTING_MANAGER_TYPE_MATERIAL,
     PROCESS_MODE_MESH,
-    RIGHT_EXTRUDER,
     SOURCE_TYPE
 } from '../../constants';
 import { CylinderWorkpieceReference, OriginType, RectangleWorkpieceReference, convertMaterialsToWorkpiece } from '../../constants/coordinate';
@@ -41,7 +38,9 @@ import { actions as workspaceActions } from '../workspace';
 
 import ThreeModel from '../../models/ThreeModel';
 import { savedLayerOrder, withLayerPositionZ } from '../../models/z-order';
-import { createTabsState, TabsState } from './tabs-model';
+import { createTabsState, isEditorHeadType, TabsState, updateDocument } from './tabs-model';
+import { routeAutosaveResult } from './document-swap';
+import { documentStore } from './document-store';
 /* eslint-disable-next-line import/no-cycle */
 import { tabsActions } from './actions-tabs';
 
@@ -125,10 +124,16 @@ export const actions = {
         startService(HEAD_PRINTING);
     },
 
-    autoSaveEnvironment: (headType, isSaveEditor = false) => async (dispatch, getState) => {
-        const editorState = getState()[headType];
-        // the document this autosave belongs to (taken before the mesh syncs below are awaited)
+    autoSaveEnvironment: (headType, isSaveEditor = false) => (dispatch, getState) => {
+        // the document this autosave belongs to (taken before the mesh syncs are awaited)
         const docId = activeDocId(getState(), headType);
+        const promise = dispatch(actions.autoSaveDocument(headType, docId, isSaveEditor));
+        docId && documentStore.trackAutosave(docId, promise);
+        return promise;
+    },
+
+    autoSaveDocument: (headType, docId, isSaveEditor = false) => async (dispatch, getState) => {
+        const editorState = getState()[headType];
         const { initState } = getState().project[headType];
         const { modelGroup } = editorState;
         // Use getAllEntities() so groups are included in the save
@@ -227,7 +232,15 @@ export const actions = {
             envObj.toolpaths = toolPaths;
         }
         const content = JSON.stringify(envObj);
-        dispatch(actions.updateState(headType, { content, unSaved: true, initState: false }));
+        // 4.17 tabs: the tab may have been switched while the meshes were synced: the result belongs to docId
+        if (routeAutosaveResult(activeDocId(getState(), headType), docId) === 'slice') {
+            dispatch(actions.updateState(headType, { content, unSaved: true, initState: false }));
+        } else {
+            documentStore.patchProjectMeta(docId, { content, unSaved: true, initState: false });
+        }
+        if (docId) {
+            dispatch(tabsActions.setTabs((s) => updateDocument(s, docId, { unSaved: true })));
+        }
         await api.env.saveEnv({ content, docId });
     },
 
@@ -495,35 +508,8 @@ export const actions = {
 
         // Recover selected presets
         if (envHeadType === HEAD_PRINTING) {
-            // deal with old project file
-            if (restState.defaultQualityId) {
-                restState.activePresetIds = {
-                    [LEFT_EXTRUDER]: restState.defaultQualityId,
-                    [RIGHT_EXTRUDER]: '',
-                };
-            }
-
-            // deal with old project without supportExtruderConfig
-            if (!restState.supportExtruderConfig && restState.helpersExtruderConfig) {
-                restState.supportExtruderConfig = {
-                    support: restState.helpersExtruderConfig.support,
-                    interface: restState.helpersExtruderConfig.support,
-                };
-            }
-
-            dispatch(modActions.updateState({
-                ...restState
-            }));
-
-            const { helpersExtruderConfig } = restState;
-            dispatch(modActions.updateHelpersExtruder(helpersExtruderConfig));
-
-            const { supportExtruderConfig } = restState;
-            dispatch(modActions.updateSupportExtruderConfig(supportExtruderConfig));
-
             const { defaultMaterialId, defaultMaterialIdRight } = envObj;
-            dispatch(modActions.updateSavedPresetIds(PRINTING_MANAGER_TYPE_MATERIAL, defaultMaterialId, LEFT_EXTRUDER));
-            dispatch(modActions.updateSavedPresetIds(PRINTING_MANAGER_TYPE_MATERIAL, defaultMaterialIdRight, RIGHT_EXTRUDER));
+            dispatch(printingActions.applyDocumentSettings({ ...restState, defaultMaterialId, defaultMaterialIdRight }));
         } else {
             dispatch(modActions.updateState(envHeadType, restState));
         }
@@ -674,88 +660,110 @@ export const actions = {
         dispatch(actions.autoSaveEnvironment(headType));
     },
 
+    /**
+     * Uploads a project file and reads its environment. Returns null when the file cannot be read.
+     * `fileRef` is the opened file to remember ({ name, path }) or null for a case-library template.
+     */
+    parseProjectFile: (file) => async () => {
+        const formData = new FormData();
+        let shouldSetFileName = true;
+        let body = file;
+        if (!(file instanceof File)) {
+            if (new RegExp(/^\.\//).test(file?.path)) {
+                shouldSetFileName = false;
+            }
+            body = JSON.stringify(file);
+        }
+        formData.append('file', body);
+        const { body: { content, projectPath } } = await api.env.recoverProjectFile(formData);
+        let envObj;
+        try {
+            envObj = JSON.parse(content);
+        } catch (e) {
+            log.error(e);
+            return null;
+        }
+        const machineInfo = envObj.machineInfo;
+        let headType;
+        // Start of Compatible with old project file
+        if (machineInfo) {
+            // new verison of project file
+            headType = machineInfo.headType;
+            // TODO: for project file of "< version 4.1"
+            if (headType === '3dp') {
+                headType = HEAD_PRINTING;
+            }
+        } else {
+            // old verison of project file
+            headType = envObj.headType;
+        }
+        UniformToolpathConfig(envObj);
+        // End of Compatible with old project file
+
+        let fileRef = null;
+        if (shouldSetFileName) {
+            fileRef = file instanceof File ? { name: file.name, path: projectPath } : { name: file.name, path: file.path };
+        }
+        return { envObj, content, headType, shouldSetFileName, fileRef };
+    },
+
+    /** Loads a parsed project into the live document of its mode (the page of that mode is shown). */
+    loadParsedProject: (parsed, isGuideTours = false) => async (dispatch) => {
+        const { envObj, content, headType, shouldSetFileName, fileRef } = parsed;
+        content && dispatch(actions.updateState(headType, { findLastEnvironment: false, content, unSaved: false }));
+        await dispatch(actions.onRecovery(headType, envObj, false, shouldSetFileName, isGuideTours));
+        if (shouldSetFileName) {
+            await dispatch(actions.setOpenedFileWithType(headType, fileRef));
+            await dispatch(actions.updateState(headType, { unSaved: false, content }));
+        } else {
+            await dispatch(actions.updateState(headType, { unSaved: true, openedFile: null }));
+        }
+    },
+
+    /**
+     * Opens a project file. 4.17 tabs: it gets its own tab (an open file is only focused); G-code goes to
+     * the Workspace. The guide tours keep the 4.16 behaviour: they load into the live document of the mode.
+     */
     openProject: (file, history, unReload = false, isGuideTours = false) => async (dispatch) => {
+        if (isGuideTours) {
+            return dispatch(actions.openProjectReplace(file, history, unReload, isGuideTours));
+        }
+        return dispatch(tabsActions.openProjectInTab(file, history));
+    },
+
+    /** 4.16: the project replaces the live document of its mode. */
+    openProjectReplace: (file, history, unReload = false, isGuideTours = false) => async (dispatch) => {
         if (checkIsSnapmakerProjectFile(file.name)) {
             dispatch(actions.updateState('general', { opening: true }));
-
-            const formData = new FormData();
-            let shouldSetFileName = true;
-            if (!(file instanceof File)) {
-                if (new RegExp(/^\.\//).test(file?.path)) {
-                    shouldSetFileName = false;
-                }
-                file = JSON.stringify(file);
-            }
-            formData.append('file', file);
-            const { body: { content, projectPath } } = await api.env.recoverProjectFile(formData);
-            let envObj;
             try {
-                envObj = JSON.parse(content);
-            } catch (e) {
-                log.error(e);
-                return;
-            }
-            const machineInfo = envObj.machineInfo;
-            let headType;
-            // Start of Compatible with old project file
-
-            if (machineInfo) {
-                // new verison of project file
-                headType = machineInfo.headType;
-                // TODO: for project file of "< version 4.1"
-                if (headType === '3dp') {
-                    headType = HEAD_PRINTING;
+                const parsed = await dispatch(actions.parseProjectFile(file));
+                if (!parsed) {
+                    return;
                 }
-            } else {
-                // old verison of project file
-                headType = envObj.headType;
-            }
-            UniformToolpathConfig(envObj);
-
-            // End of Compatible with old project file
-
-            const oldHeadType = getCurrentHeadType(history?.location?.pathname) || headType;
-            // 4.17 tabs: the projects of other modes stay open in their tabs; the project replaces the live
-            // document of its own mode, so that one is offered for saving and closed
-            if (!isGuideTours) {
-                await dispatch(actions.save(headType, {
-                    message: i18n._(
-                        'key-Project/Save-Save the changes you made in the {{headType}} G-code Generator? Your changes will be lost if you don’t save them.',
-                        { headType: i18n._(HEAD_TYPE_ENV_NAME[headType]) }
-                    )
-                }));
-            }
-
-            await dispatch(actions.closeProject(headType));
-            // 4.17 tabs: the project gets the live document of its mode (registered if there is none)
-            dispatch(tabsActions.ensureLiveDocument(headType));
-            content && dispatch(actions.updateState(headType, { findLastEnvironment: false, content, unSaved: false }));
-            if (oldHeadType === headType && !unReload) {
-                history.push('/');
-            }
-            history.push(
-                {
-                    pathname: `/${headType}`,
-                    state: { initialized: true }
+                const { headType } = parsed;
+                const oldHeadType = getCurrentHeadType(history?.location?.pathname) || headType;
+                // the projects of other modes stay open in their tabs; the project replaces the live
+                // document of its own mode, so that one is offered for saving and closed
+                if (!isGuideTours) {
+                    await dispatch(actions.save(headType, {
+                        message: i18n._(
+                            'key-Project/Save-Save the changes you made in the {{headType}} G-code Generator? Your changes will be lost if you don’t save them.',
+                            { headType: i18n._(HEAD_TYPE_ENV_NAME[headType]) }
+                        )
+                    }));
                 }
-            );
-            await dispatch(actions.onRecovery(headType, envObj, false, shouldSetFileName, isGuideTours));
-            if (shouldSetFileName) {
-                if (file instanceof File) {
-                    const newOpenedFile = {
-                        name: file.name,
-                        path: projectPath
-                    };
-                    await dispatch(actions.setOpenedFileWithType(headType, newOpenedFile));
-                } else {
-                    await dispatch(actions.setOpenedFileWithType(headType, JSON.parse(file)));
-                }
-                await dispatch(actions.updateState(headType, { unSaved: false, content }));
-            } else {
-                await dispatch(actions.updateState(headType, { unSaved: true, openedFile: null }));
-            }
 
-            dispatch(actions.updateState('general', { opening: false }));
+                await dispatch(actions.closeProject(headType));
+                // the project gets the live document of its mode (registered if there is none)
+                dispatch(tabsActions.ensureLiveDocument(headType));
+                if (oldHeadType === headType && !unReload) {
+                    history.push('/');
+                }
+                history.push(`/${headType}`);
+                await dispatch(actions.loadParsedProject(parsed, isGuideTours));
+            } finally {
+                dispatch(actions.updateState('general', { opening: false }));
+            }
         } else if (checkIsGCodeFile(file.name)) {
             dispatch(workspaceActions.uploadGcodeFile(file));
             history.push('/workspace');
@@ -769,7 +777,13 @@ export const actions = {
             history.push(to);
             return;
         }
-        // 4.17 tabs: the projects of other modes stay open in their tabs; the new project replaces the live
+        // 4.17 tabs: a new project gets its own tab. Restarting the guide tour on the page of a mode
+        // (from === to) keeps the 4.16 behaviour and replaces the live document of the mode.
+        if (!(restartGuide && from === to) && isEditorHeadType(newHeadType)) {
+            await dispatch(tabsActions.newDocument(newHeadType, { isRotate }, history));
+            return;
+        }
+        // the projects of other modes stay open in their tabs; the new project replaces the live
         // document of its own mode, so that one is offered for saving and closed
         const replacedHeadType = newHeadType || oldHeadType;
         const done = await dispatch(actions.save(replacedHeadType, {

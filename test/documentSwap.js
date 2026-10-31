@@ -5,7 +5,12 @@ import {
     pickDocumentState,
     swapDocumentState,
     adoptSvgChildren,
+    planActivation,
+    documentStatusOf,
+    routeAutosaveResult,
+    isHeadBusy,
 } from '../src/app/flux/project/document-swap';
+import { addDocument, activateTab, createTabsState } from '../src/app/flux/project/tabs-model';
 import { documentStore } from '../src/app/flux/project/document-store';
 
 const laserSlice = () => ({
@@ -162,5 +167,116 @@ test('documentStore lastAutosave waits for the tracked autosave and never reject
     t.pass('a failed autosave does not reject');
     await documentStore.lastAutosave('none');
     t.pass('unknown id resolves');
+    t.end();
+});
+
+const meta = (id, headType, extra = {}) => ({
+    id,
+    headType,
+    openedFile: null,
+    untitledIndex: 1,
+    unSaved: false,
+    loaded: true,
+    source: 'live',
+    isRotate: false,
+    machineSeries: null,
+    machineToolHead: null,
+    status: 'design',
+    lastActiveAt: 0,
+    ...extra,
+});
+
+// A (cnc, live), B (cnc, parked), L (laser, live), U (cnc, not loaded)
+const tabsWithDocs = () => {
+    let s = createTabsState();
+    for (const m of [meta('A', 'cnc'), meta('B', 'cnc'), meta('L', 'laser'), meta('U', 'cnc', { loaded: false })]) {
+        s = addDocument(s, m);
+    }
+    s = activateTab(s, 'L', 1);
+    s = activateTab(s, 'A', 2);
+    return s;
+};
+
+test('planActivation: live doc of another head → live (no park)', (t) => {
+    const s = tabsWithDocs();
+    t.deepEqual(planActivation(s, 'L', { parked: ['B'], busyHeads: [] }), { kind: 'live' });
+    t.deepEqual(planActivation(s, 'A', { parked: ['B'], busyHeads: [] }), { kind: 'noop' }, 'the active tab → noop');
+    t.end();
+});
+
+test('planActivation: parked doc while the slice holds another doc → swap with parkId', (t) => {
+    const s = tabsWithDocs();
+    t.deepEqual(planActivation(s, 'B', { parked: ['B'], busyHeads: [] }), { kind: 'swap', parkId: 'A' });
+    t.end();
+});
+
+test('planActivation: unloaded doc → load', (t) => {
+    const s = tabsWithDocs();
+    t.deepEqual(planActivation(s, 'U', { parked: ['B'], busyHeads: [] }), { kind: 'load', parkId: 'A' });
+    t.end();
+});
+
+test('planActivation blocks same-head swap while busy', (t) => {
+    const s = tabsWithDocs();
+    t.deepEqual(planActivation(s, 'B', { parked: ['B'], busyHeads: ['cnc'] }), { kind: 'swap', parkId: 'A', blockedBy: 'cnc' });
+    t.deepEqual(planActivation(s, 'U', { parked: ['B'], busyHeads: ['cnc'] }), { kind: 'load', parkId: 'A', blockedBy: 'cnc' });
+    t.end();
+});
+
+test('planActivation does not block a cross-head live switch', (t) => {
+    const s = tabsWithDocs();
+    t.deepEqual(planActivation(s, 'L', { parked: ['B'], busyHeads: ['cnc', 'laser'] }), { kind: 'live' });
+    t.end();
+});
+
+test('planActivation: home and workspace → route', (t) => {
+    const s = tabsWithDocs();
+    t.deepEqual(planActivation(s, 'home', { parked: [], busyHeads: ['cnc'] }), { kind: 'route' });
+    t.deepEqual(planActivation(s, 'workspace', { parked: [], busyHeads: [] }), { kind: 'route' });
+    t.deepEqual(planActivation(s, 'nope', { parked: [], busyHeads: [] }), { kind: 'noop' }, 'unknown id → noop');
+    t.end();
+});
+
+test('planActivation: a parked doc of a head without live doc swaps without parkId', (t) => {
+    let s = createTabsState();
+    s = addDocument(s, meta('P', 'printing'));
+    t.deepEqual(planActivation(s, 'P', { parked: ['P'], busyHeads: [] }), { kind: 'swap' });
+    t.end();
+});
+
+test('documentStatusOf: sliced / gcode-ready / design', (t) => {
+    t.equal(documentStatusOf({ gcodeFile: { name: 'a.gcode' } }, 'printing'), 'sliced');
+    t.equal(documentStatusOf({ gcodeFile: null }, 'printing'), 'design');
+    t.equal(documentStatusOf({ gcodeFile: { name: 'a.nc' }, isChangedAfterGcodeGenerating: false }, 'cnc'), 'gcode-ready');
+    t.equal(documentStatusOf({ gcodeFile: { name: 'a.nc' }, isChangedAfterGcodeGenerating: true }, 'laser'), 'design');
+    t.equal(documentStatusOf({ gcodeFile: null, isChangedAfterGcodeGenerating: false }, 'laser'), 'design');
+    t.equal(documentStatusOf(undefined, 'laser'), 'design');
+    t.end();
+});
+
+test('autosave result is routed to the doc it started for', (t) => {
+    t.equal(routeAutosaveResult('A', 'A'), 'slice', 'still live → slice');
+    t.equal(routeAutosaveResult('B', 'A'), 'parked', 'swapped meanwhile → parked doc A');
+    t.equal(routeAutosaveResult(undefined, undefined), 'slice', 'no registry (4.16) → slice');
+    t.equal(routeAutosaveResult(undefined, 'A'), 'parked', 'doc no longer live → parked');
+    t.end();
+});
+
+test('isHeadBusy: progress, G-code generation, running toolpath, project opening, pending load', (t) => {
+    const idle = { inProgress: false, isGcodeGenerating: false, progressStatesManager: { inProgress: () => false }, toolPathGroup: { toolPaths: [{ status: 'success' }] } };
+    const state = (cnc, opening = false) => ({ cnc, project: { general: { opening } } });
+    t.equal(isHeadBusy(state(idle), 'cnc'), false, 'idle');
+    t.equal(isHeadBusy(state({ ...idle, inProgress: true }), 'cnc'), true, 'inProgress');
+    t.equal(isHeadBusy(state({ ...idle, isGcodeGenerating: true }), 'cnc'), true, 'G-code');
+    t.equal(isHeadBusy(state({ ...idle, progressStatesManager: { inProgress: () => true } }), 'cnc'), true, 'progress manager running');
+    t.equal(isHeadBusy(state({ ...idle, toolPathGroup: { toolPaths: [{ status: 'running' }] } }), 'cnc'), true, 'toolpath running');
+    t.equal(isHeadBusy(state(idle, true), 'cnc'), true, 'project opening');
+    t.equal(isHeadBusy(state(idle), 'cnc', ['cnc']), true, 'pending load of that head');
+    t.equal(isHeadBusy(state(idle), 'cnc', ['laser']), false, 'pending load of another head');
+    t.equal(isHeadBusy({ project: { general: {} } }, 'laser'), false, 'no slice');
+    const printing = (stage) => ({ printing: { stage, inProgress: false, progressStatesManager: { inProgress: () => true } }, project: { general: {} } });
+    t.equal(isHeadBusy(printing(24), 'printing'), false, 'printing: a stuck progress manager after a load does not count, stage "load complete"');
+    t.equal(isHeadBusy(printing(27), 'printing'), true, 'printing: slicing');
+    t.equal(isHeadBusy(printing(23), 'printing'), true, 'printing: loading models');
     t.end();
 });

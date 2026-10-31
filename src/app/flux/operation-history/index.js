@@ -5,7 +5,8 @@ import { actions as projectActions } from '../project';
 
 const updateState = (headType, state) => {
     if (headType === 'printing') {
-        return printingBaseActions.updateState(headType, state);
+        // the printing updateState takes only the state (passing headType spread "printing" into keys '0'..'7')
+        return printingBaseActions.updateState(state);
     } else if (headType === 'cnc' || headType === 'laser') {
         return editorBaseActions.updateState(headType, state);
     }

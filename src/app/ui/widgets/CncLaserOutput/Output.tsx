@@ -117,7 +117,14 @@ const Output: React.FC<OutputViewProps> = (props) => {
             });
         }
     }, [previewFailed]);
+    // 4.17 tabs: the page of a document is mounted again on a tab switch; the G-code is generated when the
+    // counter changes, not again on mount (that replaced the G-code of the document every time)
+    const generatedCounter = useRef(shouldGenerateGcodeCounter);
     useEffect(() => {
+        if (generatedCounter.current === shouldGenerateGcodeCounter) {
+            return;
+        }
+        generatedCounter.current = shouldGenerateGcodeCounter;
         actions.onGenerateThumbnail();
         dispatch(editorActions.commitGenerateGcode(headType));
     }, [shouldGenerateGcodeCounter]);

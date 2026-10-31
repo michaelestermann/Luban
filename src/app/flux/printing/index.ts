@@ -440,6 +440,8 @@ function setMachineSavedPresetIds(series, presetIds) {
 }
 
 let initPromise: Promise<void> = null;
+// model groups (documents) whose page was initialized once (4.17 tabs)
+const initializedPrintingGroups = new WeakSet<object>();
 
 export const actions = {
     updateState: state => {
@@ -1112,9 +1114,63 @@ export const actions = {
         }
     },
 
+    /**
+     * Applies the print settings of a document (presets, extruder assignment) to the slice: used when a
+     * project is recovered and when the page of an open document is mounted again (4.17 tabs).
+     */
+    applyDocumentSettings: (settings) => (dispatch) => {
+        const restState = { ...settings };
+        // deal with old project file
+        if (restState.defaultQualityId) {
+            restState.activePresetIds = {
+                [LEFT_EXTRUDER]: restState.defaultQualityId,
+                [RIGHT_EXTRUDER]: '',
+            };
+        }
+
+        // deal with old project without supportExtruderConfig
+        if (!restState.supportExtruderConfig && restState.helpersExtruderConfig) {
+            restState.supportExtruderConfig = {
+                support: restState.helpersExtruderConfig.support,
+                interface: restState.helpersExtruderConfig.support,
+            };
+        }
+
+        dispatch(actions.updateState({
+            ...restState
+        }));
+
+        const { helpersExtruderConfig } = restState;
+        dispatch(actions.updateHelpersExtruder(helpersExtruderConfig));
+
+        const { supportExtruderConfig } = restState;
+        dispatch(actions.updateSupportExtruderConfig(supportExtruderConfig));
+
+        const { defaultMaterialId, defaultMaterialIdRight } = restState;
+        dispatch(actions.updateSavedPresetIds(PRINTING_MANAGER_TYPE_MATERIAL, defaultMaterialId, LEFT_EXTRUDER));
+        dispatch(actions.updateSavedPresetIds(PRINTING_MANAGER_TYPE_MATERIAL, defaultMaterialIdRight, RIGHT_EXTRUDER));
+    },
+
     // TODO: init should be re-called
     init: () => async (dispatch, getState) => {
+        // 4.17 tabs: the page of an open document is mounted again (tab switch): initPrintConfig resets the
+        // presets to the machine's saved ones, the document keeps its own
+        const before = getState().printing;
+        const remount = initializedPrintingGroups.has(before.modelGroup);
+        const documentSettings = {
+            activePresetIds: before.activePresetIds,
+            defaultMaterialId: before.defaultMaterialId,
+            defaultMaterialIdRight: before.defaultMaterialIdRight,
+            helpersExtruderConfig: before.helpersExtruderConfig,
+            supportExtruderConfig: before.supportExtruderConfig,
+        };
+
         await dispatch(actions.initPrintConfig());
+
+        if (remount && getState().printing.modelGroup === before.modelGroup) {
+            dispatch(actions.applyDocumentSettings(documentSettings));
+        }
+        initializedPrintingGroups.add(before.modelGroup);
 
         const printingState = getState().printing;
         const { modelGroup } = printingState;

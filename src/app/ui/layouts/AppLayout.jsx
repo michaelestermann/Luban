@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import i18next from 'i18next';
 import isElectron from 'is-electron';
-import { cloneDeep, includes, throttle } from 'lodash';
+import { cloneDeep, throttle } from 'lodash';
 import Mousetrap from 'mousetrap';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -12,8 +12,6 @@ import { Group } from 'three';
 
 import {
     FORUM_URL,
-    HEAD_CNC,
-    HEAD_LASER,
     HEAD_TYPE_ENV_NAME,
     MARKET_EN_URL,
     MARKET_ZH_URL,
@@ -27,9 +25,9 @@ import {
 
 import { actions as appGlobalActions } from '../../flux/app-global';
 import { actions as menuActions } from '../../flux/appbar-menu';
-import { actions as editorActions } from '../../flux/editor';
 import { actions as machineActions } from '../../flux/machine';
 import { actions as operationHistoryActions } from '../../flux/operation-history';
+import { tabsActions } from '../../flux/project/actions-tabs';
 import { actions as projectActions } from '../../flux/project';
 import { actions as settingsActions } from '../../flux/setting';
 
@@ -62,10 +60,7 @@ class AppLayout extends React.PureComponent {
         store: PropTypes.object.isRequired,
         currentModalPath: PropTypes.string,
         updateCurrentModalPath: PropTypes.func.isRequired,
-        startProject: PropTypes.func.isRequired,
-        initializeWorkpiece: PropTypes.func.isRequired,
-        initializeOrigin: PropTypes.func.isRequired,
-        scaleCanvasToFit: PropTypes.func.isRequired,
+        newDocument: PropTypes.func.isRequired,
         initRecoverService: PropTypes.func.isRequired,
         save: PropTypes.func.isRequired,
         saveAndClose: PropTypes.func.isRequired,
@@ -84,8 +79,6 @@ class AppLayout extends React.PureComponent {
         updateShouldCheckForUpdate: PropTypes.func.isRequired,
         children: PropTypes.array.isRequired,
         restartGuideTours: PropTypes.func.isRequired,
-        machineInfo: PropTypes.object.isRequired,
-        updateMachineToolHead: PropTypes.func.isRequired,
         longTermBackupConfig: PropTypes.func.isRequired,
         showSavedModal: PropTypes.bool.isRequired,
         savedModalType: PropTypes.string,
@@ -793,22 +786,8 @@ class AppLayout extends React.PureComponent {
                 }
             });
             UniApi.Event.on('appbar-menu:new-file', async ({ headType, isRotate }) => {
-                const oldPathname = this.props.history.location.pathname;
-                const history = this.props.history;
-                const { toolHead, series } = this.props.machineInfo;
-                await this.props.startProject(oldPathname, `/${headType}`, history, isRotate);
-                await this.props.updateMachineToolHead(toolHead, series, headType);
-
-                // initialize workpiece now
-                if (includes([HEAD_LASER, HEAD_CNC], headType)) {
-                    await this.props.initializeWorkpiece(headType, {
-                        isRotate: isRotate,
-                    });
-
-                    await this.props.initializeOrigin(headType);
-
-                    await this.props.scaleCanvasToFit(headType);
-                }
+                // 4.17 tabs: a new project opens in its own tab (tool head, workpiece, origin and fit included)
+                await this.props.newDocument(headType, isRotate, this.props.history);
             });
             UniApi.Event.on('appbar-menu:clear-recent-files', () => {
                 this.actions.updateRecentFile([], 'reset');
@@ -1048,11 +1027,8 @@ const mapDispatchToProps = (dispatch) => {
         save: (headType, dialogOptions) => dispatch(projectActions.save(headType, dialogOptions)),
         saveAndClose: (headType, opts) => dispatch(projectActions.saveAndClose(headType, opts)),
         openProject: (file, history) => dispatch(projectActions.openProject(file, history)),
-        startProject: (from, to, history, isRotate) => dispatch(projectActions.startProject(from, to, history, false, isRotate)),
+        newDocument: (headType, isRotate, history) => dispatch(tabsActions.newDocument(headType, { isRotate }, history)),
         updateRecentProject: (arr, type) => dispatch(projectActions.updateRecentFile(arr, type)),
-        initializeWorkpiece: (headType, options) => dispatch(editorActions.initializeWorkpiece(headType, options)),
-        initializeOrigin: (headType) => dispatch(editorActions.initializeOrigin(headType)),
-        scaleCanvasToFit: (headType) => dispatch(editorActions.scaleCanvasToFit(headType)),
         loadCase: (pathConfig, history) => dispatch(projectActions.openProject(pathConfig, history)),
         updateCurrentModalPath: (pathName) => dispatch(menuActions.updateCurrentModalPath(pathName)),
         updateMenu: () => dispatch(menuActions.updateMenu()),
@@ -1063,7 +1039,6 @@ const mapDispatchToProps = (dispatch) => {
         updateAutoupdateMessage: (message) => dispatch(machineActions.updateAutoupdateMessage(message)),
         updateIsDownloading: (isDownloading) => dispatch(machineActions.updateIsDownloading(isDownloading)),
         restartGuideTours: (pathname, history) => dispatch(projectActions.startProject(pathname, pathname, history, true)),
-        updateMachineToolHead: (toolHead, series, headType) => dispatch(machineActions.updateMachineToolHead(toolHead, series, headType)),
         longTermBackupConfig: () => dispatch(settingsActions.longTermBackupConfig()),
         updateSavedModal: (options) => dispatch(appGlobalActions.updateSavedModal(options)),
         updateShowArrangeModelsError: (options) => dispatch(appGlobalActions.updateShowArrangeModelsError(options)),

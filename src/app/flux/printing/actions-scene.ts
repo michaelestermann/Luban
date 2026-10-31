@@ -154,7 +154,8 @@ const applyPrintSettingsToModels = () => {
 
         // update parameters for each model
         if (leftPresetModel || rightPresetModel) {
-            const globalSettings = leftPresetModel.settings;
+            // the left preset may not be valid yet (a project preset this machine lacks): PresetInitialization picks one
+            const globalSettings = (leftPresetModel || rightPresetModel).settings;
 
             const leftMaterialPresetModel = materialDefinitions.find((d) => d.definitionId === defaultMaterialId);
             const rightMaterialPresetModel = materialDefinitions.find((d) => d.definitionId === defaultMaterialIdRight);
