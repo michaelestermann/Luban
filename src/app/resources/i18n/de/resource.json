@@ -2743,5 +2743,6 @@
     "key-Tabs/Scroll tabs right": "Tabs nach rechts blättern",
     "key-Tabs/All tabs": "Alle Tabs",
     "key-Tabs/Search {{count}} open projects": "{{count}} offene Projekte durchsuchen",
-    "key-Tabs/No open project matches.": "Kein offenes Projekt passt."
+    "key-Tabs/No open project matches.": "Kein offenes Projekt passt.",
+    "key-Tabs/This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.": "Dieses Projekt hat Änderungen, die nicht gespeichert sind. Wenn Sie ohne Speichern beenden, bleiben sie als automatische Sicherung erhalten und der Tab ist beim nächsten Start wieder da. Der Rückgängig-Verlauf bleibt nicht erhalten."
 }

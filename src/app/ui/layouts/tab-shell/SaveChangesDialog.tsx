@@ -1,16 +1,20 @@
 import React, { useEffect, useRef } from 'react';
 
 import i18n from '../../../lib/i18n';
-import { SaveChangesAnswer } from '../../../lib/tab-dialogs';
+import { SaveChangesAnswer, SaveChangesContext } from '../../../lib/tab-dialogs';
 import styles from './tab-shell.styl';
 
 interface SaveChangesDialogProps {
     name: string;
+    context?: SaveChangesContext;
     onAnswer: (answer: SaveChangesAnswer) => void;
 }
 
-/** "Save changes to {{name}}?" (design D): Save is focused, Esc = Cancel. */
-const SaveChangesDialog: React.FC<SaveChangesDialogProps> = ({ name, onAnswer }) => {
+/**
+ * "Save changes to {{name}}?" (design D): Save is focused, Esc = Cancel. Closing a tab discards the changes,
+ * quitting keeps them as autosave and the tab comes back on the next start, so the body text differs.
+ */
+const SaveChangesDialog: React.FC<SaveChangesDialogProps> = ({ name, context = 'close', onAnswer }) => {
     const saveRef = useRef<HTMLButtonElement | null>(null);
 
     useEffect(() => {
@@ -40,7 +44,9 @@ const SaveChangesDialog: React.FC<SaveChangesDialogProps> = ({ name, onAnswer })
                     {i18n._('key-Tabs/Save changes to {{name}}?', { name })}
                 </b>
                 <span id="tabs-save-text" className={styles['dialog-text']}>
-                    {i18n._('key-Tabs/This tab has changes that are not saved. If you close it without saving, they are lost. Undo history of this tab is also cleared.')}
+                    {context === 'quit'
+                        ? i18n._('key-Tabs/This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.')
+                        : i18n._('key-Tabs/This tab has changes that are not saved. If you close it without saving, they are lost. Undo history of this tab is also cleared.')}
                 </span>
                 <div className={styles['dialog-actions']}>
                     <button type="button" className={styles.secondary} data-answer="discard" onClick={() => onAnswer('discard')}>

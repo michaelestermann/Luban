@@ -14,7 +14,7 @@ const DialogHost: React.FC = () => {
         return null;
     }
     if (request.kind === 'save-changes') {
-        return <SaveChangesDialog key={request.id} name={request.name} onAnswer={request.respond} />;
+        return <SaveChangesDialog key={request.id} name={request.name} context={request.context} onAnswer={request.respond} />;
     }
     return <QuitDialog key={request.id} docs={request.docs} onAnswer={request.respond} />;
 };

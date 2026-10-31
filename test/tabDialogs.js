@@ -55,3 +55,17 @@ test('saveAs cancel resolves false', async (t) => {
     t.equal(done.file.name, 'a.snapcnc', 'file of the dialog');
     t.end();
 });
+
+test('requestSaveChanges tells the dialog whether it asks for a close or a quit', async (t) => {
+    const closing = requestSaveChanges('a.snapcnc');
+    const closeReq = currentDialogRequest();
+    t.equal(closeReq.context, 'close', 'default context is close');
+    closeReq.respond('cancel');
+    await closing;
+    const quitting = requestSaveChanges('b.snapcnc', 'quit');
+    const quitReq = currentDialogRequest();
+    t.equal(quitReq.context, 'quit', 'quit context passed to the dialog');
+    quitReq.respond('discard');
+    t.equal(await quitting, 'discard');
+    t.end();
+});

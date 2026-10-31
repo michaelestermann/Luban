@@ -8,6 +8,9 @@
 
 export type SaveChangesAnswer = 'save' | 'discard' | 'cancel';
 
+/** Why the save prompt is shown: closing a tab discards the changes, quitting keeps them as autosave. */
+export type SaveChangesContext = 'close' | 'quit';
+
 export interface QuitDocument {
     id: string;
     name: string;
@@ -21,7 +24,7 @@ export interface QuitAnswer {
 }
 
 export type DialogRequest =
-    | { id: number; kind: 'save-changes'; name: string; respond: (answer: SaveChangesAnswer) => void }
+    | { id: number; kind: 'save-changes'; name: string; context: SaveChangesContext; respond: (answer: SaveChangesAnswer) => void }
     | { id: number; kind: 'quit-selection'; docs: QuitDocument[]; respond: (answer: QuitAnswer) => void };
 
 type Listener = (request: DialogRequest | null) => void;
@@ -74,9 +77,9 @@ export function subscribeDialogRequests(listener: Listener): () => void {
     };
 }
 
-/** "Save changes to {{name}}?" with Save / Don't save / Cancel. */
-export async function requestSaveChanges(name: string): Promise<SaveChangesAnswer> {
-    return enqueue<SaveChangesAnswer>((id, respond) => ({ id, kind: 'save-changes', name, respond }));
+/** "Save changes to {{name}}?" with Save / Don't save / Cancel. `context` picks the body text (close or quit). */
+export async function requestSaveChanges(name: string, context: SaveChangesContext = 'close'): Promise<SaveChangesAnswer> {
+    return enqueue<SaveChangesAnswer>((id, respond) => ({ id, kind: 'save-changes', name, context, respond }));
 }
 
 /** The quit list: the documents to save (all checked at first), "Save selected and quit" / "Don’t save any" / "Cancel". */

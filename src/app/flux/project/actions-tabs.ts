@@ -1021,7 +1021,7 @@ const confirmQuit = (history: HistoryLike) => async (dispatch): Promise<boolean>
         const unsaved: DocumentMeta[] = dispatch(unsavedDocuments());
         let toSave: string[] = [];
         if (unsaved.length === 1) {
-            const answer = await requestSaveChanges(documentDisplayName(unsaved[0], i18n._('key-Tabs/Untitled')));
+            const answer = await requestSaveChanges(documentDisplayName(unsaved[0], i18n._('key-Tabs/Untitled')), 'quit');
             if (answer === 'cancel') {
                 return false;
             }

@@ -2722,5 +2722,6 @@
     "key-Tabs/Scroll tabs right": "Scroll tabs right",
     "key-Tabs/All tabs": "All tabs",
     "key-Tabs/Search {{count}} open projects": "Search {{count}} open projects",
-    "key-Tabs/No open project matches.": "No open project matches."
+    "key-Tabs/No open project matches.": "No open project matches.",
+    "key-Tabs/This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.": "This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept."
 }
