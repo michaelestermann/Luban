@@ -12,7 +12,7 @@ import CursorGroup from './CursorGroup';
 import { ModelTransformation } from '../../../../models/BaseModel';
 import {
     PathData, PointType, parsePath, serializePath, nearestSegment, insertPoint, deletePoint, splitAt, splitSegment,
-    setPointPosition, getPointType, setPointType
+    setPointPosition, getPointType, setPointType, roundCorner
 } from '../../path-edit/path-geometry';
 import {
     NodeRef, PointEditState, SegmentPoints, TPoint, normalizePenPath, segmentPoints, readPathFromSegments, parseNumbers,
@@ -1094,7 +1094,8 @@ class DrawGroup {
                 y: pathNode.y,
                 type: getPointType(this.editPath, subpathIndex, nodeIndex),
                 canDelete: !!deletePoint(this.editPath, subpathIndex, nodeIndex),
-                canSplit: !!splitAt(this.editPath, subpathIndex, nodeIndex)
+                canSplit: !!splitAt(this.editPath, subpathIndex, nodeIndex),
+                canRound: !!roundCorner(this.editPath, subpathIndex, nodeIndex, 1)
             };
         }
         return {
@@ -1169,6 +1170,17 @@ class DrawGroup {
             return;
         }
         this.commitEdit(setPointPosition(this.editPath, node.subpathIndex, node.nodeIndex, x, y), node, true);
+    }
+
+    /** Replaces the selected corner by an arc of radius r (canvas units = mm); the radius may get smaller. */
+    public roundSelectedPoint(r: number): number | null {
+        const node = this.getSelectedNode();
+        const result = node && roundCorner(this.editPath, node.subpathIndex, node.nodeIndex, r);
+        if (!result) {
+            return null;
+        }
+        this.commitEdit(result.path, null);
+        return result.radius;
     }
 
     public setSelectedPointType(type: PointType) {

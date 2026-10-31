@@ -37,6 +37,8 @@ export interface PointEditState {
         type: PointType;
         canDelete: boolean;
         canSplit: boolean;
+        // a corner between two straight segments (Round)
+        canRound: boolean;
     };
     cardOpen: boolean;
     insertMode: boolean;

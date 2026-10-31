@@ -72,6 +72,9 @@ import DrawTransform from '../operation-history/DrawTransform';
 import DrawTransformComplete from '../operation-history/DrawTransformComplete';
 import ShapeToPath from '../operation-history/ShapeToPath';
 import { SHAPE_GEOMETRY_ATTRIBUTES, closePathD, joinPathEndsD, shapeToPathD } from '../../ui/SVGEditor/path-edit/shape-to-path';
+import {
+    CORNER_KEYS, CornerRadii, ROUNDED_RECT_ATTRIBUTE, clampRadii, flipRadii, planCorners, readCorners, roundedRectPathD
+} from '../../ui/SVGEditor/path-edit/rect-corners';
 import MoveOperation2D from '../operation-history/MoveOperation2D';
 import RotateOperation2D from '../operation-history/RotateOperation2D';
 import ScaleOperation2D from '../operation-history/ScaleOperation2D';
@@ -290,6 +293,15 @@ const scaleExtname = ['.svg', '.dxf'];
 const DEFAULT_STATE = {
     showSVGShapeLibrary: false
 };
+
+// a copy of the config without the given keys
+function withoutKeys(config: Record<string, string | number | boolean>, keys: string[]) {
+    const result = { ...config };
+    for (const key of keys) {
+        delete result[key];
+    }
+    return result;
+}
 
 export const ACTION_UPDATE_STATE = 'editor/ACTION_UPDATE_STATE';
 // Head types with a decompose in progress (guards against double clicks)
@@ -3131,7 +3143,7 @@ export const actions = {
             shapeElem: elem,
             shapeConfig: { ...model.config },
             pathElem,
-            pathConfig: { ...model.config, svgNodeName: 'path', [SvgModel.POINT_EDITABLE_ATTRIBUTE]: 'true' }
+            pathConfig: { ...withoutKeys(model.config, geometry), svgNodeName: 'path', [SvgModel.POINT_EDITABLE_ATTRIBUTE]: 'true' }
         });
         operation.redo();
         const operations = new CompoundOperation();
@@ -3139,6 +3151,80 @@ export const actions = {
         dispatch(operationHistoryActions.setOperations(headType, operations));
         dispatch(actions.resetProcessState(headType));
         return pathElem;
+    },
+
+    /**
+     * Corner radii of the selected rectangle (corners as seen on the screen, clamped to half the shorter
+     * side). Equal radii stay on the <rect> (rx / ry); different ones turn it into a path with arcs; a path
+     * made like that gets its new corners. One undo step; toolpaths are marked stale.
+     */
+    setRectCorners: (headType, radii: CornerRadii) => (dispatch, getState) => {
+        const { SVGActions, modelGroup } = getState()[headType];
+        const selected = modelGroup.getSelectedModelArray();
+        const model = selected.length === 1 ? selected[0] : null;
+        const elem = model?.elem;
+        const info = elem && readCorners(elem.nodeName, (name) => elem.getAttribute(name));
+        if (!info) {
+            return;
+        }
+        // the element's own corners: a flip in its transform mirrors them on the screen
+        const flipX = model.transformation.scaleX < 0;
+        const flipY = model.transformation.scaleY < 0;
+        const wanted = clampRadii(flipRadii(radii, flipX, flipY), info.width, info.height).radii;
+        if (CORNER_KEYS.every(key => Math.abs(wanted[key] - info.radii[key]) < 1e-6)) {
+            return;
+        }
+        const plan = planCorners(info.kind, wanted);
+        let newElem: SVGElement;
+        let newConfig: Record<string, string | number | boolean>;
+        if (plan.kind === 'rect') {
+            newElem = elem.cloneNode(true) as SVGElement;
+            newConfig = withoutKeys(model.config, ['rx', 'ry']);
+            if (plan.radius > 0) {
+                const r = String(Math.round(plan.radius * 10000) / 10000);
+                newElem.setAttribute('rx', r);
+                newElem.setAttribute('ry', r);
+                // written back to the element when the project is opened
+                newConfig = { ...newConfig, rx: r, ry: r };
+            } else {
+                newElem.removeAttribute('rx');
+                newElem.removeAttribute('ry');
+            }
+        } else {
+            const skip = info.kind === 'rect' ? SHAPE_GEOMETRY_ATTRIBUTES.rect : ['d'];
+            newElem = document.createElementNS(NS.SVG, 'path') as SVGPathElement;
+            for (const attr of Array.from(elem.attributes) as Attr[]) {
+                if (!skip.includes(attr.name)) {
+                    newElem.setAttribute(attr.name, attr.value);
+                }
+            }
+            newElem.setAttribute('d', roundedRectPathD(info.x, info.y, info.width, info.height, wanted));
+            newElem.setAttribute(SvgModel.POINT_EDITABLE_ATTRIBUTE, 'true');
+            newElem.setAttribute(ROUNDED_RECT_ATTRIBUTE, 'true');
+            if (newElem.hasAttribute('svgNodeName')) {
+                newElem.setAttribute('svgNodeName', 'path');
+            }
+            newConfig = {
+                ...withoutKeys(model.config, ['rx', 'ry']),
+                svgNodeName: 'path',
+                [SvgModel.POINT_EDITABLE_ATTRIBUTE]: 'true',
+                [ROUNDED_RECT_ATTRIBUTE]: 'true'
+            };
+        }
+        const operation = new ShapeToPath({
+            svgModel: model,
+            svgActions: SVGActions,
+            shapeElem: elem,
+            shapeConfig: { ...model.config },
+            pathElem: newElem as SVGPathElement,
+            pathConfig: newConfig
+        });
+        operation.redo();
+        const operations = new CompoundOperation();
+        operations.push(operation);
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(actions.resetProcessState(headType));
+        dispatch(baseActions.render(headType));
     },
 
     /**

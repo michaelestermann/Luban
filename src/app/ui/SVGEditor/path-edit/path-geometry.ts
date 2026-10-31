@@ -553,3 +553,71 @@ export function setPointType(path: PathData, subpathIndex: number, nodeIndex: nu
     }
     return result;
 }
+
+// ---- round corner ----
+
+/**
+ * Replaces a corner point between two straight segments by a circular arc of radius r (one cubic).
+ * The tangent points are clamped to the segment lengths (the radius gets smaller); a tangent point
+ * on the neighbour point is merged with it. Returns null if the point has no two straight sides,
+ * the sides are in line or r is not positive.
+ */
+export function roundCorner(path: PathData, subpathIndex: number, nodeIndex: number, r: number): { path: PathData; radius: number } | null {
+    const sub = path[subpathIndex];
+    const n = sub?.nodes.length || 0;
+    if (!sub || !(r > 0) || n < 3) {
+        return null;
+    }
+    const hasPrev = sub.closed || nodeIndex > 0;
+    const hasNext = sub.closed || nodeIndex < n - 1;
+    if (!hasPrev || !hasNext) {
+        return null;
+    }
+    const prevIndex = (nodeIndex - 1 + n) % n;
+    const nextIndex = (nodeIndex + 1) % n;
+    const c = sub.nodes[nodeIndex];
+    const p = sub.nodes[prevIndex];
+    const q = sub.nodes[nextIndex];
+    if (c.in || c.out || p.out || q.in) {
+        // a curve on one side
+        return null;
+    }
+    const len1 = dist(c, p);
+    const len2 = dist(c, q);
+    if (len1 < EPSILON || len2 < EPSILON) {
+        return null;
+    }
+    const u1 = { x: (p.x - c.x) / len1, y: (p.y - c.y) / len1 };
+    const u2 = { x: (q.x - c.x) / len2, y: (q.y - c.y) / len2 };
+    const alpha = Math.acos(Math.max(-1, Math.min(1, u1.x * u2.x + u1.y * u2.y)));
+    if (alpha < 1e-6 || Math.PI - alpha < 1e-6) {
+        return null;
+    }
+    const tanHalf = Math.tan(alpha / 2);
+    const tangent = Math.min(r / tanHalf, len1, len2);
+    const radius = tangent * tanHalf;
+    // cubic handle length of an arc with the sweep π - α
+    const handle = (4 / 3) * Math.tan((Math.PI - alpha) / 4) * radius;
+    const a = { x: c.x + u1.x * tangent, y: c.y + u1.y * tangent };
+    const b = { x: c.x + u2.x * tangent, y: c.y + u2.y * tangent };
+    const c1 = { x: a.x - u1.x * handle, y: a.y - u1.y * handle };
+    const c2 = { x: b.x - u2.x * handle, y: b.y - u2.y * handle };
+
+    const result = copyPath(path);
+    const nodes = result[subpathIndex].nodes;
+    const mergeA = dist(a, p) < 1e-9;
+    const mergeB = dist(b, q) < 1e-9;
+    const inserted: PathNode[] = [];
+    if (mergeA) {
+        nodes[prevIndex].out = c1;
+    } else {
+        inserted.push({ x: a.x, y: a.y, in: null, out: c1 });
+    }
+    if (mergeB) {
+        nodes[nextIndex].in = c2;
+    } else {
+        inserted.push({ x: b.x, y: b.y, in: c2, out: null });
+    }
+    nodes.splice(nodeIndex, 1, ...inserted);
+    return { path: result, radius };
+}

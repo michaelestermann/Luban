@@ -48,6 +48,7 @@ test('ellipse, circle and rectangle perimeters', (t) => {
     // Ramanujan II is 0.04 % short for a flat ellipse
     near(t, ellipsePerimeter(10, 0), 40, 0.02, 'flat ellipse');
     t.equal(rectPerimeter(30, 22), 104, 'rectangle');
+    near(t, rectPerimeter(30, 22, 5), 104 - 40 + 10 * Math.PI, 1e-9, 'rounded corners');
     t.end();
 });
 
@@ -100,6 +101,7 @@ test('geometryRows per shape kind', (t) => {
 
 test('cutLength and selectionGeometry', (t) => {
     t.equal(cutLength({ kind: 'rect', width: 30, height: 22 }), 104, 'rectangle perimeter');
+    near(t, cutLength({ kind: 'rect', width: 30, height: 22, radius: 5 }), 64 + 10 * Math.PI, 1e-9, 'rounded rectangle perimeter');
     t.equal(cutLength({ kind: 'circle', width: 40, height: 40 }), circleCircumference(20), 'circle');
     t.equal(cutLength({ kind: 'path', length: 12 }), 12, 'path');
     t.equal(cutLength({ kind: 'svg', length: null }), null, 'svg still loading');

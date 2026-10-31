@@ -4,6 +4,7 @@
 import svgPath from 'svgpath';
 
 import { GeometryInfo, outlineDLength, ParsedShape, shapesLength } from './geometry-length';
+import { rectElementRadius } from '../path-edit/rect-corners';
 
 interface GeometryModel {
     modelID: string;
@@ -118,8 +119,11 @@ export function modelGeometry(model: GeometryModel, onLoaded: () => void): Geome
         return [{ kind: 'text' }];
     }
     switch (tag) {
-        case 'rect':
-            return [{ kind: 'rect', width: w, height: h }];
+        case 'rect': {
+            // rx / ry are in the element units (mm, scale is applied to width and height)
+            const radius = rectElementRadius(model.elem.getAttribute('rx'), model.elem.getAttribute('ry'), w, h);
+            return [radius > 0 ? { kind: 'rect', width: w, height: h, radius } : { kind: 'rect', width: w, height: h }];
+        }
         case 'circle':
             return [{ kind: 'circle', width: w, height: h }];
         case 'ellipse':

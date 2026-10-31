@@ -21,6 +21,7 @@ import {
     setPointPosition,
     setPointType,
     getPointType,
+    roundCorner,
 } from '../src/app/ui/SVGEditor/path-edit/path-geometry';
 
 const near = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
@@ -309,5 +310,51 @@ test('pathGeometry: setPointType smooth makes handles collinear', (t) => {
     t.ok(near(m[0].nodes[1].out.y, 0), 'handle on the line direction');
     t.ok(m[0].nodes[1].out.x > 5);
     t.equal(getPointType(m, 0, 1), 'smooth');
+    t.end();
+});
+
+test('roundCorner replaces a corner between two lines by an arc', (t) => {
+    const path = parsePath('M0 0 L20 0 L20 20 L0 20 Z');
+    const res = roundCorner(path, 0, 1, 5);
+    t.ok(res, 'rounded');
+    t.equal(res.radius, 5, 'radius kept');
+    const nodes = res.path[0].nodes;
+    t.equal(nodes.length, 5, 'one point more');
+    t.ok(nearPoint(nodes[1], { x: 15, y: 0 }) && nearPoint(nodes[2], { x: 20, y: 5 }), 'tangent points');
+    t.ok(nodes[1].out && nodes[2].in && !nodes[1].in && !nodes[2].out, 'one cubic between them');
+    const mid = pointAt(res.path, 0, 1, 0.5);
+    t.ok(near(Math.hypot(mid.x - 15, mid.y - 5), 5, 0.01), 'arc middle on the circle');
+    t.ok(res.path[0].closed, 'still closed');
+    t.equal(serializePath(path), 'M0 0 L20 0 L20 20 L0 20 Z', 'input unchanged');
+    t.end();
+});
+
+test('roundCorner on other angles, the first point and with clamping', (t) => {
+    // 45° corner: tangent length r / tan(22.5°)
+    const path = parsePath('M0 0 L100 0 L0 100');
+    const res = roundCorner(path, 0, 1, 10);
+    const tan = 10 / Math.tan(Math.PI / 8);
+    t.ok(nearPoint(res.path[0].nodes[1], { x: 100 - tan, y: 0 }, 1e-6), 'tangent point on the first line');
+    // first point of a closed path
+    const square = parsePath('M0 0 L20 0 L20 20 L0 20 Z');
+    const first = roundCorner(square, 0, 0, 4);
+    t.equal(first.path[0].nodes.length, 5);
+    t.ok(nearPoint(first.path[0].nodes[0], { x: 0, y: 4 }) && nearPoint(first.path[0].nodes[1], { x: 4, y: 0 }), 'arc from the left side to the top');
+    // radius too large: clamped to the shorter segment
+    const big = roundCorner(parsePath('M0 0 L10 0 L10 40'), 0, 1, 50);
+    t.ok(near(big.radius, 10), 'clamped radius');
+    t.equal(big.path[0].nodes.length, 3, 'tangent point on the end point merged');
+    t.ok(nearPoint(big.path[0].nodes[0], { x: 0, y: 0 }) && big.path[0].nodes[0].out, 'the start point gets the handle');
+    t.end();
+});
+
+test('roundCorner refuses what it cannot round', (t) => {
+    const open = parsePath('M0 0 L10 0 L10 10');
+    t.equal(roundCorner(open, 0, 0, 2), null, 'open end');
+    t.equal(roundCorner(open, 0, 2, 2), null, 'other open end');
+    t.equal(roundCorner(parsePath('M0 0 C3 3 7 3 10 0 L10 10'), 0, 1, 2), null, 'next to a curve');
+    t.equal(roundCorner(parsePath('M0 0 L10 0 L20 0'), 0, 1, 2), null, 'straight');
+    t.equal(roundCorner(open, 0, 1, 0), null, 'radius 0');
+    t.equal(roundCorner(open, 0, 1, -1), null, 'negative radius');
     t.end();
 });

@@ -19,11 +19,14 @@ test('shapeToPathD converts draw tool shapes', (t) => {
     const c = parsePath(shapeToPathD('circle', attrs({ cx: 0, cy: 0, r: 5 })));
     t.equal(c[0].nodes.length, 4, 'circle: 4 points');
     t.equal(shapeToPathD('line', attrs({ x1: 1, y1: 2, x2: 3, y2: 4 })), 'M1 2 L3 4', 'line');
+    const rounded = parsePath(shapeToPathD('rect', attrs({ x: 0, y: 0, width: 20, height: 10, rx: 2 })));
+    t.equal(rounded[0].nodes.length, 8, 'rounded rect: 2 points per corner');
+    const capped = parsePath(shapeToPathD('rect', attrs({ x: 0, y: 0, width: 20, height: 10, ry: 9 })));
+    t.equal(capped[0].nodes.length, 6, 'rounded rect: radius clamped to half the height');
     t.end();
 });
 
 test('shapeToPathD refuses what it cannot convert exactly', (t) => {
-    t.equal(shapeToPathD('rect', attrs({ x: 0, y: 0, width: 10, height: 10, rx: 2 })), null, 'rounded rect');
     t.equal(shapeToPathD('rect', attrs({ x: 0, y: 0, width: 0, height: 10 })), null, 'empty rect');
     t.equal(shapeToPathD('ellipse', attrs({ cx: 0, cy: 0, rx: 0, ry: 3 })), null, 'flat ellipse');
     t.equal(shapeToPathD('path', attrs({ d: 'M0 0' })), null, 'path');

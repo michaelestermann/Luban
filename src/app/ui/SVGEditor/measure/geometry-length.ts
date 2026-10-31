@@ -20,6 +20,8 @@ export interface GeometryInfo {
     height?: number;
     // path, svg and multiple: total length, null while not known
     length?: number | null;
+    // rect: corner radius
+    radius?: number;
 }
 
 export type GeometryKey = 'length' | 'totalLength' | 'circumference' | 'perimeter' | 'radius' | 'width' | 'height';
@@ -104,8 +106,10 @@ export function circleCircumference(r: number): number {
     return 2 * Math.PI * Math.abs(r);
 }
 
-export function rectPerimeter(width: number, height: number): number {
-    return 2 * (Math.abs(width) + Math.abs(height));
+// corners with radius r: each corner loses 2 r of straight side and gets a quarter circle
+export function rectPerimeter(width: number, height: number, radius: number = 0): number {
+    const r = Math.max(0, Math.min(radius, Math.abs(width) / 2, Math.abs(height) / 2));
+    return 2 * (Math.abs(width) + Math.abs(height)) - 8 * r + 2 * Math.PI * r;
 }
 
 export function polylineLength(points: number[][], sx: number = 1, sy: number = 1): number {
@@ -159,7 +163,7 @@ export function geometryRows(info: GeometryInfo): GeometryRow[] {
             ];
         case 'rect':
             return [
-                { key: 'perimeter', value: rectPerimeter(width, height) },
+                { key: 'perimeter', value: rectPerimeter(width, height, info.radius || 0) },
                 { key: 'width', value: width },
                 { key: 'height', value: height },
             ];
@@ -181,7 +185,7 @@ export function cutLength(info: GeometryInfo): number | null | undefined {
         case 'ellipse':
             return ellipsePerimeter(width / 2, height / 2);
         case 'rect':
-            return rectPerimeter(width, height);
+            return rectPerimeter(width, height, info.radius || 0);
         case 'path':
         case 'svg':
         case 'multiple':

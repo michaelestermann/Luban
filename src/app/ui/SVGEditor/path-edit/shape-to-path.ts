@@ -5,6 +5,7 @@ import {
     circleToPath, closeOpenSubpaths, ellipseToPath, hasOpenSubpaths, joinEnds, lineToPath, parsePath, rectToPath, serializePath
 } from './path-geometry';
 import { normalizePenPath } from './point-edit';
+import { rectElementRadius, roundedRectPathD } from './rect-corners';
 
 // attributes of a shape that the path's `d` replaces
 export const SHAPE_GEOMETRY_ATTRIBUTES: Record<string, string[]> = {
@@ -19,7 +20,7 @@ export const JOIN_TOLERANCE = 1;
 
 /**
  * The `d` of a path equal to the shape (in the shape's own coordinates), or null if the element is
- * no draw tool shape or can not be converted exactly (rounded rect, zero size).
+ * no draw tool shape or has no size. Rounded corners become quarter circles (cubics).
  */
 export function shapeToPathD(tagName: string, getAttribute: (name: string) => string | null): string | null {
     if (!SHAPE_GEOMETRY_ATTRIBUTES[tagName]) {
@@ -36,10 +37,11 @@ export function shapeToPathD(tagName: string, getAttribute: (name: string) => st
     switch (tagName) {
         case 'rect': {
             const [x, y, width, height, rx, ry] = values;
-            if (width <= 0 || height <= 0 || rx > 0 || ry > 0) {
+            if (width <= 0 || height <= 0) {
                 return null;
             }
-            return rectToPath(x, y, width, height);
+            const r = rectElementRadius(String(rx), String(ry), width, height);
+            return r > 0 ? roundedRectPathD(x, y, width, height, { tl: r, tr: r, br: r, bl: r }) : rectToPath(x, y, width, height);
         }
         case 'ellipse': {
             const [cx, cy, rx, ry] = values;

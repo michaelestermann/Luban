@@ -36,6 +36,9 @@ const stroke = {
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
+// radius offered by Round (the last one used)
+let lastRoundRadius = 2;
+
 /**
  * Point editing on the canvas: the point card next to the selected end point (follows zoom and pan,
  * never covers the point) and the keys of the mode (Tab, Shift+Tab, Enter, Del, Esc).
@@ -46,6 +49,7 @@ const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScree
     const rootRef = useRef<HTMLDivElement>(null);
     const cardRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState<{ left: number, top: number } | null>(null);
+    const [roundRadius, setRoundRadius] = useState(lastRoundRadius);
 
     const activeRef = useRef(isActive);
     activeRef.current = isActive;
@@ -216,6 +220,35 @@ const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScree
                     {typeButton('smooth', i18n._('key-CncLaser/PointEdit-Smooth'), i18n._('key-CncLaser/PointEdit-Smooth: the handles stay in line'), (
                         <svg {...stroke}><path d="M4 18c3-10 13-10 16 0" /></svg>
                     ))}
+                </div>
+                <div className={styles.round}>
+                    <div className={styles.field}>
+                        <span className={styles.prefix}>R</span>
+                        <Input
+                            key={`r-${key}`}
+                            suffix="mm"
+                            size="small"
+                            min={0}
+                            disabled={!selected.canRound}
+                            value={roundRadius}
+                            onChange={(value: number) => {
+                                lastRoundRadius = value;
+                                setRoundRadius(value);
+                            }}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        className={styles['action-button']}
+                        title={selected.canRound
+                            ? i18n._('key-CncLaser/PointEdit-Replace the corner by an arc of radius R')
+                            : i18n._('key-CncLaser/PointEdit-Only a corner between two straight segments can be rounded')}
+                        disabled={!selected.canRound || !(roundRadius > 0)}
+                        onClick={() => drawGroup.roundSelectedPoint(roundRadius)}
+                    >
+                        <svg {...stroke}><path d="M5 19V12a7 7 0 017-7h7" /></svg>
+                        {i18n._('key-CncLaser/PointEdit-Round')}
+                    </button>
                 </div>
                 <div className={styles.actions}>
                     <button
