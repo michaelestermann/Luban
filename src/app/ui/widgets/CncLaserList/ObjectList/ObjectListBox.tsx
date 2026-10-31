@@ -93,7 +93,8 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
         >
             <div className={classNames('padding-vertical-4')}>
                 {
-                    allModels && allModels.map((entity) => {
+                    // layer order: the front object on top
+                    allModels && allModels.slice().reverse().map((entity) => {
                         if (entity && entity.type === '2d-group') {
                             return (
                                 <GroupRow

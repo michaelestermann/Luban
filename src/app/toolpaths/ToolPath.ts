@@ -18,6 +18,7 @@ import {
     SUCCESS,
     WARNING,
 } from './utils';
+import { orderedMemberIds } from '../models/z-order';
 import SvgModel from '../models/SvgModel';
 
 interface GenerateToolPathTask {
@@ -122,15 +123,8 @@ class ToolPath {
         const allLeafModels = typeof this.modelGroup.getModels === 'function'
             ? this.modelGroup.getModels()
             : this.modelGroup.models;
-        this.visibleModelIDs = allLeafModels
-            .filter((model) => {
-                return (
-                    this.modelMap.has(model.modelID) && model.visible === true
-                );
-            })
-            .map((model) => {
-                return model.modelID;
-            });
+        // machining order = the toolpath's member order (its chips), not the layer order
+        this.visibleModelIDs = orderedMemberIds([...this.modelMap.keys()], allLeafModels);
 
         return {
             id: this.id,

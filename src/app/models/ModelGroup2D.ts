@@ -17,6 +17,7 @@ import { emitUpdateScaleEvent } from '../ui/components/SMCanvas/TransformControl
 import { ModelInfo as SVGModelInfo, TMode } from './BaseModel';
 import SvgModel from './SvgModel';
 import SvgGroup from './SvgGroup';
+import { moveToEdge } from './z-order';
 import { ModelInfo, ModelTransformation } from './ThreeBaseModel';
 import { ModelEvents } from './events';
 
@@ -573,6 +574,29 @@ class ModelGroup2D extends EventEmitter {
             sorted[i].updateTransformation({ 'positionZ': (i + 1) * INDEXMARGIN });
         }
         selected.updateTransformation({ 'positionZ': (sorted.length + 1) * INDEXMARGIN });
+    }
+
+    /**
+     * Layer order (context menu "Bring to Front" / "Send to Back"): move the selected objects,
+     * a grouped object with its whole group, to the front or back of models[] and apply that order
+     * to positionZ and to the SVG elements.
+     */
+    public moveSelectedToEdge(edge: 'front' | 'back') {
+        const entities = [];
+        for (const model of this.selectedModelArray) {
+            const entity = this.getParentGroup(model.modelID) || model;
+            if (!entities.includes(entity)) {
+                entities.push(entity);
+            }
+        }
+        this.models = moveToEdge(this.models, entities, edge);
+        const leafs = this.getModels<SvgModel>();
+        leafs.forEach((leaf, i) => {
+            leaf.updateTransformation({ 'positionZ': (i + 1) * INDEXMARGIN });
+            const elem = leaf.elem as unknown as Element;
+            elem?.parentNode?.appendChild(elem);
+        });
+        this.modelChanged();
     }
 
     // keep the origin order

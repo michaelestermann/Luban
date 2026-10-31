@@ -1595,14 +1595,22 @@ export const actions = {
 
     bringSelectedModelToFront: (headType, svgModel) => (dispatch, getState) => {
         const { modelGroup, SVGActions } = getState()[headType];
-        SVGActions.bringElementToFront(svgModel?.elem);
+        if (!svgModel) {
+            // context menu / toolbar: move the selection in the layer order (object list too)
+            modelGroup.moveSelectedToEdge('front');
+            dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
+            dispatch(baseActions.render(headType));
+            return;
+        }
+        SVGActions.bringElementToFront(svgModel.elem);
         modelGroup.bringSelectedModelToFront(svgModel);
     },
 
     sendSelectedModelToBack: headType => (dispatch, getState) => {
-        const { modelGroup, SVGActions } = getState()[headType];
-        SVGActions.sendElementToBack();
-        modelGroup.sendSelectedModelToBack();
+        const { modelGroup } = getState()[headType];
+        modelGroup.moveSelectedToEdge('back');
+        dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
+        dispatch(baseActions.render(headType));
     },
 
     arrangeAllModels2D: headType => (dispatch, getState) => {
