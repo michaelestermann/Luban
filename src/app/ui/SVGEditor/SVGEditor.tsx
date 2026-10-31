@@ -13,6 +13,7 @@ import SVGShapeLibrary from './SVGShapeLibrary';
 import PointEditOverlay from './path-edit/PointEditOverlay';
 import MeasureOverlay from './measure/MeasureOverlay';
 import DimensionsOverlay from './measure/DimensionsOverlay';
+import SnapOverlay from './snap/SnapOverlay';
 import ShapeActionKeys from './combine/ShapeActionKeys';
 import OffsetPreview from './combine/OffsetPreview';
 import ArrayPreview from './combine/ArrayPreview';
@@ -435,6 +436,10 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             getScreenCTM={getCanvasScreenCTM}
                             isActive={props.isActive}
                             onExit={() => onStopDraw(true)}
+                        />
+                        <SnapOverlay
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
                         />
                         <DimensionsOverlay
                             headType={props.headType}

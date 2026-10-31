@@ -21,6 +21,10 @@ import { library } from './lib/ext-shapes';
 import { NS } from './lib/namespaces';
 import SVGContentGroup from './svg-content/SVGContentGroup';
 import { SHAPE_GEOMETRY_ATTRIBUTES } from './path-edit/shape-to-path';
+import { Bounds } from './measure/dimension-chains';
+import { Axes, SnapRef } from './snap/snap-math';
+import { elementsBounds, SnapSession } from './snap/snap-session';
+import { getHelpers } from './rail/helper-switches';
 
 const STEP_COUNT = 10;
 const THRESHOLD_DIST = 0.8;
@@ -164,6 +168,15 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
 
     // drawing variables
     public currentDrawing = {};
+
+    // snapping of the running drag (switch "Snap"), null when off
+    private snap: SnapSession | null = null;
+
+    // box of the moved selection at the start of a move
+    private snapBox: Bounds | null = null;
+
+    // resize: the dragged grip and the axes it changes
+    private snapGrip: { ref: SnapRef; span: Bounds; axes: Axes } | null = null;
 
     // selectedElements = [];
 
@@ -450,6 +463,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
     }
 
     public updateMode(mode, extShape) {
+        this.endSnap();
         if (mode === 'select') {
             jQuery(this.svgContainer).css('cursor', 'auto');
         } else if (mode === 'draw') {
@@ -546,6 +560,77 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
             || this.props.elementActions.isPointInSelectArea(x - this.props.size.x, this.props.size.y - y);
     }
 
+    // collects the snap candidates once per drag; the given elements are not targets
+    private startSnap(exclude: Element[]): SnapSession | null {
+        this.snap = SnapSession.start({
+            models: this.props.modelGroup?.getModels?.() || [],
+            exclude,
+            ctm: this.svgContentGroup.getScreenCTM(),
+            size: this.props.size,
+            coordinateSize: this.props.coordinateSize,
+            coordinateMode: this.props.coordinateMode,
+        });
+        this.snapBox = null;
+        this.snapGrip = null;
+        return this.snap;
+    }
+
+    private endSnap() {
+        this.snap?.clear();
+        this.snap = null;
+        this.snapBox = null;
+        this.snapGrip = null;
+    }
+
+    // snapped cursor while drawing (pen, rectangle, ellipse) or dragging a point in point editing
+    private snapPointer(pt: { x: number, y: number }, event): { x: number, y: number } {
+        if (this.mode === 'draw') {
+            if (!getHelpers().snap.on) {
+                this.endSnap();
+                return pt;
+            }
+            // the pen snaps while hovering too: candidates once, again after each click or option change
+            if (!this.snap || !this.snap.isCurrent()) {
+                this.startSnap(this.editingElem ? [this.editingElem] : []);
+            }
+        } else if (!(this.snap && this.currentDrawing.started
+            && (this.mode === 'rect' || this.mode === 'ellipse' || (this.mode === 'select' && this.editingElem && event.which === 1)))) {
+            return pt;
+        }
+        return this.snap ? this.snap.point(pt, event) : pt;
+    }
+
+    // resize grip of the selection box: the dragged point, the axes it changes and its edge
+    private startResizeSnap(elements: Element[], resizeMode: string, uniform: boolean) {
+        const box = this.startSnap(elements) && elementsBounds(elements, this.svgContentGroup.getScreenCTM());
+        if (!box) {
+            return;
+        }
+        const w = resizeMode.includes('e') || resizeMode.includes('w');
+        const h = resizeMode.includes('n') || resizeMode.includes('s');
+        let x = (box.minX + box.maxX) / 2;
+        if (resizeMode.includes('e')) {
+            x = box.maxX;
+        } else if (resizeMode.includes('w')) {
+            x = box.minX;
+        }
+        let y = (box.minY + box.maxY) / 2;
+        if (resizeMode.includes('s')) {
+            y = box.maxY;
+        } else if (resizeMode.includes('n')) {
+            y = box.minY;
+        }
+        // uniform scaling follows the width when the grip changes it, otherwise the height
+        const axes = uniform ? { x: w, y: !w } : { x: w, y: h };
+        const span = {
+            minX: w ? x : box.minX,
+            maxX: w ? x : box.maxX,
+            minY: h ? y : box.minY,
+            maxY: h ? y : box.maxY,
+        };
+        this.snapGrip = { ref: { x, y }, span, axes };
+    }
+
     public onMouseDown = (event) => {
         // event.preventDefault();
 
@@ -590,6 +675,9 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                     draw.startX = x;
                     draw.startY = y;
                     this.svgContentGroup.drawGroup.onMouseDown(mouseTarget, x, y, event);
+                    if (this.svgContentGroup.drawGroup.isDraggingPoint()) {
+                        this.startSnap([this.editingElem]);
+                    }
                 } else if (!rightClick) {
                     if (mouseTarget && mouseTarget.parentNode?.id === 'svg-data') {
                         draw.selectedTarget = mouseTarget;
@@ -628,6 +716,9 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
 
                 const elements = this.svgContentGroup.selectedElements;
                 this.props.elementActions.moveElementsStart(elements);
+                if (!rightClick && this.startSnap(elements)) {
+                    this.snapBox = elementsBounds(elements, this.svgContentGroup.getScreenCTM());
+                }
 
                 /* TODO: remove
                 const transform = this.svgContainer.createSVGTransform();
@@ -696,6 +787,10 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                 }
 
                 this.props.elementActions.resizeElementsStart(elements);
+                // snapping only for boxes that are not rotated
+                if (draw.isGroupResize || Math.abs(draw.angle % 360) < 1e-6) {
+                    this.startResizeSnap(elements, draw.resizeMode, !!draw.uniformScale);
+                }
 
                 break;
             }
@@ -722,6 +817,8 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                 draw.startY = y;
 
                 this.svgContentGroup.drawGroup.onMouseDown(mouseTarget, x, y);
+                // new candidates for the next point (the drawing may have been finished into an object)
+                this.startSnap(this.editingElem ? [this.editingElem] : []);
                 break;
             }
             case 'panMove': {
@@ -755,14 +852,15 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                 break;
             }
             case 'rect': {
+                const start = this.startSnap([]) ? this.snap.point({ x, y }, event) : { x, y };
                 draw.started = true;
-                draw.startX = x;
-                draw.startY = y;
+                draw.startX = start.x;
+                draw.startY = start.y;
                 this.svgContentGroup.addSVGElement({
                     element: 'rect',
                     attr: {
-                        x,
-                        y,
+                        x: start.x,
+                        y: start.y,
                         width: 0,
                         height: 0,
                         stroke,
@@ -788,12 +886,13 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
                 break;
             }
             case 'ellipse': {
+                const centre = this.startSnap([]) ? this.snap.point({ x, y }, event) : { x, y };
                 draw.started = true;
                 this.svgContentGroup.addSVGElement({
                     element: 'ellipse',
                     attr: {
-                        cx: x,
-                        cy: y,
+                        cx: centre.x,
+                        cy: centre.y,
                         rx: 0,
                         ry: 0,
                         stroke,
@@ -894,7 +993,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
     public onMouseMove = (event) => {
         const draw = this.currentDrawing;
         const matrix = this.svgContentGroup.getScreenCTM().inverse();
-        const pt = transformPoint({ x: event.pageX, y: event.pageY }, matrix);
+        const pt = this.snapPointer(transformPoint({ x: event.pageX, y: event.pageY }, matrix), event);
         const x = pt.x;
         const y = pt.y;
 
@@ -914,10 +1013,13 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
 
         switch (this.mode) {
             case 'move': {
-                const dx = x - draw.startX;
-                const dy = y - draw.startY;
+                let dx = x - draw.startX;
+                let dy = y - draw.startY;
                 if (dx === 0 && dy === 0) {
                     break;
+                }
+                if (this.snap && this.snapBox) {
+                    ({ dx, dy } = this.snap.move(this.snapBox, dx, dy, event));
                 }
                 const elements = this.svgContentGroup.selectedElements;
                 this.props.elementActions.moveElements(elements, { dx, dy });
@@ -932,6 +1034,13 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
 
                 const startPoint = { x: draw.startX, y: draw.startY };
                 const endPoint = { x: pt.x, y: pt.y };
+                if (this.snap && this.snapGrip) {
+                    // the grip moves by the pointer delta: snap the grip
+                    const { ref, span, axes } = this.snapGrip;
+                    const d = this.snap.refs([ref], span, pt.x - startPoint.x, pt.y - startPoint.y, event, axes);
+                    endPoint.x = startPoint.x + d.dx;
+                    endPoint.y = startPoint.y + d.dy;
+                }
 
                 const centerPointOrigin = draw.center;
                 const { width, height } = draw.bbox;
@@ -1216,6 +1325,10 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
     }, 300);
 
     public onMouseUp = (event) => {
+        // the pen keeps snapping while hovering
+        if (this.mode !== 'draw') {
+            this.endSnap();
+        }
         if (this.mode === 'select' && event.which === 1 && !this.editingElem) {
             this.svgSelector.setVisible(false);
         }

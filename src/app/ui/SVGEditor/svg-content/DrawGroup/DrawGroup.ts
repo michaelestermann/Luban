@@ -1109,6 +1109,11 @@ class DrawGroup {
     }
 
     /** Is the element (or any element) edited point by point right now? */
+    // point editing: an end point or a control point is held by the mouse
+    public isDraggingPoint(): boolean {
+        return this.mode === MODE.SELECT && !!this.editPath && !!this.selected.line && !!this.selected.point;
+    }
+
     public isEditingPoints(elem?: Element): boolean {
         return this.mode === MODE.SELECT && !!this.editPath && (!elem || elem === this.originGraph);
     }
