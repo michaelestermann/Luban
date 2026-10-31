@@ -9,6 +9,7 @@ import {
     documentStatusOf,
     routeAutosaveResult,
     isHeadBusy,
+    closedDocumentReset,
 } from '../src/app/flux/project/document-swap';
 import { addDocument, activateTab, createTabsState } from '../src/app/flux/project/tabs-model';
 import { documentStore } from '../src/app/flux/project/document-store';
@@ -281,5 +282,30 @@ test('isHeadBusy: progress, G-code generation, running toolpath, project opening
     const previewing = (progress) => ({ printing: { stage: 30, progress, inProgress: false }, project: { general: {} } });
     t.equal(isHeadBusy(previewing(0.6), 'printing'), true, 'printing: G-code preview running');
     t.equal(isHeadBusy(previewing(1), 'printing'), false, 'printing: preview done (the stage stays "previewing" after slicing)');
+    t.end();
+});
+
+test('closedDocumentReset: the slice of a closed last document forgets its G-code', (t) => {
+    const initial = {
+        modelGroup: { name: 'initial mg' },
+        toolPathGroup: {},
+        SVGActions: {},
+        history: {},
+        gcodeFile: null,
+        gcodeFiles: [],
+        isChangedAfterGcodeGenerating: true,
+        page: 'editor',
+        scale: 1,
+        materials: { isRotate: false },
+    };
+    const cnc = closedDocumentReset(initial, 'cnc');
+    t.deepEqual(cnc.gcodeFiles, [], 'G-code files emptied');
+    t.equal(cnc.gcodeFile, null, 'no G-code file');
+    t.equal(cnc.page, 'editor', 'other document keys back to initial');
+    t.notOk('modelGroup' in cnc || 'toolPathGroup' in cnc || 'SVGActions' in cnc || 'history' in cnc, 'live objects stay (emptied by closeProject)');
+    t.notEqual(cnc.gcodeFiles, initial.gcodeFiles, 'arrays are copies');
+    t.deepEqual(documentStatusOf({ ...initial, ...cnc }, 'cnc'), 'design', 'a project opened next is "Design"');
+    const printing = closedDocumentReset({ stage: 0, progress: 0, gcodeFile: null, gcodeLine: null, displayedType: 'model', activePresetIds: { left: 'x' }, modelGroup: {} }, 'printing');
+    t.deepEqual(printing, { stage: 0, progress: 0, gcodeFile: null, gcodeLine: null, displayedType: 'model' }, 'printing: only the slice result keys');
     t.end();
 });

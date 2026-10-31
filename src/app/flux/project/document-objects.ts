@@ -24,7 +24,7 @@ import { EditorHeadType } from './tabs-model';
 // live objects of a document: never cloned, created fresh
 const LIVE_KEYS = new Set(['modelGroup', 'toolPathGroup', 'SVGActions', 'history', 'gcodeLineGroup', 'background']);
 
-const initialStateOf = (headType: EditorHeadType): Record<string, unknown> => {
+export const initialStateOf = (headType: EditorHeadType): Record<string, unknown> => {
     if (headType === 'laser') {
         return LASER_INITIAL_STATE as unknown as Record<string, unknown>;
     }

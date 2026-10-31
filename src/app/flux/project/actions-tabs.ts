@@ -27,11 +27,11 @@ import { actions as machineActions } from '../machine';
 import { actions as printingActions } from '../printing';
 import { actions as workspaceActions } from '../workspace';
 import { actions as projectActions } from './index';
-import { createDocumentObjects, disposeDocumentObjects, wireDocumentObjects } from './document-objects';
+import { createDocumentObjects, disposeDocumentObjects, initialStateOf, wireDocumentObjects } from './document-objects';
 import { currentMachineRef, knownMachineOf, shouldSwitchMachineFor, switchMachineForProject } from './machine-switch';
 /* eslint-enable import/no-cycle */
 import { documentStore } from './document-store';
-import { PROJECT_META_KEYS, documentStatusOf, isHeadBusy, planActivation, swapDocumentState } from './document-swap';
+import { PROJECT_META_KEYS, closedDocumentReset, documentStatusOf, isHeadBusy, planActivation, swapDocumentState } from './document-swap';
 import {
     DocumentMeta,
     EDITOR_HEAD_TYPES,
@@ -644,8 +644,10 @@ const closeDocumentNow = (docId: string, history: HistoryLike) => async (dispatc
     if (parked) {
         disposeDocumentObjects(parked.slice, head);
     } else if (wasLive) {
-        // the slice keeps the emptied objects until another document of the mode goes live
+        // the slice keeps the emptied objects until another document of the mode goes live; its G-code and
+        // steps go back to the initial state, so the next project opened into it does not show them
         dispatch(projectActions.closeProject(head));
+        dispatch(sliceUpdate(head, closedDocumentReset(initialStateOf(head), head)));
     }
     dispatch(setTabs((s) => removeDocument(s, docId)));
     if (wasLive) {

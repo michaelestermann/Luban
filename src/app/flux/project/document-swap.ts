@@ -86,6 +86,43 @@ export function pickDocumentState(slice: object, headType: EditorHeadType): Reco
     return out;
 }
 
+// live objects of a document: closeProject empties them in place, they are not reset to the initial ones
+const DOCUMENT_OBJECT_KEYS = new Set(['modelGroup', 'toolPathGroup', 'SVGActions', 'history', 'gcodeLineGroup', 'background']);
+
+// printing: only the result of slicing is reset (presets and the rest are set again by the page init)
+const PRINTING_RESULT_KEYS = ['stage', 'progress', 'gcodeFile', 'gcodeLine', 'displayedType'];
+
+function clonePlainValue(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map(clonePlainValue);
+    }
+    if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value)) {
+            out[k] = clonePlainValue(v);
+        }
+        return out;
+    }
+    return value;
+}
+
+/**
+ * The slice patch after the last document of a mode was closed: laser/CNC get every document key of the
+ * initial state back (G-code files, steps, origin, ...), printing the slicing result keys, so the next
+ * project opened into the slice does not show the G-code of the closed one. Live objects are left out.
+ */
+export function closedDocumentReset(initial: object, headType: EditorHeadType): Record<string, unknown> {
+    const doc = pickDocumentState(initial, headType);
+    const keys = headType === 'printing'
+        ? PRINTING_RESULT_KEYS.filter((key) => key in doc)
+        : Object.keys(doc).filter((key) => !DOCUMENT_OBJECT_KEYS.has(key));
+    const out: Record<string, unknown> = {};
+    for (const key of keys) {
+        out[key] = clonePlainValue(doc[key]);
+    }
+    return out;
+}
+
 /**
  * `outgoing` is the current document of the slice; `patch` puts `incoming` in its place:
  * every document key of the current slice is set (to `undefined` when `incoming` lacks it),
