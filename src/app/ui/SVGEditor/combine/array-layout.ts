@@ -156,20 +156,31 @@ export function arrayEntities<M extends { modelID: string }, G extends { modelID
     if (selected.length === 0) {
         return null;
     }
+    // index maps: the selection may hold thousands of objects
+    const parent = new Map<string, G>();
+    for (const g of groups) {
+        for (const child of g.children) {
+            parent.set(child.modelID, g);
+        }
+    }
+    const selectedIDs = new Set(selected.map(m => m.modelID));
     const entities: (M | G)[] = [];
+    const added = new Set<G>();
     for (const model of selected) {
-        const group = groups.find(g => g.children.some(child => child.modelID === model.modelID));
+        const group = parent.get(model.modelID);
         if (!group) {
             entities.push(model);
             continue;
         }
-        const complete = group.modelID === selectedGroupID || group.children.every(child => selected.some(m => m.modelID === child.modelID));
+        if (added.has(group)) {
+            continue;
+        }
+        const complete = group.modelID === selectedGroupID || group.children.every(child => selectedIDs.has(child.modelID));
         if (!complete) {
             return null;
         }
-        if (!entities.includes(group)) {
-            entities.push(group);
-        }
+        added.add(group);
+        entities.push(group);
     }
     return entities;
 }

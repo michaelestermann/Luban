@@ -108,6 +108,9 @@ export function isVectorShape(model: OutlineModel): boolean {
  * Whether the model is a closed vector shape. Imported SVG files and texts count as closed (their
  * source is read only when the action runs).
  */
+// closed state of path models by their d (parsing the d of every selected path on each render is slow)
+const closedPaths = new WeakMap<OutlineModel, { d: string; closed: boolean }>();
+
 export function isClosedShape(model: OutlineModel): boolean {
     if (!isVectorShape(model)) {
         return false;
@@ -117,11 +120,19 @@ export function isClosedShape(model: OutlineModel): boolean {
         return false;
     }
     if (tag === 'path') {
-        try {
-            return normalizePenPath(parsePath(model.elem.getAttribute('d') || '')).some(sub => sub.closed && sub.nodes.length >= 2);
-        } catch (e) {
-            return false;
+        const d = model.elem.getAttribute('d') || '';
+        const cached = closedPaths.get(model);
+        if (cached && cached.d === d) {
+            return cached.closed;
         }
+        let closed = false;
+        try {
+            closed = normalizePenPath(parsePath(d)).some(sub => sub.closed && sub.nodes.length >= 2);
+        } catch (e) {
+            closed = false;
+        }
+        closedPaths.set(model, { d, closed });
+        return closed;
     }
     return true;
 }
@@ -159,30 +170,45 @@ export async function modelOutline(model: OutlineModel, contentGroup: Element | 
         .map(shape => outlineFromPolylines(shape.paths, toContent)));
 }
 
-interface SelectionGroup {
+export interface SelectionGroup {
     getSelectedModelArray: () => OutlineModel[];
     getModels: () => OutlineModel[];
     getParentGroup?: (modelID: string) => unknown;
 }
 
-// selected models in layer order (back to front)
-function selectedInLayerOrder(modelGroup: SelectionGroup): OutlineModel[] {
-    const selected = modelGroup?.getSelectedModelArray?.() || [];
-    const order = modelGroup.getModels();
-    return selected.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b));
+/** The items sorted by their place in order (one index map: O(n log n), not indexOf in the comparator). */
+export function inLayerOrder<T>(items: T[], order: T[]): T[] {
+    const index = new Map<T, number>();
+    order.forEach((item, i) => index.set(item, i));
+    const at = (item: T) => index.get(item) ?? -1;
+    return items.slice().sort((a, b) => at(a) - at(b));
 }
 
-/** Inputs of Combine: at least two selected closed vector shapes, none of them in a group; back to front. */
-export function combinableModels(modelGroup: SelectionGroup): OutlineModel[] {
-    const models = modelGroup ? selectedInLayerOrder(modelGroup) : [];
+// selected models in layer order (back to front)
+export function selectedInLayerOrder(modelGroup: SelectionGroup): OutlineModel[] {
+    const selected = modelGroup?.getSelectedModelArray?.() || [];
+    return selected.length > 1 ? inLayerOrder(selected, modelGroup.getModels()) : selected.slice();
+}
+
+/** Combine inputs among the selected models in layer order: all closed, none in a group, at least two. */
+export function combinableFrom(models: OutlineModel[], modelGroup: SelectionGroup): OutlineModel[] {
     if (models.length < 2 || models.some(m => !isClosedShape(m) || modelGroup.getParentGroup?.(m.modelID))) {
         return [];
     }
     return models;
 }
 
+/** Offset inputs among the selected models in layer order: all vector shapes. */
+export function offsetFrom(models: OutlineModel[]): OutlineModel[] {
+    return models.every(isVectorShape) ? models : [];
+}
+
+/** Inputs of Combine: at least two selected closed vector shapes, none of them in a group; back to front. */
+export function combinableModels(modelGroup: SelectionGroup): OutlineModel[] {
+    return modelGroup ? combinableFrom(selectedInLayerOrder(modelGroup), modelGroup) : [];
+}
+
 /** Inputs of Offset: the selected vector shapes (closed or open); back to front. */
 export function offsetModels(modelGroup: SelectionGroup): OutlineModel[] {
-    const models = modelGroup ? selectedInLayerOrder(modelGroup) : [];
-    return models.every(isVectorShape) ? models : [];
+    return modelGroup ? offsetFrom(selectedInLayerOrder(modelGroup)) : [];
 }

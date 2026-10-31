@@ -2,7 +2,7 @@
  * Array on editor models (DOM side): what is copied, the selection box and the outlines for the preview.
  */
 import { arrayEntities, Box } from './array-layout';
-import { matrixToContent, modelOutline, OutlineModel } from './model-outline';
+import { inLayerOrder, matrixToContent, modelOutline, OutlineModel } from './model-outline';
 import { Pt } from './shape-ops';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -34,12 +34,12 @@ export function arraySelection(modelGroup: ArrayModelGroup | null | undefined): 
     if (!entities) {
         return null;
     }
-    const layer = modelGroup.models || [];
-    entities.sort((a, b) => layer.indexOf(a) - layer.indexOf(b));
-    const order = modelGroup.getModels();
-    const leaves = entities.reduce((all, e) => all.concat(e.children || [e]), [] as any[]);
-    leaves.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    return { entities, leaves };
+    const sortedEntities = inLayerOrder(entities, modelGroup.models || []);
+    const leaves: any[] = [];
+    for (const e of sortedEntities) {
+        leaves.push(...(e.children || [e]));
+    }
+    return { entities: sortedEntities, leaves: inLayerOrder(leaves, modelGroup.getModels()) };
 }
 
 const boxCorners = (elem: SVGGraphicsElement): Pt[] => {

@@ -5,8 +5,7 @@
 import { actions as editorActions } from '../../../flux/editor';
 import { canEditShapes, CombineKind } from '../../../flux/editor/actions-combine';
 import i18n from '../../../lib/i18n';
-import { arraySelection } from '../../SVGEditor/combine/array-model';
-import { combinableModels, offsetModels } from '../../SVGEditor/combine/model-outline';
+import { selectionActionState } from '../../SVGEditor/combine/selection-actions';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
 
 type HeadType = 'laser' | 'cnc';
@@ -20,8 +19,10 @@ export interface ShapeAction {
     run: (dispatch: (action: unknown) => unknown, headType: HeadType) => void;
 }
 
-const canCombine = (state, headType: HeadType) => canEditShapes(state, headType)
-    && combinableModels(state[headType]?.modelGroup).length >= 2;
+// computed once per selection and render, shared by all actions, the selection bar and the context menu
+const available = (state, headType: HeadType) => selectionActionState(state[headType]?.modelGroup, state[headType]?.renderingTimestamp);
+
+const canCombine = (state, headType: HeadType) => canEditShapes(state, headType) && available(state, headType).combine;
 
 const combine = (id: CombineKind, label: () => string, keyHint?: string): ShapeAction => ({
     id,
@@ -46,7 +47,7 @@ export const MORE_ACTIONS: ShapeAction[] = [
         keyHint: 'O',
         // vector shapes (closed or open); not while the offset values are open
         fits: (state, headType) => canEditShapes(state, headType) && !state[headType]?.offsetSession
-            && offsetModels(state[headType]?.modelGroup).length > 0,
+            && available(state, headType).offset,
         run: (dispatch, headType) => dispatch(editorActions.startOffset(headType)),
     },
     {
@@ -55,7 +56,7 @@ export const MORE_ACTIONS: ShapeAction[] = [
         keyHint: 'A',
         // any visible objects or whole groups; not while the array values are open
         fits: (state, headType) => canEditShapes(state, headType) && !state[headType]?.arraySession
-            && !!arraySelection(state[headType]?.modelGroup),
+            && available(state, headType).array,
         run: (dispatch, headType) => dispatch(editorActions.startArray(headType)),
     },
 ];
