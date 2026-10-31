@@ -2586,5 +2586,6 @@
     "key-CncLaser/Offset-Cancel": "Cancel",
     "key-CncLaser/Offset-Create offset": "Create offset",
     "key-CncLaser/Offset-Enter a distance greater than 0": "Enter a distance greater than 0",
-    "key-CncLaser/Offset-Nothing is left at this distance": "Nothing is left at this distance"
+    "key-CncLaser/Offset-Nothing is left at this distance": "Nothing is left at this distance",
+    "key-CncLaser/ContextMenu-Edit points": "Edit points"
 }

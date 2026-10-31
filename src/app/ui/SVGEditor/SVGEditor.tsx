@@ -304,6 +304,8 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
         zoomIn,
         zoomOut,
         autoFocus,
+        canEditPoints: (elem: Element) => !!canvas.current?.canEditPoints(elem),
+        editPoints: (elem: Element) => canvas.current?.editPoints(elem),
     }));
 
     const onStartDraw = () => {

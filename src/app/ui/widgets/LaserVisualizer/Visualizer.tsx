@@ -44,6 +44,7 @@ import ABPositionOverlay from '../../views/model-operation-overlay/ABPositionOve
 import PrintablePlate from '../CncLaserShared/PrintablePlate';
 import VisualizerBottomLeft from '../CncLaserShared/VisualizerBottomLeft';
 import SelectionBar from '../CncLaserShared/SelectionBar';
+import { ContextMenuItem, shapeContextMenuItems } from '../CncLaserShared/shape-actions';
 import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
 import ToolPathGroup from '../../../toolpaths/ToolPathGroup';
@@ -80,6 +81,7 @@ interface VisualizerProps {
 
     // new: decompose selected svg image
     decomposeSelectedSVG: () => void;
+    getShapeMenuItems: (points: { canEditPoints: (elem: Element) => boolean; editPoints: (elem: Element) => void }) => ContextMenuItem[];
 }
 
 
@@ -507,12 +509,17 @@ class Visualizer extends React.Component<VisualizerProps> {
         return this.props.progressStatesManager.getNotice(stage);
     }
 
+    // point editing from the context menu goes through the canvas
+    private shapeMenuPoints = {
+        canEditPoints: (elem: Element) => !!(this.svgCanvas.current as { canEditPoints?: (e: Element) => boolean })?.canEditPoints?.(elem),
+        editPoints: (elem: Element) => (this.svgCanvas.current as { editPoints?: (e: Element) => void })?.editPoints?.(elem),
+    };
+
     public showContextMenu = (event) => {
         const model = this.props.SVGActions.getSVGModelByElement(event.target);
-        if (this.props.modelGroup.selectedModelArray.length > 1 && this.props.modelGroup.selectedModelArray.includes(model)) {
-            return;
-        }
-        if (model) {
+        // a right-click on a member of a multi-selection keeps the selection (Combine, Offset)
+        const inSelection = this.props.modelGroup.selectedModelArray.length > 1 && this.props.modelGroup.selectedModelArray.includes(model);
+        if (model && !inSelection) {
             this.props.onClearSelection();
             this.props.onSelectElements([event.target]);
         }
@@ -727,7 +734,8 @@ class Visualizer extends React.Component<VisualizerProps> {
                                         onClick: () => this.props.onFlipSelectedModel('Vertical')
                                     }
                                 ]
-                            }
+                            },
+                            ...this.props.getShapeMenuItems(this.shapeMenuPoints)
                         ]
                     }
                 />
@@ -925,6 +933,7 @@ const mapDispatchToProps = (dispatch) => {
         setMode: (mode, ext) => dispatch(editorActions.setCanvasMode('laser', mode, ext)),
         updateShowSVGShapeLibrary: (isShow: boolean) => dispatch(editorActions.updateShowSVGShapeLibrary(isShow)),
         decomposeSelectedSVG: () => dispatch(editorActions.decomposeSelectedSVG('laser')),
+        getShapeMenuItems: (points) => dispatch((d, getState) => shapeContextMenuItems(getState(), 'laser', d, points)),
 
         elementActions: {
             moveElementsStart: (elements) => dispatch(editorActions.moveElementsStart('laser', elements)),

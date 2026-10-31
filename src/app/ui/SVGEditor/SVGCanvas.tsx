@@ -1465,14 +1465,26 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         if (this.props.editable && tagName === 'text' && this.mode !== 'textedit') {
             this.textActions.select(mouseTarget, x, y);
             this.setMode('textedit');
-        } else if (this.isPointEditable(mouseTarget)) {
-            this.enterPointEditing(mouseTarget);
-        } else if (this.props.editable && SHAPE_GEOMETRY_ATTRIBUTES[tagName] && this.props.editorActions?.convertShapeToPath) {
-            // draw tool shapes become paths first (own undo step)
-            const path = this.props.editorActions.convertShapeToPath(mouseTarget);
-            path && this.enterPointEditing(path);
+        } else {
+            this.editPoints(mouseTarget);
         }
     };
+
+    /** Whether the element's points can be edited: an editable path or a draw tool shape. */
+    public canEditPoints(elem: Element) {
+        return !!elem && (this.isPointEditable(elem) || (this.props.editable && !!SHAPE_GEOMETRY_ATTRIBUTES[elem.tagName]
+            && !!this.props.editorActions?.convertShapeToPath));
+    }
+
+    /** Enters point editing (double-click, context menu); draw tool shapes become paths first (own undo step). */
+    public editPoints(elem: Element) {
+        if (this.isPointEditable(elem)) {
+            this.enterPointEditing(elem as SVGPathElement);
+        } else if (this.canEditPoints(elem)) {
+            const path = this.props.editorActions.convertShapeToPath(elem);
+            path && this.enterPointEditing(path);
+        }
+    }
 
     // paths drawn with the pen tool or converted from draw tool shapes
     public isPointEditable(elem: Element) {

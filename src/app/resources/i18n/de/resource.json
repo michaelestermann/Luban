@@ -2599,5 +2599,6 @@
     "key-CncLaser/Offset-Cancel": "Abbrechen",
     "key-CncLaser/Offset-Create offset": "Versatz erstellen",
     "key-CncLaser/Offset-Enter a distance greater than 0": "Einen Abstand größer als 0 eingeben",
-    "key-CncLaser/Offset-Nothing is left at this distance": "Bei diesem Abstand bleibt nichts übrig"
+    "key-CncLaser/Offset-Nothing is left at this distance": "Bei diesem Abstand bleibt nichts übrig",
+    "key-CncLaser/ContextMenu-Edit points": "Punkte bearbeiten"
 }

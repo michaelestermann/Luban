@@ -6,6 +6,7 @@ import { actions as editorActions } from '../../../flux/editor';
 import { canEditShapes, CombineKind } from '../../../flux/editor/actions-combine';
 import i18n from '../../../lib/i18n';
 import { combinableModels, offsetModels } from '../../SVGEditor/combine/model-outline';
+import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
 
 type HeadType = 'laser' | 'cnc';
 
@@ -50,3 +51,50 @@ export const MORE_ACTIONS: ShapeAction[] = [
 ];
 
 export const fittingActions = (actions: ShapeAction[], state: unknown, headType: HeadType) => actions.filter(a => a.fits(state, headType));
+
+export interface ContextMenuItem {
+    type: 'item' | 'subMenu' | 'separator';
+    label?: string;
+    disabled?: boolean;
+    onClick?: () => void;
+    items?: ContextMenuItem[];
+}
+
+const withKey = (action: ShapeAction) => (action.keyHint ? `${action.label()} (${action.keyHint})` : action.label());
+
+/**
+ * Right-click menu entries of the shape actions that fit the selection: Combine (submenu), the "⋯"
+ * actions, Close path and Edit points. Empty when none fits.
+ */
+export function shapeContextMenuItems(
+    state,
+    headType: HeadType,
+    dispatch: (action: unknown) => unknown,
+    points: { canEditPoints: (elem: Element) => boolean; editPoints: (elem: Element) => void }
+): ContextMenuItem[] {
+    const items: ContextMenuItem[] = [];
+    const combineItems = fittingActions(COMBINE_ACTIONS, state, headType);
+    if (combineItems.length > 0) {
+        items.push({
+            type: 'subMenu',
+            label: i18n._('key-CncLaser/Combine-Combine'),
+            items: combineItems.map(action => ({ type: 'item', label: withKey(action), onClick: () => action.run(dispatch, headType) })),
+        });
+    }
+    for (const action of fittingActions(MORE_ACTIONS, state, headType)) {
+        items.push({ type: 'item', label: withKey(action), onClick: () => action.run(dispatch, headType) });
+    }
+    const selected = state[headType]?.modelGroup?.getSelectedModelArray?.() || [];
+    const elem: Element | null = selected.length === 1 && selected[0].visible !== false ? selected[0].elem : null;
+    if (elem && elem.nodeName === 'path' && openPathState(elem.getAttribute('d')).open) {
+        items.push({
+            type: 'item',
+            label: i18n._('key-CncLaser/SelectionBar-Close path'),
+            onClick: () => dispatch(editorActions.closeSelectedPath(headType, 'close')),
+        });
+    }
+    if (elem && state[headType]?.SVGCanvasMode === 'select' && points.canEditPoints(elem)) {
+        items.push({ type: 'item', label: i18n._('key-CncLaser/ContextMenu-Edit points'), onClick: () => points.editPoints(elem) });
+    }
+    return items.length > 0 ? [{ type: 'separator' }, ...items] : [];
+}
