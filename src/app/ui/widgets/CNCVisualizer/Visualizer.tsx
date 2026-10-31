@@ -478,7 +478,7 @@ class Visualizer extends React.Component<VisualizerProps> {
         // Set the origin to not occlude the model
         this.canvas.current.renderer.setSortObjects(false);
         this.actions.autoFocus();
-        this.props.clearOperationHistory();
+        // the undo history belongs to the document and survives a remount (cleared by onRecovery / startProject)
         UniApi.Event.on('appbar-menu:cnc.import', this.actions.importFile);
     }
 
@@ -564,7 +564,6 @@ class Visualizer extends React.Component<VisualizerProps> {
     }
 
     public componentWillUnmount() {
-        this.props.clearOperationHistory();
         UniApi.Event.off('appbar-menu:cnc.import', this.actions.importFile);
     }
 

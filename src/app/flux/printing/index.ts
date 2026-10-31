@@ -1121,7 +1121,8 @@ export const actions = {
         const { series } = getState().machine;
         modelGroup.setSeries(series);
 
-        modelGroup.removeAllModels();
+        // The page is mounted again for the same document: the models stay.
+        // A project is cleared by its explicit flows (closeProject, onRecovery, startProject).
 
         dispatch(actions.initSocketEvent());
         dispatch(actions.applyProfileToAllModels());
@@ -4856,3 +4857,5 @@ export default function reducer(state = INITIAL_STATE, action) {
             return state;
     }
 }
+
+export { INITIAL_STATE };

@@ -399,7 +399,7 @@ class Visualizer extends PureComponent {
     };
 
     public componentDidMount() {
-        this.props.clearOperationHistory();
+        // the undo history belongs to the document and survives a remount (cleared by onRecovery / startProject)
 
         this.canvas.current.resizeWindow();
         this.canvas.current.enable3D();
@@ -545,7 +545,6 @@ class Visualizer extends PureComponent {
     }
 
     public componentWillUnmount() {
-        this.props.clearOperationHistory();
         this.props.modelGroup.off(ModelEvents.AddModel, this.onAddModel);
         this.props.modelGroup.off(ModelEvents.MeshPositionChanged, this.onMeshPositionChanged);
         window.removeEventListener('fit-view-in', this.actions.fitViewIn, false);

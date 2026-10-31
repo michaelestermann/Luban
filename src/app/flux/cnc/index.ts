@@ -387,3 +387,5 @@ export default function reducer(state = INITIAL_STATE, action) {
         }
     }
 }
+
+export { INITIAL_STATE };

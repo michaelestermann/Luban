@@ -160,9 +160,10 @@ class Canvas extends React.PureComponent<CanvasProps> {
         const { backgroundGroup, printableArea } = this.props;
 
         this.group.add(printableArea);
-        printableArea.addEventListener('update', () => this.renderScene());
-
-        this.modelGroup.object.addEventListener('update', () => this.renderScene());
+        // the same printableArea / modelGroup objects outlive this canvas (the page is mounted again on a tab switch),
+        // so the listeners are kept to be removed on unmount
+        this.updateListenerTargets = [printableArea, this.modelGroup.object];
+        this.updateListenerTargets.forEach((target) => target.addEventListener('update', this.onObjectUpdate));
 
         this.group.add(this.modelGroup.object);
         if (this.modelGroup.clippingGroup) {
@@ -266,14 +267,25 @@ class Canvas extends React.PureComponent<CanvasProps> {
     }
 
     public componentWillUnmount() {
+        this.updateListenerTargets.forEach((target) => target.removeEventListener('update', this.onObjectUpdate));
+        this.updateListenerTargets = [];
+        window.removeEventListener('resize', this.resizeWindow, false);
         if (this.controls) {
             this.controls.dispose();
         }
         if (this.renderer) {
+            // WebGLRendererWrapper.dispose() calls forceContextLoss(): the WebGL context is released now, not on GC
             this.renderer.dispose();
             this.renderer = null;
         }
     }
+
+    private updateListenerTargets: Array<{
+        addEventListener: (type: string, listener: () => void) => void;
+        removeEventListener: (type: string, listener: () => void) => void;
+    }> = [];
+
+    private onObjectUpdate = () => this.renderScene();
 
     public onScale = () => {
         if (typeof this.props.updateScale !== 'function') {

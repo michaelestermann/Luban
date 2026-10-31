@@ -874,6 +874,8 @@ export const actions = {
         modState.toolPathGroup && modState.toolPathGroup.deleteAllToolPaths();
         modState.modelGroup.removeAllModels();
         modState.SVGActions && modState.SVGActions.svgContentGroup && modState.SVGActions.svgContentGroup.removeAllElements();
+        // the edit page is no longer mounted again (which cleared the undo history in 4.16): a closed project drops its history here
+        dispatch(operationHistoryActions.clear(headType));
         UniApi.Window.setOpenedFile();
     },
 

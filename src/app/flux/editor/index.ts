@@ -111,6 +111,8 @@ import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
 import { stateAfterGcodeFailure } from '../../ui/pages/CncLaserShared/editor-step';
 import { drillFailureMessage } from '../../toolpaths/cnc-drill';
 import AddMaterialTestGenerate from '../operation-history/AddMaterialTestGenerate';
+import { adoptSvgChildren } from '../project/document-swap';
+import { documentStore } from '../project/document-store';
 
 
 declare type HeadType = 'laser' | 'cnc';
@@ -409,7 +411,8 @@ export const actions = {
     _init: headType => (dispatch, getState) => {
         const { modelGroup, toolPathGroup, initFlag } = getState()[headType];
 
-        modelGroup.removeAllModels();
+        // The page is mounted again for the same document (tab switch, Home/Workspace and back):
+        // the models stay. A project is cleared by its explicit flows (closeProject, onRecovery, startProject).
         modelGroup.setDataChangedCallback(() => {
             dispatch(baseActions.render(headType));
         });
@@ -700,11 +703,26 @@ export const actions = {
      * Save content group in state.
      */
     initContentGroup: (headType, svgContentGroup) => (dispatch, getState) => {
-        const { SVGActions } = getState()[headType];
+        const { SVGActions, modelGroup } = getState()[headType];
+
+        // a remounted editor adopts the SVG nodes of the live document from the previous canvas
+        const selectedModels = [...modelGroup.selectedModelArray];
+        const adopted = adoptSvgChildren(SVGActions.svgContentGroup, svgContentGroup);
 
         dispatch(baseActions.updateState(headType, { contentGroup: svgContentGroup }));
 
         SVGActions.init(svgContentGroup);
+
+        if (adopted > 0 && selectedModels.length > 0) {
+            // a selected group is selected again through the elements of its children
+            const elems = selectedModels
+                .flatMap((m) => (m.elem ? [m.elem] : (m.children || []).map((c) => c.elem)))
+                .filter(Boolean);
+            elems.length && dispatch(actions.selectElements(headType, elems));
+        }
+
+        const docId = getState().project?.tabs?.activeDocByHead?.[headType];
+        documentStore.markEditorReady(docId ?? headType);
     },
 
     /**
