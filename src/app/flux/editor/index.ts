@@ -55,6 +55,7 @@ import ModelGroup2D from '../../models/ModelGroup2D';
 import { DEFAULT_TEXT_CONFIG, checkParams, generateModelDefaultConfigs, isOverSizeModel, limitModelSizeByMachineSize } from '../../models/ModelInfoUtils';
 import SVGActionsFactory from '../../models/SVGActionsFactory';
 import SvgModel from '../../models/SvgModel';
+import { frontmostAt } from '../../models/z-order';
 import { machineStore } from '../../store/local-storage';
 import ToolPath from '../../toolpaths/ToolPath';
 import ToolPathGroup from '../../toolpaths/ToolPathGroup';
@@ -1007,21 +1008,9 @@ export const actions = {
         const { modelGroup } = getState()[headType];
         const models = modelGroup.getModels();
         if (models.length > 0) {
-            const arr = models
-                .filter(model => {
-                    return model.visible;
-                });
-            // Sort by z-order: use the model's positionZ (transformation)
-            // as a stable sort key that works regardless of DOM nesting.
-            arr.sort((a, b) => {
-                const zA = a.transformation?.positionZ ?? 0;
-                const zB = b.transformation?.positionZ ?? 0;
-                return zB - zA;
-            });
-            const index = arr.findIndex(model => {
-                return isInside([x, y], model.vertexPoints);
-            });
-            return index === -1 ? null : arr[index]?.elem;
+            // the layer order (models[], back to front) decides which of overlapping objects is hit
+            const target = frontmostAt(models, model => model.visible && isInside([x, y], model.vertexPoints));
+            return target ? target.elem : null;
         }
         return null;
     },

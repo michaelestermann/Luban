@@ -1,5 +1,5 @@
 import test from 'tape';
-import { moveToEdge, orderedMemberIds, reorderFromDisplay, replaceInLayers } from '../src/app/models/z-order';
+import { frontmostAt, moveToEdge, orderedMemberIds, reorderFromDisplay, replaceInLayers } from '../src/app/models/z-order';
 
 const e = id => ({ modelID: id });
 
@@ -47,5 +47,12 @@ test('replaceInLayers: added models take the place of the anchor', (t) => {
     t.equal(ids(replaceInLayers(['a', 'b', 'c', 'r'], ['b'], ['r'], 'b')), 'arc');
     // unknown anchor: on top
     t.equal(ids(replaceInLayers(['a', 'b'], [], ['r'], 'x')), 'abr');
+    t.end();
+});
+
+test('a click hits the front-most object where objects overlap (layer order, not positionZ)', (t) => {
+    const list = [{ modelID: 'back', hit: true }, { modelID: 'mid', hit: false }, { modelID: 'front', hit: true }];
+    t.equal(frontmostAt(list, m => m.hit).modelID, 'front');
+    t.equal(frontmostAt(list, () => false), null, 'nothing hit');
     t.end();
 });

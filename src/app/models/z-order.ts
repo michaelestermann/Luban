@@ -13,6 +13,16 @@ export function moveToEdge<T>(list: T[], items: T[], edge: 'front' | 'back'): T[
     return edge === 'front' ? [...rest, ...moving] : [...moving, ...rest];
 }
 
+/** The front-most of the layers (back to front) that is hit, or null. */
+export function frontmostAt<T>(models: T[], hit: (model: T) => boolean): T | null {
+    for (let i = models.length - 1; i >= 0; i--) {
+        if (hit(models[i])) {
+            return models[i];
+        }
+    }
+    return null;
+}
+
 /** Ids an operation machines, in its member order; hidden or removed objects are left out. */
 export function orderedMemberIds(memberIds: string[], leafModels: { modelID: string, visible?: boolean }[]): string[] {
     const visible = new Set(leafModels.filter(model => model.visible === true).map(model => model.modelID));
