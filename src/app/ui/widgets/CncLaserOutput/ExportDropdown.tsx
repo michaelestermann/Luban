@@ -59,12 +59,12 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ headType, renderImmedia
 
     const menu = (
         <Menu>
-            <Menu.Item disabled={!canUseGcode} onClick={onLoadToWorkspace}>
+            <Menu.Item key="load-to-workspace" disabled={!canUseGcode} onClick={onLoadToWorkspace}>
                 <div className={classNames('align-c', 'padding-vertical-4')}>
                     {i18n._('key-CncLaser/G-codeAction-Load G-code to Workspace')}
                 </div>
             </Menu.Item>
-            <Menu.Item disabled={!canUseGcode} onClick={onExport}>
+            <Menu.Item key="export-to-file" disabled={!canUseGcode} onClick={onExport}>
                 <div className={classNames('align-c', 'padding-vertical-4')}>
                     {i18n._('key-CncLaser/G-codeAction-Export G-code to File')}
                 </div>
