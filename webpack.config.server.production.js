@@ -17,6 +17,13 @@ fs.readdirSync(NODE_MODULES)
     .forEach((mod) => {
         externals[mod] = `commonjs ${mod}`;
     });
+// scoped packages the packaged app ships (e.g. @snapmaker/snapmaker-lunar) must stay external too,
+// so that they find their files (engine binaries) relative to their own folder
+Object.keys(require('./src/package.json').dependencies)
+    .filter((x) => x.startsWith('@'))
+    .forEach((mod) => {
+        externals[mod] = `commonjs ${mod}`;
+    });
 
 // Use publicPath for production
 // const payload = pkg.version;
