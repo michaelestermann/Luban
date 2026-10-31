@@ -55,9 +55,9 @@ class ProjectLayout extends PureComponent {
         if (this.props.renderLeftView) {
             const leftView = this.leftView.current;
             const sideWidth = (leftView ? leftView.offsetWidth : 0) + (rightView ? rightView.offsetWidth : 0);
-            centerView.style.width = `calc(100vw - ${sideWidth}px)`;
+            centerView.style.width = `calc(100vw - var(--project-panel-width, 0px) - ${sideWidth}px)`;
         } else {
-            centerView.style.width = `calc(100vw - ${rightView.clientWidth}px)`;
+            centerView.style.width = `calc(100vw - var(--project-panel-width, 0px) - ${rightView.clientWidth}px)`;
         }
     };
 

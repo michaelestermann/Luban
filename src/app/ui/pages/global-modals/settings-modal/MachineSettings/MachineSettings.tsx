@@ -17,7 +17,7 @@ import {
 } from '../../../../../constants/machines';
 import { RootState } from '../../../../../flux/index.def';
 import { actions as machineActions } from '../../../../../flux/machine';
-import { actions as projectActions } from '../../../../../flux/project';
+import { tabsActions } from '../../../../../flux/project/actions-tabs';
 import { actions as workspaceActions } from '../../../../../flux/workspace';
 import i18n from '../../../../../lib/i18n';
 import UniApi from '../../../../../lib/uni-api';
@@ -299,6 +299,7 @@ const MachineSettings: React.FC = () => {
 
     // Save changes
     const onSave = useCallback(async () => {
+        const previousMachine = { series, toolHead: { ...toolHead } };
         dispatch(workspaceActions.connect.setConnectionTimeout(state.connectionTimeout));
         dispatch(machineActions.updateMachineSeries(state.series));
         dispatch(machineActions.updateMachineSize(state.size));
@@ -311,13 +312,18 @@ const MachineSettings: React.FC = () => {
         }, state.series));
         dispatch(machineActions.setMachineModules(state.modules));
 
-        // save and redirect
+        // save and redirect; 4.17 tabs: open projects come back after the reload (nothing is discarded)
         const headType = getCurrentHeadType(window.location.href);
-        if (headType) {
-            await dispatch(projectActions.clearSavedEnvironment(headType));
-        }
+        await dispatch(tabsActions.prepareMachineReload(previousMachine, {
+            series: state.series,
+            toolHead: {
+                printingToolhead: printingToolHeadSelected,
+                laserToolhead: laserToolHeadSelected,
+                cncToolhead: cncToolHeadSelected,
+            },
+        }, headType));
         window.location.href = '/';
-    }, [dispatch, state, printingToolHeadSelected, laserToolHeadSelected, cncToolHeadSelected]);
+    }, [dispatch, state, series, toolHead, printingToolHeadSelected, laserToolHeadSelected, cncToolHeadSelected]);
 
     const onCancel = useCallback(() => {
         setState({

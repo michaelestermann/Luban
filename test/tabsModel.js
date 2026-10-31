@@ -24,6 +24,14 @@ import {
     planLegacyMigration,
     restoreEntryPoint,
     unloadedMeta,
+    initialPanelCollapsed,
+    projectPanelGroups,
+    lastEditorHead,
+    normalizeMachineSeries,
+    needsMachineSwitch,
+    isDocumentForOtherMachine,
+    machineSwitchToolHead,
+    recentProjects,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -493,5 +501,140 @@ test('serializeSession stores the unsaved flag as a boolean', (t) => {
     const s = withDocs(doc('a', 'cnc', { unSaved: [{}] }), doc('b', 'cnc', { unSaved: undefined }));
     const m = JSON.parse(serializeSession(s));
     t.deepEqual(m.documents.map((d) => d.unSaved), [true, false]);
+    t.end();
+});
+
+test('initialPanelCollapsed: stored value wins; collapsed below 1280', (t) => {
+    t.equal(initialPanelCollapsed(true, 1920), true, 'stored collapsed');
+    t.equal(initialPanelCollapsed(false, 1000), false, 'stored expanded');
+    t.equal(initialPanelCollapsed(undefined, 1440), false, 'wide window: expanded');
+    t.equal(initialPanelCollapsed(undefined, 1280), false, '1280 is not narrower than 1280');
+    t.equal(initialPanelCollapsed(undefined, 1279), true, 'narrow window: collapsed');
+    t.equal(initialPanelCollapsed(null, 1200), true, 'null counts as not stored');
+    t.equal(initialPanelCollapsed('true', 1920), true, 'stored string from the store');
+    t.equal(initialPanelCollapsed('false', 1000), false);
+    t.end();
+});
+
+test('projectPanelGroups: modes in order, live docs take the live status, parked docs their meta', (t) => {
+    let s = withDocs(
+        doc('c1', 'cnc', { status: 'design' }),
+        doc('l1', 'laser', { status: 'gcode-ready' }),
+        doc('c2', 'cnc', { status: 'gcode-ready' }),
+        doc('p1', 'printing', { status: 'design' }),
+    );
+    s = activateTab(activateTab(s, 'c1', 1), 'p1', 2);
+    const groups = projectPanelGroups(s, { cnc: 'gcode-ready', printing: 'sliced', laser: 'design' });
+    t.deepEqual(groups.map((g) => g.headType), ['printing', 'laser', 'cnc'], 'printing, laser, cnc');
+    t.deepEqual(groups[2].documents.map((d) => d.meta.id), ['c1', 'c2'], 'tab order inside a mode');
+    t.equal(groups[2].documents[0].status, 'gcode-ready', 'live cnc doc: live status');
+    t.equal(groups[2].documents[1].status, 'gcode-ready', 'parked cnc doc: meta status');
+    t.equal(groups[0].documents[0].status, 'sliced', 'live printing doc: live status');
+    t.equal(groups[1].documents[0].status, 'gcode-ready', 'laser doc is not live (never activated): meta status');
+    t.equal(groups[0].documents[0].active, true, 'the active tab is marked');
+    t.equal(groups[2].documents[0].active, false);
+    t.deepEqual(projectPanelGroups(createTabsState(), {}), [], 'no docs: no groups');
+    const noLive = projectPanelGroups(s, {});
+    t.equal(noLive[2].documents[0].status, 'design', 'without a live status the meta status is used');
+    t.end();
+});
+
+test('lastEditorHead: the active doc, else the most recently active doc, else null', (t) => {
+    let s = withDocs(doc('c1', 'cnc'), doc('l1', 'laser'));
+    t.equal(lastEditorHead(s), null, 'nothing activated yet');
+    s = activateTab(s, 'l1', 5);
+    s = activateTab(s, 'c1', 9);
+    t.equal(lastEditorHead(s), 'cnc', 'active doc');
+    s = activateTab(s, HOME_TAB, 10);
+    t.equal(lastEditorHead(s), 'cnc', 'Home: last active doc');
+    s = activateTab(s, 'l1', 11);
+    s = activateTab(s, WORKSPACE_TAB, 12);
+    t.equal(lastEditorHead(s), 'laser', 'Workspace: last active doc');
+    t.end();
+});
+
+test('normalizeMachineSeries maps the legacy series names of old project files', (t) => {
+    t.equal(normalizeMachineSeries('A150'), 'Snapmaker 2.0 A150');
+    t.equal(normalizeMachineSeries('A250'), 'Snapmaker 2.0 A250');
+    t.equal(normalizeMachineSeries('A350'), 'Snapmaker 2.0 A350');
+    t.equal(normalizeMachineSeries('A400'), 'A400', 'identifiers stay');
+    t.equal(normalizeMachineSeries('Snapmaker J1'), 'Snapmaker J1');
+    t.equal(normalizeMachineSeries(''), null);
+    t.equal(normalizeMachineSeries(undefined), null);
+    t.equal(normalizeMachineSeries(42), null);
+    t.end();
+});
+
+test('needsMachineSwitch: same machine -> false; other series -> true; other toolhead for the mode -> true; no machineInfo -> false', (t) => {
+    const toolHead = { printingToolhead: 'dualExtruderToolheadForArtisan', laserToolhead: '40W Laser Module', cncToolhead: 'levelTwoCNCToolheadForSM2' };
+    const current = { series: 'A400', toolHead };
+    t.equal(needsMachineSwitch(current, { series: 'A400', toolHead: { ...toolHead } }, 'cnc'), false, 'same machine');
+    t.equal(needsMachineSwitch(current, { series: 'Snapmaker J1', toolHead: { printingToolhead: 'Snapmaker J1 IDEX Tool Head' } }, 'printing'), true, 'other series');
+    t.equal(needsMachineSwitch(current, { series: 'A400', toolHead: { ...toolHead, laserToolhead: '20W Laser Module' } }, 'laser'), true, 'other toolhead of the mode');
+    t.equal(needsMachineSwitch(current, { series: 'A400', toolHead: { ...toolHead, laserToolhead: '20W Laser Module' } }, 'cnc'), false, 'other toolhead of another mode');
+    t.equal(needsMachineSwitch(current, null, 'cnc'), false, 'no machineInfo');
+    t.equal(needsMachineSwitch(current, {}, 'cnc'), false, 'no series');
+    t.equal(needsMachineSwitch(current, { series: 'A400' }, 'cnc'), false, 'no toolhead: series decides');
+    t.equal(needsMachineSwitch(current, { series: 'A400', toolHead: { cncToolhead: '' } }, 'cnc'), false, 'empty toolhead is unknown');
+    t.equal(
+        needsMachineSwitch({ series: 'Snapmaker 2.0 A350', toolHead }, { series: 'A350', toolHead }, 'cnc'),
+        false,
+        'legacy series name of the same machine',
+    );
+    t.end();
+});
+
+test('isDocumentForOtherMachine uses the machine stored in the tab meta', (t) => {
+    const current = { series: 'A400', toolHead: { printingToolhead: 'p', laserToolhead: 'l40', cncToolhead: 'c2' } };
+    t.equal(isDocumentForOtherMachine(doc('a', 'laser', { machineSeries: 'A400', machineToolHead: { laserToolhead: 'l40' } }), current), false);
+    t.equal(isDocumentForOtherMachine(doc('a', 'laser', { machineSeries: 'A400', machineToolHead: { laserToolhead: 'l20' } }), current), true);
+    t.equal(isDocumentForOtherMachine(doc('a', 'laser', { machineSeries: 'Snapmaker 2.0 A350', machineToolHead: null }), current), true);
+    t.equal(isDocumentForOtherMachine(doc('a', 'laser'), current), false, 'unknown machine: no bar');
+    t.equal(isDocumentForOtherMachine(null, current), false);
+    t.end();
+});
+
+test('machineSwitchToolHead: the project toolhead for its mode, the current one for the others, only toolheads of the new machine', (t) => {
+    const available = {
+        printing: ['p-single', 'p-dual'],
+        laser: ['l10', 'l20'],
+        cnc: ['c-std', 'c-hi'],
+    };
+    const current = { printingToolhead: 'p-artisan', laserToolhead: 'l20', cncToolhead: 'c-hi' };
+    const project = { printingToolhead: 'p-dual', laserToolhead: 'l10', cncToolhead: 'c-std' };
+    t.deepEqual(machineSwitchToolHead(current, project, 'cnc', available), {
+        printingToolhead: 'p-dual', // the current one is not on the new machine: the project one
+        laserToolhead: 'l20', // the current one fits
+        cncToolhead: 'c-std', // the mode of the project: the project one
+    });
+    t.deepEqual(machineSwitchToolHead(current, { cncToolhead: 'c-unknown' }, 'cnc', available), {
+        printingToolhead: 'p-single', // neither fits: the first toolhead of the machine
+        laserToolhead: 'l20',
+        cncToolhead: 'c-hi', // the project one does not exist: the current one
+    });
+    t.deepEqual(machineSwitchToolHead(current, null, 'laser', { printing: ['x'] }), {
+        printingToolhead: 'x',
+        laserToolhead: 'l20', // no list for the mode: kept
+        cncToolhead: 'c-hi',
+    });
+    t.end();
+});
+
+test('recentProjects: all modes, newest first, no duplicates, open files marked, limited', (t) => {
+    const s = withDocs(doc('a', 'cnc', { openedFile: { name: 'PCB.snapcnc', path: 'D:/p/PCB.snapcnc' } }));
+    const recent = [
+        { name: 'old.snaplzr', path: 'D:/p/old.snaplzr' },
+        { name: 'PCB.snapcnc', path: 'd:\\p\\pcb.snapcnc' },
+        { name: 'part.stl', path: 'D:/p/part.stl' },
+        { name: 'vase.snap3dp', path: 'D:/p/vase.snap3dp' },
+        { name: 'PCB.snapcnc', path: 'D:/p/PCB.snapcnc' },
+        null,
+    ];
+    const list = recentProjects(recent, s);
+    t.deepEqual(list.map((r) => r.name), ['PCB.snapcnc', 'vase.snap3dp', 'old.snaplzr'], 'newest first, deduplicated, projects only');
+    t.deepEqual(list.map((r) => r.headType), ['cnc', 'printing', 'laser']);
+    t.deepEqual(list.map((r) => r.isOpen), [true, false, false]);
+    t.equal(recentProjects(recent, s, 2).length, 2, 'limit');
+    t.deepEqual(recentProjects(null, s), []);
     t.end();
 });

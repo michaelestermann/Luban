@@ -13,6 +13,7 @@ import { actions as machineActions } from '../../../flux/machine';
 import { actions as printingActions } from '../../../flux/printing';
 import sceneActions from '../../../flux/printing/actions-scene';
 import { actions as projectActions } from '../../../flux/project';
+import { tabsActions } from '../../../flux/project/actions-tabs';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
 import sceneLogic from '../../../scene/scene.logic';
@@ -95,7 +96,12 @@ function useRenderMainToolBar(pageMode, setPageMode, profileInitialized = false)
                     ...toolHead,
                     printingToolhead: currentToolhead
                 }, currentSeries));
-                await dispatch(projectActions.clearSavedEnvironment(HEAD_PRINTING));
+                // 4.17 tabs: open projects come back after the reload (nothing is discarded)
+                await dispatch(tabsActions.prepareMachineReload(
+                    { series: seriesRef.current, toolHead: { ...toolHeadRef.current } },
+                    { series: currentSeries, toolHead: { ...toolHead, printingToolhead: currentToolhead } },
+                    HEAD_PRINTING,
+                ));
                 window.location.href = '/';
             }
         };

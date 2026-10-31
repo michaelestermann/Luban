@@ -204,9 +204,26 @@
     }
 }
 
+// project panel (left) | page (design D)
+.tab-body {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: flex-start;
+    min-height: 0;
+}
+
+.tab-page {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
 .tab-content {
     flex: 1 1 auto;
     min-height: 0;
+    min-width: 0;
 }
 
 // dialogs of the tab shell: "+" mode chooser, save prompt, quit list (design D)

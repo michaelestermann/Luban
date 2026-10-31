@@ -15,6 +15,7 @@ import { checkIsGCodeFile, checkIsSnapmakerProjectFile } from '../../lib/check-n
 import { logModuleVisit } from '../../lib/gaEvent';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
+import { stashMachineNotice } from '../../lib/machine-notice';
 import { requestQuitSelection, requestSaveChanges } from '../../lib/tab-dialogs';
 import workerManager from '../../lib/manager/workerManager';
 import { machineStore } from '../../store/local-storage';
@@ -27,6 +28,7 @@ import { actions as printingActions } from '../printing';
 import { actions as workspaceActions } from '../workspace';
 import { actions as projectActions } from './index';
 import { createDocumentObjects, disposeDocumentObjects, wireDocumentObjects } from './document-objects';
+import { currentMachineRef, knownMachineOf, shouldSwitchMachineFor, switchMachineForProject } from './machine-switch';
 /* eslint-enable import/no-cycle */
 import { documentStore } from './document-store';
 import { PROJECT_META_KEYS, documentStatusOf, isHeadBusy, planActivation, swapDocumentState } from './document-swap';
@@ -35,6 +37,7 @@ import {
     EDITOR_HEAD_TYPES,
     EditorHeadType,
     HOME_TAB,
+    MachineRef,
     OpenedFileRef,
     TabsState,
     WORKSPACE_TAB,
@@ -44,6 +47,7 @@ import {
     documentDisplayName,
     findDocumentByPath,
     isEditorHeadType,
+    needsMachineSwitch,
     nextTabAfterClose,
     RestorePlan,
     nextUntitledIndex,
@@ -318,6 +322,8 @@ const startDocument = (headType: EditorHeadType, init: RegisterInit, history: Hi
                 openedFile,
                 untitledIndex: openedFile ? 0 : meta.untitledIndex,
                 isRotate: init.isRotate ?? meta.isRotate,
+                machineSeries: init.machineSeries ?? meta.machineSeries,
+                machineToolHead: init.machineToolHead ?? meta.machineToolHead,
             }), liveId, Date.now());
         }));
         init.openedFile && dispatch(projectActions.updateState(headType, fileMeta));
@@ -347,6 +353,46 @@ const editorReady = async (id: string, ms = 15000): Promise<void> => {
         new Promise<void>((resolve) => { timer = setTimeout(resolve, ms); }),
     ]);
     clearTimeout(timer);
+};
+
+/**
+ * The machine a project file was made for, for its tab meta (`machineInfo` of the file); nothing when the
+ * file names no machine Luban knows (the tab then gets the current machine).
+ */
+const projectMachineInit = (machineInfo: { series?: string; toolHead?: Record<string, string> } | null | undefined)
+    : Pick<RegisterInit, 'machineSeries' | 'machineToolHead'> => {
+    const machine = knownMachineOf(machineInfo?.series);
+    if (!machine) {
+        return {};
+    }
+    const toolHead = machineInfo?.toolHead && typeof machineInfo.toolHead === 'object' ? { ...machineInfo.toolHead } : null;
+    return { machineSeries: machine.identifier, machineToolHead: toolHead };
+};
+
+/** After a save the project is made for the current machine: its tab gets that machine (no mismatch bar). */
+const adoptCurrentMachine = (headType: EditorHeadType | string) => (dispatch, getState): void => {
+    if (!isEditorHeadType(headType)) {
+        return;
+    }
+    const id = getTabsState(getState()).activeDocByHead[headType];
+    if (!id) {
+        return;
+    }
+    const { series, toolHead } = currentMachineRef(getState());
+    dispatch(setTabs((s) => updateDocument(s, id, { machineSeries: series, machineToolHead: toolHead })));
+};
+
+/**
+ * Mismatch bar "Switch machine to …": the machine of the tab becomes the machine (notice with Undo).
+ * Nothing switches on a tab change by itself.
+ */
+const switchMachineToDocument = (docId: string) => (dispatch, getState): boolean => {
+    const meta = getTabsState(getState()).documents[docId];
+    if (!meta || !meta.machineSeries) {
+        return false;
+    }
+    const project = { series: meta.machineSeries, toolHead: meta.machineToolHead };
+    return !!dispatch(switchMachineForProject(project, meta.headType));
 };
 
 // project files are opened one after the other
@@ -410,7 +456,13 @@ const openProjectInTab = (file: ProjectFileLike, history: HistoryLike) => async 
             loadingHead = headType;
             documentStore.setLoading(headType, true);
             await dispatch(leaveCurrentPage(history));
-            const id = dispatch(startDocument(headType, { openedFile: parsed.fileRef }, history)) as unknown as string;
+            // one machine overall: a project made for another machine switches it (notice with Undo); the
+            // tab remembers the project's machine (case-library templates are for the current machine)
+            const machineInit = isTemplate ? {} : projectMachineInit(parsed.envObj?.machineInfo);
+            if (!isTemplate && shouldSwitchMachineFor(getState(), parsed.envObj?.machineInfo, headType)) {
+                dispatch(switchMachineForProject(parsed.envObj.machineInfo, headType));
+            }
+            const id = dispatch(startDocument(headType, { openedFile: parsed.fileRef, ...machineInit }, history)) as unknown as string;
             if (isEditor2D(headType)) {
                 await editorReady(id);
             }
@@ -703,6 +755,11 @@ const loadDocumentContent = (meta: DocumentMeta) => async (dispatch): Promise<bo
         await api.env.recoverEnv({ content });
     }
     await dispatch(projectActions.onRecovery(head, envObj, !legacy, false));
+    if (!meta.machineSeries && knownMachineOf(envObj?.machineInfo?.series)) {
+        // a migrated 4.16 auto-save: its tab is for the machine it was made with
+        const machineInit = projectMachineInit(envObj.machineInfo);
+        dispatch(setTabs((s) => updateDocument(s, meta.id, machineInit)));
+    }
     await dispatch(projectActions.updateState(head, {
         findLastEnvironment: false,
         openedFile: meta.openedFile ? { ...meta.openedFile } : null,
@@ -1055,6 +1112,36 @@ const restoreSessionNow = (history: HistoryLike) => async (dispatch, getState): 
     }
 };
 
+/**
+ * The machine settings switch the machine and reload the window (4.16). With open tabs nothing is
+ * discarded: the auto-saves of the live documents are written and the session is stored, so every tab
+ * comes back after the reload (the tabs of the previous machine with the mismatch bar), and the notice
+ * "Machine switched to …" is shown after the reload. Without tabs the 4.16 behaviour stays (the auto-save
+ * of the page's mode is cleared).
+ */
+const prepareMachineReload = (previous: MachineRef, next: MachineRef, headType: string | null) => async (dispatch, getState): Promise<void> => {
+    const tabs = getTabsState(getState());
+    if (tabs.order.length === 0) {
+        if (headType) {
+            await dispatch(projectActions.clearSavedEnvironment(headType));
+        }
+        return;
+    }
+    const changed = EDITOR_HEAD_TYPES.some((head) => needsMachineSwitch(previous, next, head));
+    if (changed) {
+        stashMachineNotice(next.series, previous);
+    }
+    for (const head of EDITOR_HEAD_TYPES) {
+        const id = tabs.activeDocByHead[head];
+        if (id && getState().project[head]?.unSaved) {
+            dispatch(projectActions.autoSaveEnvironment(head));
+        }
+    }
+    await Promise.all(tabs.order.map(async (id) => documentStore.lastAutosave(id)));
+    dispatch(syncLiveDocumentMeta());
+    await dispatch(persistSession());
+};
+
 let restoreRun: Promise<void> | null = null;
 
 /**
@@ -1097,6 +1184,9 @@ export const tabsActions = {
     loadDocument,
     unloadDocument,
     unloadBackgroundDocumentsIfNeeded,
+    adoptCurrentMachine,
+    switchMachineToDocument,
+    prepareMachineReload,
 };
 
 export default tabsActions;

@@ -3,17 +3,42 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 
 import { tabsActions } from '../../../flux/project/actions-tabs';
-import { TabsState } from '../../../flux/project/tabs-model';
+import { TabsState, initialPanelCollapsed } from '../../../flux/project/tabs-model';
+import log from '../../../lib/log';
 import UniApi from '../../../lib/uni-api';
+import { machineStore } from '../../../store/local-storage';
 import DialogHost from './DialogHost';
+import { MISMATCH_BAR_HEIGHT, MachineMismatchBar, MachineNotice, useActiveMismatch } from './MachineNotice';
 import ModeChooser from './ModeChooser';
+import ProjectPanel, { PROJECT_PANEL_COLLAPSED_WIDTH, PROJECT_PANEL_WIDTH } from './ProjectPanel';
 import TabStrip, { tabDisplayName } from './TabStrip';
 import { useTabRouteSync } from './useTabRouteSync';
 import styles from './tab-shell.styl';
 
 export const TAB_STRIP_HEIGHT = 40;
 
-/** Height of the tab strip in CSS px (0 when there is none), for code that measures with window.innerHeight. */
+const PANEL_COLLAPSED_KEY = 'tabs.panelCollapsed';
+
+function readPanelCollapsed(): boolean {
+    let stored: boolean | string | undefined;
+    try {
+        stored = machineStore.get(PANEL_COLLAPSED_KEY);
+    } catch (e) {
+        stored = undefined;
+    }
+    return initialPanelCollapsed(stored, window.innerWidth);
+}
+
+/** Sets a CSS custom property on html and body (pages read it in calc()). */
+function setShellVariable(name: string, px: number): void {
+    document.documentElement.style.setProperty(name, `${px}px`);
+    document.body.style.setProperty(name, `${px}px`);
+}
+
+/**
+ * Height of the tab strip in CSS px (0 when there is none), for code that measures with window.innerHeight.
+ * It includes the machine mismatch bar while that shows (the page is below it).
+ */
 export function getTabStripHeight(): number {
     const value = getComputedStyle(document.documentElement).getPropertyValue('--tab-strip-height');
     return parseFloat(value) || 0;
@@ -44,10 +69,32 @@ const TabShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         name: state.project[head]?.openedFile?.name ?? null,
     })), shallowEqual);
 
+    // a project made for another machine shows the mismatch bar above its page
+    const mismatch = useActiveMismatch();
     useEffect(() => {
-        // pages subtract the strip from 100vh with calc(100vh - var(--tab-strip-height) - …)
-        document.documentElement.style.setProperty('--tab-strip-height', `${TAB_STRIP_HEIGHT}px`);
-        document.body.style.setProperty('--tab-strip-height', `${TAB_STRIP_HEIGHT}px`);
+        // pages subtract the strip (and the bar) from 100vh with calc(100vh - var(--tab-strip-height) - …)
+        setShellVariable('--tab-strip-height', TAB_STRIP_HEIGHT + (mismatch ? MISMATCH_BAR_HEIGHT : 0));
+        window.dispatchEvent(new Event('resize'));
+    }, [mismatch]);
+
+    // project panel left of the page: collapsed state stored on toggle (narrow windows start collapsed)
+    const [panelCollapsed, setPanelCollapsed] = useState<boolean>(readPanelCollapsed);
+    useEffect(() => {
+        // pages subtract the panel from 100vw with calc(100vw - var(--project-panel-width) - …)
+        setShellVariable('--project-panel-width', panelCollapsed ? PROJECT_PANEL_COLLAPSED_WIDTH : PROJECT_PANEL_WIDTH);
+        // the canvases and layouts measure on the window resize event
+        window.dispatchEvent(new Event('resize'));
+    }, [panelCollapsed]);
+    const togglePanel = useCallback(() => {
+        setPanelCollapsed((collapsed) => {
+            const next = !collapsed;
+            try {
+                machineStore.set(PANEL_COLLAPSED_KEY, next);
+            } catch (e) {
+                log.warn(`tabs: could not store the panel state: ${e}`);
+            }
+            return next;
+        });
     }, []);
 
     // the tab meta follows unSaved / openedFile of the live documents
@@ -102,10 +149,17 @@ const TabShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     return (
         <div className={styles['tab-shell']}>
             <TabStrip onActivate={onActivate} onAdd={onAdd} onClose={onClose} />
-            <div className={styles['tab-content']}>
-                {children}
+            <div className={styles['tab-body']}>
+                <ProjectPanel collapsed={panelCollapsed} onToggle={togglePanel} onAdd={onAdd} onActivate={onActivate} onClose={onClose} />
+                <div className={styles['tab-page']}>
+                    {mismatch && <MachineMismatchBar />}
+                    <div className={styles['tab-content']}>
+                        {children}
+                    </div>
+                </div>
             </div>
             {chooserOpen && <ModeChooser onClose={closeChooser} />}
+            <MachineNotice />
             <DialogHost />
         </div>
     );

@@ -23,7 +23,7 @@ const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({ renderLeftView, rende
 
     const resizeWindow = () => {
         if (visualizerContainer.current) {
-            visualizerContainer.current.style.width = `calc(100vw - ${primaryContainer.current.clientWidth < 360 ? 360 : primaryContainer.current.clientWidth}px - ${secondaryContainer.current.clientWidth < 360 ? 360 : secondaryContainer.current.clientWidth}px - 48px)`;
+            visualizerContainer.current.style.width = `calc(100vw - var(--project-panel-width, 0px) - ${primaryContainer.current.clientWidth < 360 ? 360 : primaryContainer.current.clientWidth}px - ${secondaryContainer.current.clientWidth < 360 ? 360 : secondaryContainer.current.clientWidth}px - 48px)`;
         }
     };
     useEffect(() => {

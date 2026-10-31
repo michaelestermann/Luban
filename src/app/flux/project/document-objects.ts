@@ -99,6 +99,12 @@ export const wireDocumentObjects = (headType: EditorHeadType) => (dispatch, getS
         dispatch(editorActions.initSelectedModelListener(headType));
         // the tool paths take their object origin point from the group
         slice.origin && slice.toolPathGroup?.setOrigin?.(slice.origin);
+        // the machine may have been switched while the document was parked
+        const size = getState().machine?.size;
+        const svgSize = slice.SVGActions?.size;
+        if (size && slice.SVGActions && (!svgSize || svgSize.x !== size.x || svgSize.y !== size.y || svgSize.z !== size.z)) {
+            dispatch(editorActions.onSizeUpdated(headType, size));
+        }
     }
 };
 

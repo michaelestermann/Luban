@@ -221,11 +221,14 @@ const mapStateToProps = (state) => {
     enableShortcut = (typeof enableShortcut === 'undefined' ? true : enableShortcut);
     const { shouldCheckForUpdate } = machineInfo;
     const activeDocByHead = state.project.tabs.activeDocByHead;
+    // an editor page is mounted again when its document or the machine changes (its init reads the machine)
+    const { series, toolHead } = state.machine;
+    const docKey = (head: string) => `${activeDocByHead[head] ?? 'none'}|${series}|${toolHead?.[`${head}Toolhead`] ?? ''}`;
 
     return {
-        printingDocKey: activeDocByHead.printing ?? 'none',
-        laserDocKey: activeDocByHead.laser ?? 'none',
-        cncDocKey: activeDocByHead.cnc ?? 'none',
+        printingDocKey: docKey('printing'),
+        laserDocKey: docKey('laser'),
+        cncDocKey: docKey('cnc'),
         activeMachine,
         enableShortcut,
         menuDisabledCount,

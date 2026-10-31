@@ -566,3 +566,178 @@ export function pickDocumentToUnload(s: TabsState, liveIds: string[], usedRatio:
     }
     return best ? best.id : null;
 }
+
+// ---- project panel (design D) ----
+
+/** Narrower windows (CSS px) start with the project panel collapsed when no choice is stored. */
+export const PANEL_COLLAPSE_BELOW_WIDTH = 1280;
+
+/**
+ * Whether the project panel starts collapsed: a stored choice wins (the store may give it back as a
+ * string), else the panel is collapsed below 1280 px window width.
+ */
+export function initialPanelCollapsed(stored: boolean | string | null | undefined, windowWidth: number): boolean {
+    if (stored === true || stored === 'true') {
+        return true;
+    }
+    if (stored === false || stored === 'false') {
+        return false;
+    }
+    return windowWidth < PANEL_COLLAPSE_BELOW_WIDTH;
+}
+
+export interface PanelDocument {
+    meta: DocumentMeta;
+    status: DocumentStatus;
+    active: boolean;
+}
+
+/**
+ * The open projects for the project panel, grouped by mode (printing, laser, cnc; tab order inside a
+ * mode). The live document of a mode shows `liveStatus[head]` (computed from its slice); a parked or
+ * unloaded document shows the status stored when it was parked.
+ */
+export function projectPanelGroups(
+    s: TabsState,
+    liveStatus: Partial<Record<EditorHeadType, DocumentStatus>>,
+): Array<{ headType: EditorHeadType; documents: PanelDocument[] }> {
+    return groupDocumentsByMode(s).map((group) => ({
+        headType: group.headType,
+        documents: group.documents.map((meta) => {
+            const live = s.activeDocByHead[meta.headType] === meta.id && !!liveStatus[meta.headType];
+            return {
+                meta,
+                status: live ? liveStatus[meta.headType] : meta.status,
+                active: s.activeTabId === meta.id,
+            };
+        }),
+    }));
+}
+
+/** The mode of the active document, else of the most recently active one (Home, Workspace), else null. */
+export function lastEditorHead(s: TabsState): EditorHeadType | null {
+    const active = s.documents[s.activeTabId];
+    if (active) {
+        return active.headType;
+    }
+    let best: DocumentMeta | null = null;
+    for (const id of s.order) {
+        const meta = s.documents[id];
+        if (meta && meta.lastActiveAt > 0 && (!best || meta.lastActiveAt > best.lastActiveAt)) {
+            best = meta;
+        }
+    }
+    return best ? best.headType : null;
+}
+
+// ---- one machine (design D): projects made for another machine ----
+
+export interface MachineRef {
+    series: string;
+    toolHead: Record<string, string>;
+}
+
+export interface ProjectMachineRef {
+    series?: string | null;
+    toolHead?: Record<string, string> | null;
+}
+
+// series names of older project files → machine identifiers
+const LEGACY_SERIES: Record<string, string> = {
+    A150: 'Snapmaker 2.0 A150',
+    A250: 'Snapmaker 2.0 A250',
+    A350: 'Snapmaker 2.0 A350',
+};
+
+/** The machine identifier of a series stored in a project (legacy names mapped), null when there is none. */
+export function normalizeMachineSeries(series: unknown): string | null {
+    if (typeof series !== 'string' || !series) {
+        return null;
+    }
+    return LEGACY_SERIES[series] ?? series;
+}
+
+const toolHeadKey = (headType: EditorHeadType) => `${headType}Toolhead`;
+
+/**
+ * Whether a project needs another machine than the current one: its series differs, or its toolhead for
+ * the project's mode differs. A project without a known machine (no machineInfo, no series) never does;
+ * a missing or empty toolhead only compares the series.
+ */
+export function needsMachineSwitch(current: MachineRef, project: ProjectMachineRef | null | undefined, headType: EditorHeadType): boolean {
+    const series = normalizeMachineSeries(project?.series);
+    if (!series) {
+        return false;
+    }
+    if (series !== normalizeMachineSeries(current.series)) {
+        return true;
+    }
+    const wanted = project?.toolHead?.[toolHeadKey(headType)];
+    return !!wanted && wanted !== current.toolHead?.[toolHeadKey(headType)];
+}
+
+/** `needsMachineSwitch` for an open tab: the machine stored in its meta against the current machine. */
+export function isDocumentForOtherMachine(meta: DocumentMeta | null | undefined, current: MachineRef): boolean {
+    if (!meta) {
+        return false;
+    }
+    return needsMachineSwitch(current, { series: meta.machineSeries, toolHead: meta.machineToolHead }, meta.headType);
+}
+
+/**
+ * The toolheads after a switch to a project's machine: for the project's mode the project's toolhead, for
+ * the other modes the current one; each only when the new machine has it (`available[head]`), else the
+ * other candidate, else the machine's first toolhead of that mode. A mode without a list keeps the current one.
+ */
+export function machineSwitchToolHead(
+    current: Record<string, string> | null | undefined,
+    project: Record<string, string> | null | undefined,
+    headType: EditorHeadType,
+    available: Partial<Record<EditorHeadType, string[]>>,
+): Record<string, string> {
+    const out: Record<string, string> = { ...(current || {}) };
+    for (const head of EDITOR_HEAD_TYPES) {
+        const key = toolHeadKey(head);
+        const fromProject = project?.[key];
+        const fromCurrent = current?.[key];
+        const candidates = head === headType ? [fromProject, fromCurrent] : [fromCurrent, fromProject];
+        const list = available[head];
+        if (!list || list.length === 0) {
+            const keep = candidates.find((c) => !!c);
+            if (keep) {
+                out[key] = keep;
+            }
+            continue;
+        }
+        out[key] = candidates.find((c) => !!c && list.includes(c)) ?? list[0];
+    }
+    return out;
+}
+
+/**
+ * The recent project files of all modes for the panel's Recent list: newest first (the store keeps the
+ * newest entry last), without duplicates, at most `limit`; `isOpen` marks files open in a tab.
+ */
+export function recentProjects(
+    recent: Array<RecentFileRef | null | undefined> | null | undefined,
+    s: TabsState,
+    limit = 10,
+): Array<RecentFileRef & { headType: EditorHeadType; isOpen: boolean }> {
+    const out: Array<RecentFileRef & { headType: EditorHeadType; isOpen: boolean }> = [];
+    const seen = new Set<string>();
+    const list = [...(recent || [])].reverse();
+    for (const item of list) {
+        const headType = item && typeof item.name === 'string' ? projectHeadTypeOf(item.name) : null;
+        if (!headType || out.length >= limit) {
+            continue;
+        }
+        const path = typeof item.path === 'string' ? item.path : '';
+        const key = path ? normalizeDocumentPath(path) : `name:${item.name.toLowerCase()}`;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        out.push({ name: item.name, path, headType, isOpen: !!findDocumentByPath(s, path) });
+    }
+    return out;
+}

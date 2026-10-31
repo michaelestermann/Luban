@@ -575,6 +575,8 @@ export const actions = {
             await dispatch(actions.setOpenedFileWithType(headType, result.file));
         }
         await dispatch(actions.clearSavedEnvironment(headType));
+        // the file now names the current machine
+        dispatch(tabsActions.adoptCurrentMachine(headType));
         return true;
     },
     save: (headType, dialogOptions = false) => async (dispatch, getState) => {
@@ -638,6 +640,8 @@ export const actions = {
             });
         });
         await dispatch(actions.clearSavedEnvironment(headType));
+        // the file now names the current machine
+        dispatch(tabsActions.adoptCurrentMachine(headType));
 
         return true;
     },
