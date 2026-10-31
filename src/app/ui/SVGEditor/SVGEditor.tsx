@@ -14,6 +14,7 @@ import PointEditOverlay from './path-edit/PointEditOverlay';
 import MeasureOverlay from './measure/MeasureOverlay';
 import DimensionsOverlay from './measure/DimensionsOverlay';
 import ShapeActionKeys from './combine/ShapeActionKeys';
+import OffsetPreview from './combine/OffsetPreview';
 
 
 export type SVGEditorHandle = {
@@ -266,6 +267,10 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
         return canvas.current ? canvas.current.svgContentGroup.getScreenCTM() : null;
     }, []);
 
+    const getContentGroup = useCallback(() => {
+        return canvas.current ? canvas.current.svgContentGroup.group : null;
+    }, []);
+
     const getSvgContainer = useCallback(() => {
         return canvas.current ? canvas.current.svgContainer : null;
     }, []);
@@ -443,6 +448,12 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             getScreenCTM={getCanvasScreenCTM}
                             getSvgContainer={getSvgContainer}
                             setMode={(mode) => leftBarRef.current?.actions.setMode(mode)}
+                        />
+                        <OffsetPreview
+                            headType={props.headType as 'laser' | 'cnc'}
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
+                            getContentGroup={getContentGroup}
                         />
                         <ShapeActionKeys
                             headType={props.headType as 'laser' | 'cnc'}

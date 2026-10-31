@@ -11,6 +11,7 @@ import {
 import i18n from '../../../lib/i18n';
 import TextParameters from '../CncLaserShared/TextParameters';
 import TransformationSection from '../CncLaserShared/TransformationSection';
+import OffsetPanel from '../CncLaserShared/OffsetPanel';
 import Image3dParameters from './Image3dParameters';
 import ImageProcessMode from './ImageProcessMode';
 import { actions as editorActions } from '../../../flux/editor';
@@ -53,6 +54,7 @@ const CNCPath = ({ widgetActions }) => {
 
     return (
         <React.Fragment>
+            {isEditor && <OffsetPanel headType={HEAD_CNC} />}
             {isEditor && (
                 <TransformationSection
                     disabled={!hasSelectedModels}

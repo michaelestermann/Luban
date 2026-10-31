@@ -16,6 +16,7 @@ import {
     outlineIsEmpty,
     combineMembership,
     unionShapes,
+    replaceMembers,
 } from '../src/app/ui/SVGEditor/combine/shape-ops';
 import { parsePath } from '../src/app/ui/SVGEditor/path-edit/path-geometry';
 
@@ -224,5 +225,11 @@ test('combineMembership: the result takes the place of the bottom input', (t) =>
     t.deepEqual(combineMembership(['b', 'c'], ['a', 'b', 'c'], 'a', 'r'), ['r']);
     // no input: unchanged
     t.deepEqual(combineMembership(['x', 'y'], ['a'], 'a', 'r'), ['x', 'y']);
+    t.end();
+});
+
+test('replaceMembers: offset results take the place of removed originals', (t) => {
+    t.deepEqual(replaceMembers(['x', 'a', 'y'], { a: ['r1', 'r2'] }), ['x', 'r1', 'r2', 'y']);
+    t.deepEqual(replaceMembers(['x', 'y'], { a: ['r1'] }), ['x', 'y']);
     t.end();
 });

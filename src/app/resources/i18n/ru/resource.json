@@ -2574,5 +2574,20 @@
     "key-CncLaser/Combine-The shapes could not be read": "The shapes could not be read",
     "key-CncLaser/Combine-The shapes do not overlap": "The shapes do not overlap",
     "key-CncLaser/Combine-Nothing is left of the shapes": "Nothing is left of the shapes",
-    "key-CncLaser/SelectionBar-More actions": "More actions"
+    "key-CncLaser/SelectionBar-More actions": "More actions",
+    "key-CncLaser/Offset-Offset": "Offset",
+    "key-CncLaser/Offset-1 object": "1 object",
+    "key-CncLaser/Offset-{{count}} objects": "{{count}} objects",
+    "key-CncLaser/Offset-Distance": "Distance",
+    "key-CncLaser/Offset-Outside": "Outside",
+    "key-CncLaser/Offset-Inside": "Inside",
+    "key-CncLaser/Offset-Both": "Both",
+    "key-CncLaser/Offset-Round": "Round",
+    "key-CncLaser/Offset-Sharp": "Sharp",
+    "key-CncLaser/Offset-Chamfer": "Chamfer",
+    "key-CncLaser/Offset-Keep original": "Keep original",
+    "key-CncLaser/Offset-Cancel": "Cancel",
+    "key-CncLaser/Offset-Create offset": "Create offset",
+    "key-CncLaser/Offset-Enter a distance greater than 0": "Enter a distance greater than 0",
+    "key-CncLaser/Offset-Nothing is left at this distance": "Nothing is left at this distance"
 }

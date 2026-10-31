@@ -386,3 +386,8 @@ export function combineMembership(memberIds: string[], inputIds: string[], botto
     }
     return others;
 }
+
+/** Members of an operation after originals were replaced (offset without keeping them): results take their place. */
+export function replaceMembers(memberIds: string[], replacements: Record<string, string[]>): string[] {
+    return memberIds.reduce((ids, id) => ids.concat(replacements[id] || [id]), [] as string[]);
+}

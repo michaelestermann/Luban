@@ -224,3 +224,119 @@
 .unit {
     color: #5b6170;
 }
+
+// Offset values (key O / "⋯" → Offset) above Position & size
+.offset {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 8px 0 12px;
+    padding: 12px;
+    border: 1px solid #c9d6f5;
+    border-radius: 10px;
+    background: #f7f9fe;
+}
+
+.offset-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1d4ed8;
+}
+
+.offset-count {
+    font-size: 12px;
+    font-weight: 400;
+    color: #5b6170;
+}
+
+.offset-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.offset-field {
+    flex: 1 1 auto;
+}
+
+.offset-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: inherit;
+}
+
+.segmented {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    padding: 2px;
+    border-radius: 8px;
+    background: #e9edf4;
+}
+
+.segmented-item {
+    height: 30px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #2f3441;
+    font-size: 12px;
+    cursor: pointer;
+
+    &.on {
+        background: #ffffff;
+        color: #1d4ed8;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(20, 30, 50, .12);
+    }
+}
+
+.offset-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #2f3441;
+    cursor: pointer;
+}
+
+.offset-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.offset-cancel,
+.offset-create {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.offset-cancel {
+    border: 1px solid #d9dde6;
+    background: #ffffff;
+    color: #2f3441;
+}
+
+.offset-create {
+    border: 0;
+    background: #1d4ed8;
+    color: #ffffff;
+    font-weight: 600;
+
+    &:disabled {
+        background: #c4c8d1;
+        cursor: not-allowed;
+    }
+}

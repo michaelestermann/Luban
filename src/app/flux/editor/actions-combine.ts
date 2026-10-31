@@ -2,8 +2,10 @@ import CompoundOperation from '../../core/CompoundOperation';
 import { DISPLAYED_TYPE_MODEL, HEAD_LASER } from '../../constants';
 import i18n from '../../lib/i18n';
 import { replaceInLayers } from '../../models/z-order';
-import { combinableModels, modelOutline } from '../../ui/SVGEditor/combine/model-outline';
-import { combineMembership, intersect, Outline, polygonsToD, Pt, subtract, weld } from '../../ui/SVGEditor/combine/shape-ops';
+import { combinableModels, modelOutline, offsetModels } from '../../ui/SVGEditor/combine/model-outline';
+import {
+    combineMembership, intersect, offsetOutline, OffsetCorners, OffsetSide, Outline, polygonsToD, Pt, replaceMembers, subtract, weld
+} from '../../ui/SVGEditor/combine/shape-ops';
 import { toast } from '../../ui/components/Toast';
 import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
 import ReplaceModelsOperation2D, { MembershipChange } from '../operation-history/ReplaceModelsOperation2D';
@@ -13,6 +15,25 @@ import { baseActions } from './actions-base';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type HeadType = 'laser' | 'cnc';
 export type CombineKind = 'weld' | 'subtract' | 'intersect';
+
+export interface OffsetSettings {
+    distance: number;
+    side: OffsetSide;
+    corners: OffsetCorners;
+    keepOriginal: boolean;
+}
+
+// the values of the last offset are offered next time
+let lastOffset: OffsetSettings = { distance: 2, side: 'outside', corners: 'round', keepOriginal: true };
+
+/** Offset outlines of one model: outside and / or inside, each a list of polygons; empty ones left out. */
+export function offsetGroups(outline: Outline, settings: OffsetSettings): Pt[][][] {
+    if (!(settings.distance > 0)) {
+        return [];
+    }
+    const { outside, inside } = offsetOutline(outline, settings.distance, settings.side, settings.corners);
+    return [outside, inside].filter(polygons => polygons.length > 0);
+}
 
 // a combine or offset is running (outlines are read and the result uploaded)
 const busy = new Set<string>();
@@ -78,12 +99,17 @@ async function createPathModel(SVGActions, d: string, style: Record<string, stri
  * Puts the new models in and takes the removed ones out as one undo step: the new models go where the
  * anchor is in the layer order and take over toolpath membership by `membershipFor`.
  */
-function replaceModels(dispatch, getState, headType: HeadType, { removed, added, anchor, membershipFor }: {
-    removed: any[]; added: any[]; anchor: any; membershipFor: (ids: string[]) => string[];
+function replaceModels(dispatch, getState, headType: HeadType, { removed, placements, membershipFor }: {
+    removed: any[]; placements: { anchor: any; added: any[] }[]; membershipFor: (ids: string[]) => string[];
 }) {
     const { modelGroup, SVGActions, toolPathGroup, materials } = getState()[headType];
+    const added = placements.reduce((all, p) => all.concat(p.added), []);
     const layerBefore = modelGroup.models.filter(m => !added.includes(m));
-    const layerAfter = replaceInLayers(modelGroup.models, removed, added, anchor);
+    // each group of new models goes where its anchor is (in its place if the anchor is removed)
+    const layerAfter = placements.reduce(
+        (list, p) => replaceInLayers(list, removed.includes(p.anchor) ? [p.anchor] : [], p.added, p.anchor),
+        modelGroup.models
+    );
     const membership: MembershipChange[] = [];
     for (const toolPath of toolPathGroup.toolPaths) {
         const before = [...toolPath.modelMap.keys()] as string[];
@@ -115,7 +141,14 @@ function replaceModels(dispatch, getState, headType: HeadType, { removed, added,
     dispatch(baseActions.render(headType));
 }
 
-async function readOutlines(getState, headType: HeadType, models: any[]): Promise<Outline[] | null> {
+function discard(modelGroup, models: any[]) {
+    for (const model of models) {
+        model.elem.remove();
+        modelGroup.removeModel(model);
+    }
+}
+
+export async function readOutlines(getState, headType: HeadType, models: any[]): Promise<Outline[] | null> {
     const contentGroup = getState()[headType].SVGActions.svgContentGroup.group;
     const outlines = await Promise.all(models.map(async (m) => modelOutline(m, contentGroup)));
     return outlines.some(o => !o) ? null : outlines;
@@ -162,17 +195,106 @@ export const combineActions = {
             }
             // the scene may have changed while the result was uploaded
             if (inputs.some(m => !modelGroup.getModels().includes(m))) {
-                result.elem.remove();
-                modelGroup.removeModel(result);
+                discard(modelGroup, [result]);
                 return;
             }
             const inputIds = inputs.map(m => m.modelID);
             replaceModels(dispatch, getState, headType, {
                 removed: inputs,
-                added: [result],
-                anchor: inputs[0],
+                placements: [{ anchor: inputs[0], added: [result] }],
                 membershipFor: (ids) => combineMembership(ids, inputIds, inputs[0].modelID, result.modelID),
             });
+        } finally {
+            busy.delete(headType);
+        }
+    },
+
+    /** Opens the Offset values in the properties panel (preview on the canvas). */
+    startOffset: (headType: HeadType) => (dispatch, getState) => {
+        if (!canEditShapes(getState(), headType) || offsetModels(getState()[headType].modelGroup).length === 0) {
+            return;
+        }
+        dispatch(baseActions.updateState(headType, { offsetSession: { ...lastOffset } }));
+    },
+
+    updateOffset: (headType: HeadType, values: Partial<OffsetSettings>) => (dispatch, getState) => {
+        const session = getState()[headType].offsetSession;
+        if (session) {
+            dispatch(baseActions.updateState(headType, { offsetSession: { ...session, ...values } }));
+        }
+    },
+
+    cancelOffset: (headType: HeadType) => (dispatch, getState) => {
+        if (getState()[headType].offsetSession) {
+            dispatch(baseActions.updateState(headType, { offsetSession: null }));
+        }
+    },
+
+    /**
+     * Creates the offset outlines of the selected shapes as new paths above them (outside and inside
+     * are separate objects). Without "Keep original" the originals are removed and the results take
+     * their place in the operations. One undo step.
+     */
+    applyOffset: (headType: HeadType) => async (dispatch, getState) => {
+        const session: OffsetSettings = getState()[headType].offsetSession;
+        if (!session || busy.has(headType)) {
+            return;
+        }
+        const { modelGroup, SVGActions } = getState()[headType];
+        const models = offsetModels(modelGroup);
+        if (models.length === 0) {
+            dispatch(combineActions.cancelOffset(headType));
+            return;
+        }
+        if (!(session.distance > 0)) {
+            warn(i18n._('key-CncLaser/Offset-Enter a distance greater than 0'));
+            return;
+        }
+        busy.add(headType);
+        try {
+            const outlines = await readOutlines(getState, headType, models);
+            if (!outlines) {
+                warn(i18n._('key-CncLaser/Combine-The shapes could not be read'));
+                return;
+            }
+            const created = [];
+            const placements = [];
+            const replacements: Record<string, string[]> = {};
+            for (let i = 0; i < models.length; i++) {
+                for (const polygons of offsetGroups(outlines[i], session)) {
+                    const model = await createPathModel(SVGActions, polygonsToD(polygons), resultStyle(getState(), headType, [models[i]]));
+                    if (!model) {
+                        discard(modelGroup, created);
+                        return;
+                    }
+                    created.push(model);
+                    if (placements.length === 0 || placements[placements.length - 1].original !== models[i]) {
+                        // results right above their original (above its group if it is in one)
+                        placements.push({ original: models[i], anchor: modelGroup.getParentGroup?.(models[i].modelID) || models[i], added: [] });
+                    }
+                    placements[placements.length - 1].added.push(model);
+                    replacements[models[i].modelID] = (replacements[models[i].modelID] || []).concat(model.modelID);
+                }
+            }
+            if (created.length === 0) {
+                warn(i18n._('key-CncLaser/Offset-Nothing is left at this distance'));
+                return;
+            }
+            if (models.some(m => !modelGroup.getModels().includes(m))) {
+                discard(modelGroup, created);
+                return;
+            }
+            // originals in a group are always kept
+            const removed = session.keepOriginal ? [] : models.filter(m => !modelGroup.getParentGroup?.(m.modelID));
+            const removedIds = removed.map(m => m.modelID);
+            const used = Object.fromEntries(Object.entries(replacements).filter(([id]) => removedIds.includes(id)));
+            replaceModels(dispatch, getState, headType, {
+                removed,
+                placements,
+                membershipFor: (ids) => replaceMembers(ids, used),
+            });
+            lastOffset = { ...session };
+            dispatch(baseActions.updateState(headType, { offsetSession: null }));
         } finally {
             busy.delete(headType);
         }

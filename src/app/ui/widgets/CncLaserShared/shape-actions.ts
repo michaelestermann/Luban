@@ -5,7 +5,7 @@
 import { actions as editorActions } from '../../../flux/editor';
 import { canEditShapes, CombineKind } from '../../../flux/editor/actions-combine';
 import i18n from '../../../lib/i18n';
-import { combinableModels } from '../../SVGEditor/combine/model-outline';
+import { combinableModels, offsetModels } from '../../SVGEditor/combine/model-outline';
 
 type HeadType = 'laser' | 'cnc';
 
@@ -37,6 +37,16 @@ export const COMBINE_ACTIONS: ShapeAction[] = [
 ];
 
 /** "⋯": rarer actions; the button is shown when at least one fits. */
-export const MORE_ACTIONS: ShapeAction[] = [];
+export const MORE_ACTIONS: ShapeAction[] = [
+    {
+        id: 'offset',
+        label: () => i18n._('key-CncLaser/Offset-Offset'),
+        keyHint: 'O',
+        // vector shapes (closed or open); not while the offset values are open
+        fits: (state, headType) => canEditShapes(state, headType) && !state[headType]?.offsetSession
+            && offsetModels(state[headType]?.modelGroup).length > 0,
+        run: (dispatch, headType) => dispatch(editorActions.startOffset(headType)),
+    },
+];
 
 export const fittingActions = (actions: ShapeAction[], state: unknown, headType: HeadType) => actions.filter(a => a.fits(state, headType));
