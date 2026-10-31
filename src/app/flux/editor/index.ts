@@ -3340,9 +3340,7 @@ export const actions = {
                         }
                         selectedModels = expanded;
                     }
-                    for (const m of selectedModels) {
-                        dispatch(actions.bringSelectedModelToFront(headType, m));
-                    }
+                    // selecting keeps the layer order (the object list and the SVG elements)
                     SVGActions.setSelectedSvgModelsByModels(selectedModels);
                     // exactly one whole group in the box: the group is selected (its row in the object list)
                     const groupIDs = new Set(selectedModels.map(m => modelGroup.getParentGroup?.(m.modelID)?.modelID ?? null));
