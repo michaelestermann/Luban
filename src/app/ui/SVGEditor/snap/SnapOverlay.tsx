@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import { CURSOR_SIZE, labelCovers, LabelPoint, placeLabel } from '../label-placement';
 import styles from '../measure/measure-overlay.styl';
 import { SnapGuides, subscribeSnapGuides } from './snap-session';
 
@@ -19,7 +20,19 @@ const SnapOverlay: React.FC<SnapOverlayProps> = ({ isActive, getScreenCTM }) => 
     const [guides, setGuides] = useState<SnapGuides | null>(null);
     const rootRef = useRef<HTMLDivElement>(null);
 
+    // the mouse on the screen, only followed while guides are shown: distance labels keep clear of it
+    const [pointer, setPointer] = useState<LabelPoint | null>(null);
+
     useEffect(() => subscribeSnapGuides(setGuides), []);
+    const showing = isActive && !!guides;
+    useEffect(() => {
+        if (!showing) {
+            return undefined;
+        }
+        const onMove = (event: MouseEvent) => setPointer({ x: event.clientX, y: event.clientY });
+        window.addEventListener('mousemove', onMove, true);
+        return () => window.removeEventListener('mousemove', onMove, true);
+    }, [showing]);
 
     const ctm = isActive && guides ? getScreenCTM() : null;
     const root = rootRef.current?.getBoundingClientRect();
@@ -31,6 +44,8 @@ const SnapOverlay: React.FC<SnapOverlayProps> = ({ isActive, getScreenCTM }) => 
         y: ctm.b * x + ctm.d * y + ctm.f - root.top,
     });
     const p = guides.point ? toScreen(guides.point.x, guides.point.y) : null;
+    const cursor = pointer ? { x: pointer.x - root.left, y: pointer.y - root.top } : null;
+    const view = { x: 0, y: 0, width: root.width, height: root.height };
     return (
         <div ref={rootRef} className={styles.overlay} data-snap-guides>
             <svg className={styles.graphics} width={root.width} height={root.height} aria-hidden="true">
@@ -54,8 +69,13 @@ const SnapOverlay: React.FC<SnapOverlayProps> = ({ isActive, getScreenCTM }) => 
             </svg>
             {guides.guides.filter(g => g.label).map((g) => {
                 const l = toScreen(g.label.x, g.label.y);
-                // beside a vertical guide, above a horizontal one
-                const style = g.x1 === g.x2 ? { left: l.x + 4, top: l.y - 10 } : { left: l.x - 20, top: l.y - 24 };
+                // beside a vertical guide, above a horizontal one; beside the cursor when that is under it
+                const size = { width: Math.max(40, g.label.text.length * 6.6 + 12), height: 20 };
+                let at = g.x1 === g.x2 ? { x: l.x + 4, y: l.y - 10 } : { x: l.x - 20, y: l.y - 24 };
+                if (cursor && labelCovers({ ...at, ...size }, [cursor, p])) {
+                    at = placeLabel({ cursor, avoid: [p], size, view, cursorSize: CURSOR_SIZE });
+                }
+                const style = { left: at.x, top: at.y };
                 return (
                     <span key={`label-${g.x1},${g.y1}`} className={styles['dimension-label']} style={style}>
                         {g.label.text}

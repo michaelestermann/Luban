@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { PAGE_EDITOR } from '../../../constants';
 import i18n from '../../../lib/i18n';
 import { ShortcutHandlerPriority, ShortcutManager } from '../../../lib/shortcut';
+import { CURSOR_SIZE, labelCovers, LabelPoint, LabelRect, placeLabel } from '../label-placement';
 import { parsePath } from '../path-edit/path-geometry';
 import { rectElementRadius } from '../path-edit/rect-corners';
 import { formatMm } from './geometry-length';
@@ -288,6 +289,8 @@ const MeasureOverlay: React.FC<MeasureOverlayProps> = ({ headType, mode, editing
     // the shown state, for Esc and hovering the parts of the focused object
     const measureRef = useRef<MeasureState>(measure);
     measureRef.current = measure;
+    // the mouse on the screen (labels keep clear of it)
+    const pointerRef = useRef<LabelPoint | null>(null);
 
     // key M enters the tool, Esc leaves it
     useEffect(() => {
@@ -388,6 +391,7 @@ const MeasureOverlay: React.FC<MeasureOverlayProps> = ({ headType, mode, editing
             return { point: snap ? { x: snap.x, y: snap.y } : point, snap, hover, segment };
         };
         const onMouseDown = (event: MouseEvent) => {
+            pointerRef.current = { x: event.clientX, y: event.clientY };
             if (event.button !== 0 || event.ctrlKey || event.metaKey) {
                 return;
             }
@@ -420,6 +424,7 @@ const MeasureOverlay: React.FC<MeasureOverlayProps> = ({ headType, mode, editing
             }
         };
         const onMouseMove = (event: MouseEvent) => {
+            pointerRef.current = { x: event.clientX, y: event.clientY };
             const p = pick(event);
             if (!p) {
                 return;
@@ -484,14 +489,36 @@ const MeasureOverlay: React.FC<MeasureOverlayProps> = ({ headType, mode, editing
     const b = end ? toScreen(end) : null;
     const s = snap ? toScreen(snap) : null;
     const text = start && end ? formatMeasure(measureInfo(start, end)) : null;
-    // label beside the middle of the line, inside the view
+    // the mouse in overlay coordinates; labels never cover it nor the snap marker
+    const cursor = pointerRef.current ? { x: pointerRef.current.x - root.left, y: pointerRef.current.y - root.top } : null;
+    const labelView: LabelRect = { x: VIEW_LEFT_PX, y: VIEW_TOP_PX, width: root.width - VIEW_LEFT_PX - 4, height: root.height - VIEW_TOP_PX - 4 };
+    // a label anchored to geometry moves beside the cursor when the cursor or the snap marker is under it
+    const clearOfCursor = (x: number, y: number, w: number, h: number, avoid: (LabelPoint | null)[] = []) => {
+        if (!cursor || !labelCovers({ x, y, width: w, height: h }, [cursor, s, ...avoid])) {
+            return { x, y };
+        }
+        return placeLabel({ cursor, avoid: [s, ...avoid], size: { width: w, height: h }, view: labelView, cursorSize: CURSOR_SIZE });
+    };
     const labelW = 150;
     const labelH = 40;
     let labelX = 0;
     let labelY = 0;
-    if (a && b) {
-        labelX = Math.max(VIEW_LEFT_PX, Math.min((a.x + b.x) / 2 - labelW / 2, root.width - labelW - 4));
-        labelY = Math.max(4, Math.min((a.y + b.y) / 2 - labelH - 12, root.height - labelH - 4));
+    if (a && b && !measure.fixed) {
+        // while the second point is placed: beside the cursor, off the line and the snap marker
+        const placed = placeLabel({
+            cursor: cursor || b, avoid: [b, s, a], segments: [[a, b]], size: { width: labelW, height: labelH }, view: labelView, cursorSize: CURSOR_SIZE
+        });
+        labelX = placed.x;
+        labelY = placed.y;
+    } else if (a && b) {
+        // a finished measurement: beside the middle of the line, inside the view
+        const placed = clearOfCursor(
+            Math.max(VIEW_LEFT_PX, Math.min((a.x + b.x) / 2 - labelW / 2, root.width - labelW - 4)),
+            Math.max(VIEW_TOP_PX, Math.min((a.y + b.y) / 2 - labelH - 12, root.height - labelH - 4)),
+            labelW, labelH, [a, b]
+        );
+        labelX = placed.x;
+        labelY = placed.y;
     }
 
     // parts of the focused object
@@ -555,8 +582,11 @@ const MeasureOverlay: React.FC<MeasureOverlayProps> = ({ headType, mode, editing
             centreX = c.x + r + 16 + w / 2;
             centreY = c.y;
         }
-        const x = Math.max(VIEW_LEFT_PX, Math.min(centreX - w / 2, root.width - w - 4));
-        const y = Math.max(VIEW_TOP_PX, Math.min(centreY - h / 2, root.height - h - 4));
+        const { x, y } = clearOfCursor(
+            Math.max(VIEW_LEFT_PX, Math.min(centreX - w / 2, root.width - w - 4)),
+            Math.max(VIEW_TOP_PX, Math.min(centreY - h / 2, root.height - h - 4)),
+            w, h
+        );
         // the radius line of an arc or circle: from the centre to the middle of the arc
         let radius = null;
         if (ms.length === 1 && (last.kind === 'arc' || last.kind === 'circle') && last.centre) {
@@ -630,8 +660,7 @@ const MeasureOverlay: React.FC<MeasureOverlayProps> = ({ headType, mode, editing
                 y = box.y - h - 16 >= VIEW_TOP_PX ? box.y - h - 16 : box.y + box.height + 16;
             }
         }
-        x = Math.max(VIEW_LEFT_PX, Math.min(x, root.width - w - 4));
-        y = Math.max(VIEW_TOP_PX, Math.min(y, root.height - h - 4));
+        ({ x, y } = clearOfCursor(Math.max(VIEW_LEFT_PX, Math.min(x, root.width - w - 4)), Math.max(VIEW_TOP_PX, Math.min(y, root.height - h - 4)), w, h));
         objectGraphics = (
             <g>
                 {renderOutline(outline, 'outline')}
