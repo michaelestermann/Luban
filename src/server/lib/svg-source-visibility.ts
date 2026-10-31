@@ -11,6 +11,16 @@ export function stripHiddenVisibility(svg: string): string {
 }
 
 /**
+ * Whether a model's source SVG was written by the editor (a drawn shape, text): only those can carry
+ * the editor's own visibility="hidden". An imported SVG file (svgNodeName "image") keeps the hidden
+ * elements of its author, the engine must skip them.
+ */
+export function editorShapeSource(modelInfo: { config?: { svgNodeName?: string } } | null | undefined): boolean {
+    const nodeName = modelInfo?.config?.svgNodeName;
+    return !!nodeName && nodeName !== 'image';
+}
+
+/**
  * Source files of drawn shapes could be saved while the editor had the element hidden
  * (e.g. during point editing). The toolpath engine skips hidden elements and then produces
  * an empty toolpath. For a model that is visible, use a copy of the source without the

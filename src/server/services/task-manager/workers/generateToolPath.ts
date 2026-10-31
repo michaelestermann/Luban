@@ -6,7 +6,7 @@ import { SOURCE_TYPE_RASTER, TOOLPATH_TYPE_VECTOR } from '../../../constants';
 import slice from '../../../slicer/call-engine';
 import { generateDrillToolPathFiles } from '../../../lib/ToolPathGenerator/DrillToolPathGenerator';
 import logger from '../../../lib/logger';
-import { ensureVisibleSvgSource } from '../../../lib/svg-source-visibility';
+import { editorShapeSource, ensureVisibleSvgSource } from '../../../lib/svg-source-visibility';
 import sendMessage from '../utils/sendMessage';
 
 const log = logger('worker:generateToolPath');
@@ -32,7 +32,8 @@ const generateLaserToolPathFromEngine = async (allTasks, onProgress) => {
                     modelInfo.uploadName = newUploadName;
                 }
             }
-            if (type === TOOLPATH_TYPE_VECTOR) {
+            if (type === TOOLPATH_TYPE_VECTOR && editorShapeSource(modelInfo)) {
+                // drawn shapes only: an imported file's own hidden elements stay hidden
                 modelInfo.uploadName = ensureVisibleSvgSource(process.env.Tmpdir, modelInfo.uploadName, modelInfo.visible);
             }
             const gcodeConfig = modelInfo?.gcodeConfig;

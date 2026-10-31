@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { test } from 'tape';
-import { ensureVisibleSvgSource, stripHiddenVisibility } from '../src/server/lib/svg-source-visibility';
+import { editorShapeSource, ensureVisibleSvgSource, stripHiddenVisibility } from '../src/server/lib/svg-source-visibility';
 import { cleanSourceClone } from '../src/app/models/svg-source';
 
 const HIDDEN_SVG = '<svg viewBox="0 0 10 10"><path d="M0 0L10 0" stroke="black" visibility="hidden"/>'
@@ -46,5 +46,15 @@ test('cleanSourceClone drops the editor visibility unless the model is hidden', 
     t.deepEqual(undef.attrs, { d: 'M0 0' }, 'unknown visibility counts as visible');
     const hidden = cleanSourceClone(fakeElement(), false);
     t.deepEqual(hidden.attrs, { visibility: 'hidden', d: 'M0 0' }, 'hidden model keeps it');
+    t.end();
+});
+
+test('editorShapeSource: only sources the editor wrote get the hidden flag removed', (t) => {
+    t.ok(editorShapeSource({ config: { svgNodeName: 'path' } }), 'drawn path');
+    t.ok(editorShapeSource({ config: { svgNodeName: 'rect' } }), 'drawn rect');
+    t.notOk(editorShapeSource({ config: { svgNodeName: 'image' } }), 'imported SVG file keeps its hidden elements');
+    t.notOk(editorShapeSource({ config: {} }), 'unknown source');
+    t.notOk(editorShapeSource({}), 'no config');
+    t.notOk(editorShapeSource(null), 'nothing');
     t.end();
 });
