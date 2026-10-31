@@ -498,6 +498,8 @@ class SVGActionsFactory {
 
     _pasteFrom(models) {
         this.clearSelection();
+        // the copies are free objects: a group that was selected is not the selection any more
+        this.modelGroup.selectedGroupID = null;
         const newSVGModels = [];
         models.forEach((clonedSVGModel) => {
             clonedSVGModel.transformation.positionX += 5;
