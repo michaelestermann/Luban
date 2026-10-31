@@ -172,7 +172,27 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
                             title={meta.openedFile?.path || name}
                             tabIndex={active ? 0 : -1}
                             onClick={() => onActivate(meta.id)}
-                            onKeyDown={(e) => onKeyActivate(e, () => onActivate(meta.id))}
+                            onMouseDown={(e) => {
+                                // no auto-scroll on a middle click
+                                if (e.button === 1) {
+                                    e.preventDefault();
+                                }
+                            }}
+                            onAuxClick={(e) => {
+                                // middle click closes the tab
+                                if (e.button === 1) {
+                                    e.preventDefault();
+                                    onClose && onClose(meta.id);
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Delete' && onClose) {
+                                    e.preventDefault();
+                                    onClose(meta.id);
+                                    return;
+                                }
+                                onKeyActivate(e, () => onActivate(meta.id));
+                            }}
                         >
                             <HeadIcon headType={meta.headType} />
                             <button type="button" className={styles.name}>{name}</button>

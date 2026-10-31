@@ -36,6 +36,7 @@ Canvas2dZoom.register('');
 
 interface AppProps {
     enableShortcut: boolean;
+    menuDisabledCount?: number;
     activeMachine: Machine | null;
     // 4.17 tabs: the edit page of a mode is mounted again when another document of that mode becomes live
     printingDocKey: string;
@@ -102,6 +103,15 @@ class App extends React.PureComponent<AppProps, AppState> {
             [PREDEFINED_SHORTCUT_ACTIONS.EXPORT_GCODE]: () => {
                 if (this.props.menuDisabledCount <= 0) {
                     UniApi.Event.emit('appbar-menu:export-gcode');
+                }
+            },
+            // 4.17 tabs: File > Close Project (the menu accelerator does not reach a window without a native menu bar)
+            'CLOSEPROJECT': {
+                keys: ['mod+f4'],
+                callback: () => {
+                    if (this.props.menuDisabledCount <= 0) {
+                        UniApi.Event.emit('appbar-menu:close-project');
+                    }
                 }
             },
             'RESETUSERCONFIG': { // reset user config, which equivalent to fully reinstallation

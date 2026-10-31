@@ -2697,5 +2697,11 @@
     "key-Tabs/No recent projects of this mode": "Keine zuletzt verwendeten Projekte dieser Art",
     "key-Tabs/No cases for this machine and mode": "Keine Beispiele für diese Maschine und Art",
     "key-Tabs/Back": "Zurück",
-    "key-Tabs/Cancel": "Abbrechen"
+    "key-Tabs/Cancel": "Abbrechen",
+    "key-Tabs/Save changes to {{name}}?": "Änderungen an {{name}} speichern?",
+    "key-Tabs/This tab has changes that are not saved. If you close it without saving, they are lost. Undo history of this tab is also cleared.": "Dieser Tab hat Änderungen, die nicht gespeichert sind. Wenn Sie ihn ohne Speichern schließen, gehen sie verloren. Auch der Rückgängig-Verlauf dieses Tabs wird gelöscht.",
+    "key-Tabs/Don't save": "Nicht speichern",
+    "key-Tabs/Save": "Speichern",
+    "key-Tabs/{{name}} is still busy. Close it when it is done.": "{{name}} ist noch beschäftigt. Schließen Sie es, sobald es fertig ist.",
+    "key-App/Menu-Close Project": "Projekt schließen"
 }

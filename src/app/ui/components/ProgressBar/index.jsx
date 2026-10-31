@@ -56,7 +56,10 @@ class ProgressBar extends React.PureComponent {
                         closable={false}
                         centered={false}
                         zIndex={2000}
-                        style={{ top: 'calc(100vh - 126px)', padding: '16px 0 0' }}
+                        // 4.17 tabs: the mask starts below the tab strip, so tabs of other modes stay clickable
+                        wrapClassName="modal-wrapper below-tab-strip"
+                        maskStyle={{ top: 'var(--tab-strip-height, 0px)' }}
+                        style={{ top: 'calc(100vh - var(--tab-strip-height, 0px) - 126px)', padding: '16px 0 0' }}
                     >
                         <Modal.Body style={{ marginBottom: '-24px', marginTop: '-40px' }}>
                             <div className="position-re height-16 margin-top-24 margin-bottom-16 align-c">

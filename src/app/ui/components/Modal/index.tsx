@@ -57,6 +57,7 @@ const Modal: ModalType = React.memo((props) => {
         children,
         size,
         width = 'auto',
+        maskStyle,
         ...rest
     } = props;
 
@@ -109,7 +110,8 @@ const Modal: ModalType = React.memo((props) => {
                 }
             )}
             maskStyle={{
-                background: '#2A2C2E30'
+                background: '#2A2C2E30',
+                ...maskStyle
             }}
         >
             {renderSection('modalBody')}

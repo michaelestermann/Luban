@@ -28,6 +28,7 @@ import { PROCESS_STAGE } from '../../lib/manager/ProgressManager';
 import workerManager from '../../lib/manager/workerManager';
 import { bubbleSortByAttribute } from '../../lib/numeric-utils';
 import UniApi from '../../lib/uni-api';
+import { saveAsPromise } from '../../lib/save-as-result';
 import { UniformToolpathConfig } from '../../lib/uniform-toolpath-config';
 import { getCurrentHeadType } from '../../lib/url-utils';
 import { machineStore } from '../../store/local-storage';
@@ -571,21 +572,21 @@ export const actions = {
             tmpFile = `/Tmp/${targetFile}`;
         }
 
-        return new Promise((resolve) => {
-            UniApi.File.saveAs(newTargetFile, tmpFile, (type, filePath = '', newOpenedFile) => {
-                dispatch(appGlobalActions.updateSavedModal({
-                    showSavedModal: true,
-                    savedModalType: type,
-                    savedModalFilePath: filePath
-                }));
-                if (newOpenedFile) {
-                    dispatch(actions.setOpenedFileWithType(headType, newOpenedFile));
-                }
-                dispatch(actions.clearSavedEnvironment(headType));
-
-                resolve(); // done
-            });
-        });
+        // 4.17 tabs: resolves false when the dialog is cancelled (close / quit are aborted then)
+        const result = await saveAsPromise((callback) => UniApi.File.saveAs(newTargetFile, tmpFile, callback));
+        if (!result.saved) {
+            return false;
+        }
+        dispatch(appGlobalActions.updateSavedModal({
+            showSavedModal: true,
+            savedModalType: result.type,
+            savedModalFilePath: result.filePath
+        }));
+        if (result.file) {
+            await dispatch(actions.setOpenedFileWithType(headType, result.file));
+        }
+        await dispatch(actions.clearSavedEnvironment(headType));
+        return true;
     },
     save: (headType, dialogOptions = false) => async (dispatch, getState) => {
         // save should return when no model in editor
@@ -620,8 +621,7 @@ export const actions = {
                     return true;
                 } else {
                     await dispatch(actions.autoSaveEnvironment(headType));
-                    await dispatch(actions.saveAsFile(headType));
-                    return true;
+                    return dispatch(actions.saveAsFile(headType));
                 }
             } else {
                 const idxClicked = result && result.response;
@@ -636,8 +636,8 @@ export const actions = {
 
         if (!openedFile) {
             await dispatch(actions.autoSaveEnvironment(headType));
-            await dispatch(actions.saveAsFile(headType));
-            return true;
+            // false when the Save As dialog is cancelled
+            return dispatch(actions.saveAsFile(headType));
         }
 
         const { body: { targetFile } } = await api.env.packageEnv({ headType, docId: activeDocId(getState(), headType) });

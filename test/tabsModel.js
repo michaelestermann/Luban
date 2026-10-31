@@ -351,3 +351,15 @@ test('projectHeadTypeOf maps project extensions to modes', (t) => {
     t.equal(projectHeadTypeOf(''), null);
     t.end();
 });
+
+test('closing the last project tab leaves only home and workspace', (t) => {
+    let s = withDocs(doc('a', 'cnc'));
+    s = activateTab(s, 'a', 1);
+    s = removeDocument(s, 'a');
+    t.deepEqual(s.order, [], 'no project tabs');
+    t.deepEqual(s.documents, {}, 'no documents');
+    t.equal(s.activeTabId, HOME_TAB, 'home is active');
+    t.deepEqual(s.activeDocByHead, {}, 'no live document');
+    t.equal(pathForTab(s, s.activeTabId), '/', 'home route');
+    t.end();
+});

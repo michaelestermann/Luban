@@ -2687,5 +2687,11 @@
     "key-Tabs/No recent projects of this mode": "No recent projects of this mode",
     "key-Tabs/No cases for this machine and mode": "No cases for this machine and mode",
     "key-Tabs/Back": "Back",
-    "key-Tabs/Cancel": "Cancel"
+    "key-Tabs/Cancel": "Cancel",
+    "key-Tabs/Save changes to {{name}}?": "Save changes to {{name}}?",
+    "key-Tabs/This tab has changes that are not saved. If you close it without saving, they are lost. Undo history of this tab is also cleared.": "This tab has changes that are not saved. If you close it without saving, they are lost. Undo history of this tab is also cleared.",
+    "key-Tabs/Don't save": "Don't save",
+    "key-Tabs/Save": "Save",
+    "key-Tabs/{{name}} is still busy. Close it when it is done.": "{{name}} is still busy. Close it when it is done.",
+    "key-App/Menu-Close Project": "Close Project"
 }

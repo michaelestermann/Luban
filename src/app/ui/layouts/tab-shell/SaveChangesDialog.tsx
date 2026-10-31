@@ -1,0 +1,62 @@
+import React, { useEffect, useRef } from 'react';
+
+import i18n from '../../../lib/i18n';
+import { SaveChangesAnswer } from '../../../lib/tab-dialogs';
+import styles from './tab-shell.styl';
+
+interface SaveChangesDialogProps {
+    name: string;
+    onAnswer: (answer: SaveChangesAnswer) => void;
+}
+
+/** "Save changes to {{name}}?" (design D): Save is focused, Esc = Cancel. */
+const SaveChangesDialog: React.FC<SaveChangesDialogProps> = ({ name, onAnswer }) => {
+    const saveRef = useRef<HTMLButtonElement | null>(null);
+
+    useEffect(() => {
+        saveRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                onAnswer('cancel');
+            }
+        };
+        window.addEventListener('keydown', onKey, true);
+        return () => window.removeEventListener('keydown', onKey, true);
+    }, [onAnswer]);
+
+    return (
+        <div className={styles.backdrop} role="presentation">
+            <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="tabs-save-title"
+                aria-describedby="tabs-save-text"
+                className={styles.dialog}
+                data-dialog="save-changes"
+            >
+                <b id="tabs-save-title" className={styles['dialog-title']}>
+                    {i18n._('key-Tabs/Save changes to {{name}}?', { name })}
+                </b>
+                <span id="tabs-save-text" className={styles['dialog-text']}>
+                    {i18n._('key-Tabs/This tab has changes that are not saved. If you close it without saving, they are lost. Undo history of this tab is also cleared.')}
+                </span>
+                <div className={styles['dialog-actions']}>
+                    <button type="button" className={styles.secondary} data-answer="discard" onClick={() => onAnswer('discard')}>
+                        {i18n._('key-Tabs/Don\'t save')}
+                    </button>
+                    <span className={styles.spacer} />
+                    <button type="button" className={styles.secondary} data-answer="cancel" onClick={() => onAnswer('cancel')}>
+                        {i18n._('key-Tabs/Cancel')}
+                    </button>
+                    <button type="button" ref={saveRef} className={styles.primary} data-answer="save" onClick={() => onAnswer('save')}>
+                        {i18n._('key-Tabs/Save')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default SaveChangesDialog;

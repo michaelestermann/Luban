@@ -7,12 +7,15 @@
 import { batch } from 'react-redux';
 import { v4 as uuid } from 'uuid';
 
+import api from '../../api';
+
 import { DISPLAYED_TYPE_MODEL, PAGE_EDITOR } from '../../constants';
 import { HEAD_CNC, HEAD_LASER } from '../../constants/machines';
 import { checkIsGCodeFile, checkIsSnapmakerProjectFile } from '../../lib/check-name';
 import { logModuleVisit } from '../../lib/gaEvent';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
+import { requestSaveChanges } from '../../lib/tab-dialogs';
 import workerManager from '../../lib/manager/workerManager';
 import { toast } from '../../ui/components/Toast';
 import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
@@ -22,7 +25,7 @@ import { actions as machineActions } from '../machine';
 import { actions as printingActions } from '../printing';
 import { actions as workspaceActions } from '../workspace';
 import { actions as projectActions } from './index';
-import { createDocumentObjects, wireDocumentObjects } from './document-objects';
+import { createDocumentObjects, disposeDocumentObjects, wireDocumentObjects } from './document-objects';
 /* eslint-enable import/no-cycle */
 import { documentStore } from './document-store';
 import { PROJECT_META_KEYS, documentStatusOf, isHeadBusy, planActivation, swapDocumentState } from './document-swap';
@@ -30,6 +33,7 @@ import {
     DocumentMeta,
     EDITOR_HEAD_TYPES,
     EditorHeadType,
+    HOME_TAB,
     OpenedFileRef,
     TabsState,
     WORKSPACE_TAB,
@@ -38,8 +42,10 @@ import {
     documentDisplayName,
     findDocumentByPath,
     isEditorHeadType,
+    nextTabAfterClose,
     nextUntitledIndex,
     pathForTab,
+    removeDocument,
     tabIdForPath,
     updateDocument,
 } from './tabs-model';
@@ -445,6 +451,137 @@ const newDocument = (headType: EditorHeadType, opts: { isRotate?: boolean }, his
     }
 };
 
+interface ModelGroupLike {
+    hasModelWhole?: () => boolean;
+    getModels?: () => unknown[];
+}
+
+const hasModels = (modelGroup: ModelGroupLike | undefined): boolean => {
+    if (!modelGroup) {
+        return false;
+    }
+    if (typeof modelGroup.hasModelWhole === 'function') {
+        return modelGroup.hasModelWhole();
+    }
+    return (modelGroup.getModels?.() || []).length > 0;
+};
+
+/**
+ * Whether closing the document loses work: it is unsaved and has models. The live document is judged by
+ * its slice and project meta, a parked one by what was parked, an unloaded one (session restore) by its meta.
+ */
+const documentNeedsSave = (state, id: string): boolean => {
+    const tabs = getTabsState(state);
+    const meta = tabs.documents[id];
+    if (!meta) {
+        return false;
+    }
+    const head = meta.headType;
+    if (tabs.activeDocByHead[head] === id) {
+        return !!state.project[head]?.unSaved && hasModels(state[head]?.modelGroup);
+    }
+    const parked = documentStore.peek(id);
+    if (parked) {
+        const unSaved = parked.projectMeta.unSaved ?? meta.unSaved;
+        return !!unSaved && hasModels(parked.slice.modelGroup as ModelGroupLike);
+    }
+    return meta.unSaved;
+};
+
+/**
+ * Closes a document tab. Unsaved work is offered for saving first (in-app Save / Don't save / Cancel; a
+ * parked doc is shown for that). Returns false when the close was cancelled, Save failed or Save As was
+ * cancelled, or the mode of the live doc is busy. Afterwards the tab is gone, its objects are freed and
+ * its auto-save folder `env/docs/<id>` is removed; the right neighbour (else the left one, else Home)
+ * becomes active when it was the active tab, otherwise the active tab stays.
+ */
+const closeDocumentNow = (docId: string, history: HistoryLike) => async (dispatch, getState): Promise<boolean> => {
+    const tabsAtStart = getTabsState(getState());
+    const meta = tabsAtStart.documents[docId];
+    if (!meta) {
+        return false;
+    }
+    const head = meta.headType;
+    const name = documentDisplayName(meta, i18n._('key-Tabs/Untitled'));
+    const isLive = () => getTabsState(getState()).activeDocByHead[head] === docId;
+    // a running task of the live document would land in the next document of the mode
+    if (isLive() && busyHeads(getState()).includes(head)) {
+        toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} is still busy. Close it when it is done.', { name })));
+        return false;
+    }
+    const returnTo = tabsAtStart.activeTabId === docId ? nextTabAfterClose(tabsAtStart, docId) : tabsAtStart.activeTabId;
+
+    if (documentNeedsSave(getState(), docId)) {
+        if (!isLive()) {
+            // Save works on the live slice: show the document
+            const shown = await dispatch(activateTab(docId, history));
+            if (!shown) {
+                return false;
+            }
+        }
+        const answer = await requestSaveChanges(name);
+        if (answer === 'cancel') {
+            return false;
+        }
+        if (answer === 'save') {
+            const saved = await dispatch(projectActions.save(head));
+            if (!saved || getState().project[head]?.unSaved) {
+                return false;
+            }
+        }
+    }
+
+    // leave the document first: the next tab is shown (a document of the same mode parks this one)
+    if (getTabsState(getState()).activeTabId !== returnTo || returnTo === docId) {
+        const target = getTabsState(getState()).documents[returnTo] || returnTo === WORKSPACE_TAB ? returnTo : HOME_TAB;
+        const shown = await dispatch(activateTab(target, history));
+        if (!shown && getTabsState(getState()).activeTabId === docId) {
+            await dispatch(activateTab(HOME_TAB, history));
+        }
+    }
+    if (getTabsState(getState()).activeTabId === docId) {
+        return false;
+    }
+
+    await documentStore.lastAutosave(docId);
+    const wasLive = isLive();
+    const parked = documentStore.take(docId);
+    if (parked) {
+        disposeDocumentObjects(parked.slice, head);
+    } else if (wasLive) {
+        // the slice keeps the emptied objects until another document of the mode goes live
+        dispatch(projectActions.closeProject(head));
+    }
+    dispatch(setTabs((s) => removeDocument(s, docId)));
+    if (wasLive) {
+        dispatch(projectActions.updateState(head, { ...EMPTY_PROJECT_META }));
+    }
+    // an autosave started by the close must not write the folder again after it is removed
+    await documentStore.lastAutosave(docId);
+    documentStore.delete(docId);
+    try {
+        await api.env.removeEnv({ headType: head, docId });
+    } catch (e) {
+        log.warn(`tabs: could not remove the auto-save of ${docId}`);
+    }
+    return true;
+};
+
+// documents whose close is running (a second × / menu close of the same tab is ignored meanwhile)
+const closing = new Set<string>();
+
+const closeDocument = (docId: string, history: HistoryLike) => async (dispatch): Promise<boolean> => {
+    if (closing.has(docId)) {
+        return false;
+    }
+    closing.add(docId);
+    try {
+        return await dispatch(closeDocumentNow(docId, history));
+    } finally {
+        closing.delete(docId);
+    }
+};
+
 /**
  * Keeps the strip in sync when code still navigates with `history.push('/laser')`: the tab of the route
  * becomes active. An editor route without a document registers an untitled one for the live slice.
@@ -505,6 +642,7 @@ export const tabsActions = {
     openProjectInTab,
     newDocument,
     installDocument,
+    closeDocument,
 };
 
 export default tabsActions;

@@ -85,6 +85,7 @@ i18n._('key-App/Menu-Clear All Recent Projects');
 i18n._('key-App/Menu-Case Library');
 i18n._('key-App/Menu-Save Project');
 i18n._('key-App/Menu-Save As');
+i18n._('key-App/Menu-Close Project');
 i18n._('key-App/Menu-Import Object');
 i18n._('key-App/Menu-Export Object');
 i18n._('key-App/Menu-Export G-code');

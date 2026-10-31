@@ -243,6 +243,7 @@ export const actions = {
         if (currentPath === '#/') {
             fileMenu.submenu.forEach(item => {
                 switch (item.id) {
+                    case 'close-project':
                     case 'save':
                     case 'save-as':
                     case 'import':
@@ -268,6 +269,7 @@ export const actions = {
             fileMenu.submenu.forEach(item => {
                 switch (item.id) {
                     case 'export-gcode': item.enabled = !!gcodeFile; break;
+                    case 'close-project':
                     case 'save':
                     case 'save-as':
                     case 'export-models': item.enabled = false; break;

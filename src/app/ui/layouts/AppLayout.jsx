@@ -61,6 +61,7 @@ class AppLayout extends React.PureComponent {
         currentModalPath: PropTypes.string,
         updateCurrentModalPath: PropTypes.func.isRequired,
         newDocument: PropTypes.func.isRequired,
+        closeActiveDocument: PropTypes.func.isRequired,
         initRecoverService: PropTypes.func.isRequired,
         save: PropTypes.func.isRequired,
         saveAndClose: PropTypes.func.isRequired,
@@ -628,7 +629,10 @@ class AppLayout extends React.PureComponent {
                 }
             });
             UniApi.Event.on('close-file', async () => {
-                await this.actions.closeFile();
+                await this.props.closeActiveDocument(this.props.history);
+            });
+            UniApi.Event.on('appbar-menu:close-project', async () => {
+                await this.props.closeActiveDocument(this.props.history);
             });
             UniApi.Event.on('update-recent-file', (event, arr, type) => {
                 this.actions.updateRecentFile(arr, type);
@@ -1028,6 +1032,8 @@ const mapDispatchToProps = (dispatch) => {
         saveAndClose: (headType, opts) => dispatch(projectActions.saveAndClose(headType, opts)),
         openProject: (file, history) => dispatch(projectActions.openProject(file, history)),
         newDocument: (headType, isRotate, history) => dispatch(tabsActions.newDocument(headType, { isRotate }, history)),
+        // 4.17 tabs: File > Close Project closes the active project tab (Home and Workspace cannot be closed)
+        closeActiveDocument: (history) => dispatch((d, getState) => d(tabsActions.closeDocument(getState().project.tabs.activeTabId, history))),
         updateRecentProject: (arr, type) => dispatch(projectActions.updateRecentFile(arr, type)),
         loadCase: (pathConfig, history) => dispatch(projectActions.openProject(pathConfig, history)),
         updateCurrentModalPath: (pathName) => dispatch(menuActions.updateCurrentModalPath(pathName)),

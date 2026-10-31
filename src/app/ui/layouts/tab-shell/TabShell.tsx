@@ -5,6 +5,7 @@ import { useHistory } from 'react-router-dom';
 import { tabsActions } from '../../../flux/project/actions-tabs';
 import { TabsState } from '../../../flux/project/tabs-model';
 import UniApi from '../../../lib/uni-api';
+import DialogHost from './DialogHost';
 import ModeChooser from './ModeChooser';
 import TabStrip, { tabDisplayName } from './TabStrip';
 import { useTabRouteSync } from './useTabRouteSync';
@@ -68,6 +69,11 @@ const TabShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         activateTab(tabId);
     }, [activateTab]);
 
+    // × / middle click: in-app save prompt for unsaved work (DialogHost)
+    const onClose = useCallback((tabId: string) => {
+        dispatch(tabsActions.closeDocument(tabId, history));
+    }, [dispatch, history]);
+
     // "+" asks the mode first (ModeChooser)
     const [chooserOpen, setChooserOpen] = useState(false);
     const onAdd = useCallback(() => setChooserOpen(true), []);
@@ -75,11 +81,12 @@ const TabShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 
     return (
         <div className={styles['tab-shell']}>
-            <TabStrip onActivate={onActivate} onAdd={onAdd} />
+            <TabStrip onActivate={onActivate} onAdd={onAdd} onClose={onClose} />
             <div className={styles['tab-content']}>
                 {children}
             </div>
             {chooserOpen && <ModeChooser onClose={closeChooser} />}
+            <DialogHost />
         </div>
     );
 };

@@ -158,6 +158,20 @@ export default {
                 }
             }
         },
+        {
+            // 4.17 tabs: closes the active project tab (Ctrl+W is the weld shortcut of the laser / CNC editor)
+            id: 'close-project',
+            label: 'key-App/Menu-Close Project',
+            enabled: true,
+            accelerator: 'CmdOrCtrl+F4',
+            click(menuItem, browserWindow) {
+                if (isElectron()) {
+                    browserWindow.webContents.send('close-file');
+                } else {
+                    UniApi.Event.emit('close-file');
+                }
+            }
+        },
         { id: 'line-2', type: 'separator' },
         {
             id: 'import',

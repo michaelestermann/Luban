@@ -214,6 +214,13 @@ const File = {
             callback && callback();
         }
     },
+    /** Shows the file in the file manager of the OS. */
+    showItemInFolder(filePath) {
+        if (isElectron() && filePath) {
+            const { shell } = window.require('electron');
+            shell.showItemInFolder(filePath);
+        }
+    },
     popFile() {
         if (isElectron()) {
             const { ipcRenderer } = window.require('electron');
@@ -242,7 +249,11 @@ const File = {
                 filters: [{ name: 'files', extensions: [targetFile.split('.')[1]] }]
             }).then((saveDialogReturnValue) => {
                 targetFile = saveDialogReturnValue.filePath;
-                if (!targetFile) throw new Error('select file canceled');
+                if (!targetFile) {
+                    // 4.17 tabs: close / quit wait for the answer, a cancelled dialog must be reported
+                    callback && callback('cancel');
+                    return;
+                }
 
                 const file = { path: targetFile, name: window.require('path').basename(targetFile) };
 
@@ -251,6 +262,10 @@ const File = {
                 ipcRenderer.send('add-recent-file', file);
 
                 callback && callback('electron', targetFile, file);
+            }).catch((e) => {
+                // eslint-disable-next-line no-console
+                console.error(e);
+                callback && callback('error');
             });
             return null;
         } else {
