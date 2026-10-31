@@ -20,6 +20,7 @@ import DataStorage from './DataStorage';
 import MenuBuilder, { addRecentFile, cleanAllRecentFiles } from './electron-app/Menu';
 import { configureWindow } from './electron-app/window';
 import installShowOnReady from './electron-app/window-show-fallback';
+import { appendPendingFiles, projectPathsFromArgv } from './electron-app/argv-files';
 import pkg from './package.json';
 
 
@@ -258,18 +259,19 @@ if (!gotTheLock) {
     process.exit(0);
 }
 
-// Open the project file when the app is not started on the windows platform
+// project and G-code paths of a command line as files to open
+const filesFromArgv = (argv) => projectPathsFromArgv(argv).map((filePath) => ({ path: filePath, name: path.basename(filePath) }));
+
+// Open the project files Luban was started with on the windows platform (4.17: every project / G-code
+// path of the command line, each in its own tab; they wait until the renderer asks with popFile)
 if (process.platform === 'win32') {
-    // 'projectFileOnWindow' represents the directory of project files
-    const projectFileOnWindow = String(process.argv[process.argv.length - 1]);
-    const newProjectFile = {
-        path: projectFileOnWindow,
-        name: path.basename(projectFileOnWindow)
-    };
-    if (mainWindow) {
-        mainWindow.webContents.send('open-file', newProjectFile);
-    } else {
-        config.set('projectFile', newProjectFile);
+    const startFiles = filesFromArgv(process.argv);
+    if (startFiles.length > 0) {
+        if (mainWindow) {
+            startFiles.forEach((file) => mainWindow.webContents.send('open-file', file));
+        } else {
+            config.set('projectFile', appendPendingFiles(config.get('projectFile'), startFiles));
+        }
     }
 }
 
@@ -694,8 +696,9 @@ app.on('open-file', (event, projectFile) => {
     // if the app is ready and initialized, we open this file
     if (mainWindow && newProjectFile) {
         mainWindow.webContents.send('open-file', newProjectFile);
-    } else {
-        config.set('projectFile', newProjectFile);
+    } else if (newProjectFile) {
+        // before the window exists: several files can arrive (multi-select in Finder), all are kept
+        config.set('projectFile', appendPendingFiles(config.get('projectFile'), [newProjectFile]));
     }
 });
 
@@ -730,12 +733,8 @@ app.on('second-instance', (event, commandLine) => {
         if (mainWindow) {
             if (mainWindow.isMinimized()) mainWindow.restore();
             mainWindow.focus();
-            const projectFilePath = commandLine[commandLine.length - 1];
-            const newProjectFile = {
-                path: projectFilePath,
-                name: path.basename(projectFilePath)
-            };
-            mainWindow.webContents.send('open-file', newProjectFile);
+            // 4.17 tabs: every project / G-code path of the command line opens (an open file only gets focus)
+            filesFromArgv(commandLine).forEach((file) => mainWindow.webContents.send('open-file', file));
         }
     }
 });

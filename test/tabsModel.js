@@ -32,6 +32,9 @@ import {
     isDocumentForOtherMachine,
     machineSwitchToolHead,
     recentProjects,
+    filterDocumentsByQuery,
+    scrollOffsetToReveal,
+    droppedFilesToOpen,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -636,5 +639,39 @@ test('recentProjects: all modes, newest first, no duplicates, open files marked,
     t.deepEqual(list.map((r) => r.isOpen), [true, false, false]);
     t.equal(recentProjects(recent, s, 2).length, 2, 'limit');
     t.deepEqual(recentProjects(null, s), []);
+    t.end();
+});
+
+test('filterDocumentsByQuery matches case-insensitively and keeps groups', (t) => {
+    const s = withDocs(
+        doc('c1', 'cnc', { openedFile: { name: 'PCB-a.snapcnc', path: 'D:/x/PCB-a.snapcnc' } }),
+        doc('l1', 'laser', { openedFile: { name: 'ruler.snaplzr', path: 'D:/x/ruler.snaplzr' } }),
+        doc('c2', 'cnc', { openedFile: { name: 'pcb-b.snapcnc', path: 'D:/x/pcb-b.snapcnc' } }),
+        doc('p1', 'printing', { untitledIndex: 2 }),
+    );
+    const all = filterDocumentsByQuery(s, '', 'Untitled');
+    t.deepEqual(all.map(g => g.headType), ['printing', 'laser', 'cnc'], 'empty query: all groups in mode order');
+    t.deepEqual(all[2].documents.map(d => d.id), ['c1', 'c2'], 'tab order inside a mode');
+    const pcb = filterDocumentsByQuery(s, '  PcB ', 'Untitled');
+    t.deepEqual(pcb.map(g => g.headType), ['cnc'], 'only the cnc group');
+    t.deepEqual(pcb[0].documents.map(d => d.id), ['c1', 'c2'], 'both pcb files, case-insensitive, trimmed');
+    t.deepEqual(filterDocumentsByQuery(s, 'untitled 2', 'Untitled').map(g => g.documents[0].id), ['p1'], 'untitled docs match their label');
+    t.deepEqual(filterDocumentsByQuery(s, 'nothing', 'Untitled'), [], 'no match: no groups');
+    t.end();
+});
+
+test('scrollOffsetToReveal scrolls a hidden tab just into view', (t) => {
+    t.equal(scrollOffsetToReveal(0, 500, 100, 120), 0, 'visible: unchanged');
+    t.equal(scrollOffsetToReveal(0, 500, 600, 120), 220, 'right of the view: its right edge at the view edge');
+    t.equal(scrollOffsetToReveal(300, 500, 100, 120), 100, 'left of the view: its left edge at the view edge');
+    t.equal(scrollOffsetToReveal(300, 100, 350, 120), 350, 'wider than the view: left edge wins');
+    t.end();
+});
+
+test('droppedFilesToOpen: project files always, G-code only outside the Workspace', (t) => {
+    const names = ['a.snapcnc', 'B.SNAPLZR', 'pic.png', 'job.gcode', 'x.nc', 'p.snap3dp', 'm.stl', 'y.cnc'];
+    t.deepEqual(droppedFilesToOpen(names, 'home'), [0, 1, 3, 4, 5, 7], 'home: projects and G-code');
+    t.deepEqual(droppedFilesToOpen(names, WORKSPACE_TAB), [0, 1, 5], 'workspace: its drop zone takes the G-code');
+    t.deepEqual(droppedFilesToOpen(['pic.png'], 'doc-1'), [], 'images stay with the page');
     t.end();
 });

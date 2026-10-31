@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import React from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { shallowEqual, useSelector } from 'react-redux';
 
 import {
@@ -9,6 +9,8 @@ import {
     TabsState,
     WORKSPACE_TAB,
     documentDisplayName,
+    filterDocumentsByQuery,
+    scrollOffsetToReveal,
 } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
 import styles from './tab-shell.styl';
@@ -89,6 +91,27 @@ const CloseIcon: React.FC = () => (
     </svg>
 );
 
+const ChevronIcon: React.FC<{ direction: 'left' | 'right' | 'down' }> = ({ direction }) => {
+    let d = 'M6 9l6 6 6-6';
+    if (direction === 'left') {
+        d = 'M15 6l-6 6 6 6';
+    } else if (direction === 'right') {
+        d = 'M9 6l6 6-6 6';
+    }
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" {...stroke} strokeWidth={2}>
+            <path d={d} />
+        </svg>
+    );
+};
+
+const SearchIcon: React.FC = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" {...stroke}>
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M16 16l4.5 4.5" />
+    </svg>
+);
+
 export function tabDisplayName(meta: DocumentMeta): string {
     return documentDisplayName(meta, i18n._('key-Tabs/Untitled'));
 }
@@ -99,6 +122,86 @@ function onKeyActivate(e: React.KeyboardEvent, activate: () => void): void {
         activate();
     }
 }
+
+interface AllTabsMenuProps {
+    tabs: TabsState;
+    onActivate: (tabId: string) => void;
+    onDismiss: () => void;
+}
+
+const GROUP_LABEL_KEYS: Record<string, string> = {
+    printing: 'key-Tabs/3D Printing',
+    laser: 'key-Tabs/Laser',
+    cnc: 'key-Tabs/CNC',
+};
+
+/** The button at the end of the strip: all open projects grouped by mode, with a search field (design D). */
+const AllTabsMenu: React.FC<AllTabsMenuProps> = ({ tabs, onActivate, onDismiss }) => {
+    const [query, setQuery] = useState('');
+    const menuRef = useRef<HTMLDivElement>(null);
+    const groups = filterDocumentsByQuery(tabs, query, i18n._('key-Tabs/Untitled'));
+    const first = groups[0]?.documents[0];
+
+    useEffect(() => {
+        const onPointer = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (menuRef.current && !menuRef.current.contains(target) && !target.closest('[data-all-tabs]')) {
+                onDismiss();
+            }
+        };
+        document.addEventListener('mousedown', onPointer, true);
+        return () => document.removeEventListener('mousedown', onPointer, true);
+    }, [onDismiss]);
+
+    return (
+        <div className={styles['all-tabs']} ref={menuRef} role="dialog" aria-label={i18n._('key-Tabs/All tabs')} data-all-tabs-menu>
+            <label className={styles['all-tabs-search']}>
+                <SearchIcon />
+                <input
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    value={query}
+                    placeholder={i18n._('key-Tabs/Search {{count}} open projects', { count: tabs.order.length })}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            onDismiss();
+                        } else if (e.key === 'Enter' && first) {
+                            e.preventDefault();
+                            onActivate(first.id);
+                        }
+                    }}
+                    data-all-tabs-search
+                />
+            </label>
+            <div className={styles['all-tabs-list']}>
+                {groups.map((group) => (
+                    <div key={group.headType} data-all-tabs-group={group.headType}>
+                        <div className={styles['all-tabs-label']}>{i18n._(GROUP_LABEL_KEYS[group.headType])}</div>
+                        {group.documents.map((meta) => (
+                            <button
+                                key={meta.id}
+                                type="button"
+                                className={classNames(styles['all-tabs-row'], { [styles.selected]: tabs.activeTabId === meta.id })}
+                                title={meta.openedFile?.path || tabDisplayName(meta)}
+                                onClick={() => onActivate(meta.id)}
+                                data-all-tabs-doc={meta.id}
+                            >
+                                <HeadIcon headType={meta.headType} />
+                                <span className={styles['all-tabs-name']}>{tabDisplayName(meta)}</span>
+                                {meta.unSaved && <span className={styles['unsaved-dot']} aria-label={i18n._('key-Tabs/Unsaved changes')} />}
+                            </button>
+                        ))}
+                    </div>
+                ))}
+                {groups.length === 0 && (
+                    <div className={styles['all-tabs-empty']}>{i18n._('key-Tabs/No open project matches.')}</div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 interface TabStripProps {
     onActivate: (tabId: string) => void;
@@ -113,6 +216,63 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
     const homeActive = tabs.activeTabId === HOME_TAB;
     const workspaceActive = tabs.activeTabId === WORKSPACE_TAB;
     const docs = tabs.order.map((id) => tabs.documents[id]).filter(Boolean);
+
+    // overflow: the tabs shrink to 120 px (CSS), then the strip scrolls with the arrow buttons
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [overflow, setOverflow] = useState({ left: false, right: false });
+    const updateOverflow = useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) {
+            return;
+        }
+        const left = el.scrollLeft > 0;
+        const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+        setOverflow((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+    }, []);
+    // the active tab is always scrolled into view: on activation, when tabs come or go or change, and when
+    // the strip gets narrower (window or panel)
+    const activeTabId = tabs.activeTabId;
+    const revealActive = useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) {
+            return;
+        }
+        const tab = el.querySelector<HTMLElement>(`[data-tab-id="${activeTabId}"]`);
+        if (tab) {
+            const next = scrollOffsetToReveal(el.scrollLeft, el.clientWidth, tab.offsetLeft - el.offsetLeft, tab.offsetWidth);
+            if (Math.abs(next - el.scrollLeft) >= 1) {
+                el.scrollLeft = next;
+            }
+        }
+        updateOverflow();
+    }, [activeTabId, updateOverflow]);
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') {
+            return undefined;
+        }
+        const observer = new ResizeObserver(() => revealActive());
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [revealActive]);
+    const scrollBy = useCallback((direction: number) => {
+        const el = scrollRef.current;
+        if (el) {
+            el.scrollBy({ left: direction * Math.max(120, el.clientWidth * 0.6), behavior: 'smooth' });
+        }
+    }, []);
+    const onWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+        const el = scrollRef.current;
+        if (el && e.deltaY !== 0 && el.scrollWidth > el.clientWidth) {
+            el.scrollLeft += e.deltaY;
+        }
+    }, []);
+    useLayoutEffect(() => {
+        revealActive();
+    }, [tabs, revealActive]);
+
+    // all projects list
+    const [listOpen, setListOpen] = useState(false);
 
     return (
         <div className={styles['tab-strip']} role="tablist" aria-label={i18n._('key-Tabs/Home, Workspace and projects')}>
@@ -156,61 +316,89 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
             </div>
             <span className={styles.separator} />
             <div className={styles['doc-tabs']}>
-                {docs.map((meta) => {
-                    const active = tabs.activeTabId === meta.id;
-                    const name = tabDisplayName(meta);
-                    return (
-                        <div
-                            key={meta.id}
-                            className={classNames(styles.tab, { [styles.active]: active, [styles.dirty]: meta.unSaved })}
-                            role="tab"
-                            aria-selected={active}
-                            data-tab-id={meta.id}
-                            data-tab-kind="doc"
-                            data-head-type={meta.headType}
-                            data-unsaved={meta.unSaved ? 'true' : 'false'}
-                            title={meta.openedFile?.path || name}
-                            tabIndex={active ? 0 : -1}
-                            onClick={() => onActivate(meta.id)}
-                            onMouseDown={(e) => {
-                                // no auto-scroll on a middle click
-                                if (e.button === 1) {
-                                    e.preventDefault();
-                                }
-                            }}
-                            onAuxClick={(e) => {
-                                // middle click closes the tab
-                                if (e.button === 1) {
-                                    e.preventDefault();
-                                    onClose && onClose(meta.id);
-                                }
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Delete' && onClose) {
-                                    e.preventDefault();
-                                    onClose(meta.id);
-                                    return;
-                                }
-                                onKeyActivate(e, () => onActivate(meta.id));
-                            }}
-                        >
-                            <HeadIcon headType={meta.headType} />
-                            <button type="button" className={styles.name}>{name}</button>
-                            {meta.unSaved && <span className={styles['unsaved-dot']} aria-label={i18n._('key-Tabs/Unsaved changes')} />}
-                            <button
-                                type="button"
-                                className={styles.close}
-                                aria-label={i18n._('key-Tabs/Close {{name}}', { name })}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onClose && onClose(meta.id);
+                {overflow.left || overflow.right ? (
+                    <button
+                        type="button"
+                        className={classNames(styles['icon-button'], styles['scroll-button'])}
+                        aria-label={i18n._('key-Tabs/Scroll tabs left')}
+                        title={i18n._('key-Tabs/Scroll tabs left')}
+                        disabled={!overflow.left}
+                        onClick={() => scrollBy(-1)}
+                        data-tab-scroll="left"
+                    >
+                        <ChevronIcon direction="left" />
+                    </button>
+                ) : null}
+                <div className={styles['doc-scroll']} ref={scrollRef} onScroll={updateOverflow} onWheel={onWheel}>
+                    {docs.map((meta) => {
+                        const active = tabs.activeTabId === meta.id;
+                        const name = tabDisplayName(meta);
+                        return (
+                            <div
+                                key={meta.id}
+                                className={classNames(styles.tab, styles['doc-tab'], { [styles.active]: active, [styles.dirty]: meta.unSaved })}
+                                role="tab"
+                                aria-selected={active}
+                                data-tab-id={meta.id}
+                                data-tab-kind="doc"
+                                data-head-type={meta.headType}
+                                data-unsaved={meta.unSaved ? 'true' : 'false'}
+                                title={meta.openedFile?.path || name}
+                                tabIndex={active ? 0 : -1}
+                                onClick={() => onActivate(meta.id)}
+                                onMouseDown={(e) => {
+                                    // no auto-scroll on a middle click
+                                    if (e.button === 1) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                onAuxClick={(e) => {
+                                    // middle click closes the tab
+                                    if (e.button === 1) {
+                                        e.preventDefault();
+                                        onClose && onClose(meta.id);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Delete' && onClose) {
+                                        e.preventDefault();
+                                        onClose(meta.id);
+                                        return;
+                                    }
+                                    onKeyActivate(e, () => onActivate(meta.id));
                                 }}
                             >
-                                <CloseIcon />
-                            </button>
-                        </div>
-                    );
-                })}
+                                <HeadIcon headType={meta.headType} />
+                                <button type="button" className={styles.name}>{name}</button>
+                                {meta.unSaved && <span className={styles['unsaved-dot']} aria-label={i18n._('key-Tabs/Unsaved changes')} />}
+                                <button
+                                    type="button"
+                                    className={styles.close}
+                                    aria-label={i18n._('key-Tabs/Close {{name}}', { name })}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onClose && onClose(meta.id);
+                                    }}
+                                >
+                                    <CloseIcon />
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+                {overflow.left || overflow.right ? (
+                    <button
+                        type="button"
+                        className={classNames(styles['icon-button'], styles['scroll-button'])}
+                        aria-label={i18n._('key-Tabs/Scroll tabs right')}
+                        title={i18n._('key-Tabs/Scroll tabs right')}
+                        disabled={!overflow.right}
+                        onClick={() => scrollBy(1)}
+                        data-tab-scroll="right"
+                    >
+                        <ChevronIcon direction="right" />
+                    </button>
+                ) : null}
                 <button
                     type="button"
                     className={styles['icon-button']}
@@ -221,6 +409,29 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
                     <PlusIcon />
                 </button>
             </div>
+            {docs.length > 0 && (
+                <button
+                    type="button"
+                    className={classNames(styles['icon-button'], { [styles['icon-button-open']]: listOpen })}
+                    aria-label={i18n._('key-Tabs/All tabs')}
+                    title={i18n._('key-Tabs/All tabs')}
+                    aria-expanded={listOpen}
+                    onClick={() => setListOpen((open) => !open)}
+                    data-all-tabs
+                >
+                    <ChevronIcon direction="down" />
+                </button>
+            )}
+            {listOpen && (
+                <AllTabsMenu
+                    tabs={tabs}
+                    onActivate={(id) => {
+                        setListOpen(false);
+                        onActivate(id);
+                    }}
+                    onDismiss={() => setListOpen(false)}
+                />
+            )}
         </div>
     );
 };

@@ -2717,5 +2717,10 @@
     "key-Tabs/Loaded into Workspace · 1 file from {{name}}": "Loaded into Workspace · 1 file from {{name}}",
     "key-Tabs/Loaded into Workspace · {{count}} files from {{name}}": "Loaded into Workspace · {{count}} files from {{name}}",
     "key-Tabs/Back to {{name}}": "Back to {{name}}",
-    "key-Tabs/from {{name}}": "from {{name}}"
+    "key-Tabs/from {{name}}": "from {{name}}",
+    "key-Tabs/Scroll tabs left": "Scroll tabs left",
+    "key-Tabs/Scroll tabs right": "Scroll tabs right",
+    "key-Tabs/All tabs": "All tabs",
+    "key-Tabs/Search {{count}} open projects": "Search {{count}} open projects",
+    "key-Tabs/No open project matches.": "No open project matches."
 }

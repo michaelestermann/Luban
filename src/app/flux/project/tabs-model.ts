@@ -328,6 +328,61 @@ export function documentDisplayName(meta: DocumentMeta, untitledLabel: string): 
     return `${untitledLabel} ${meta.untitledIndex}`;
 }
 
+/**
+ * The documents whose display name contains `query` (case-insensitive, trimmed), grouped by mode as
+ * `groupDocumentsByMode` (all documents for an empty query). Untitled documents are named
+ * `${untitledLabel} ${index}`.
+ */
+export function filterDocumentsByQuery(
+    s: TabsState,
+    query: string,
+    untitledLabel: string
+): Array<{ headType: EditorHeadType; documents: DocumentMeta[] }> {
+    const wanted = (query || '').trim().toLowerCase();
+    if (!wanted) {
+        return groupDocumentsByMode(s);
+    }
+    return groupDocumentsByMode(s)
+        .map((group) => ({
+            headType: group.headType,
+            documents: group.documents.filter((meta) => documentDisplayName(meta, untitledLabel).toLowerCase().includes(wanted)),
+        }))
+        .filter((group) => group.documents.length > 0);
+}
+
+/**
+ * The scroll offset of a horizontally scrolled strip that shows the tab at `tabLeft` (strip content
+ * coordinates, width `tabWidth`) completely, moving as little as possible. A tab wider than the view
+ * shows its left edge.
+ */
+export function scrollOffsetToReveal(scrollLeft: number, viewWidth: number, tabLeft: number, tabWidth: number): number {
+    if (tabLeft < scrollLeft || tabWidth > viewWidth) {
+        return tabLeft;
+    }
+    if (tabLeft + tabWidth > scrollLeft + viewWidth) {
+        return tabLeft + tabWidth - viewWidth;
+    }
+    return scrollLeft;
+}
+
+export const GCODE_EXTENSIONS: readonly string[] = ['.gcode', '.nc', '.cnc'];
+
+/**
+ * The dropped files (indexes) that open in tabs: project files always, G-code files unless the
+ * Workspace is shown (its own drop zone takes them). Other files stay with the drop zone of the page.
+ */
+export function droppedFilesToOpen(names: string[], activeTabId: string): number[] {
+    const out: number[] = [];
+    names.forEach((name, index) => {
+        const lower = (name || '').toLowerCase();
+        const isGcode = GCODE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+        if (projectHeadTypeOf(lower) || (isGcode && activeTabId !== WORKSPACE_TAB)) {
+            out.push(index);
+        }
+    });
+    return out;
+}
+
 function toSessionDocument(meta: DocumentMeta): SessionDocument {
     return {
         id: meta.id,

@@ -397,6 +397,21 @@ const switchMachineToDocument = (docId: string) => (dispatch, getState): boolean
 
 // project files are opened one after the other
 let openQueue: Promise<unknown> = Promise.resolve();
+// opens waiting in or running from the queue
+let openPending = 0;
+// a queued open waits at most this long for its mode to finish the previous project (image processing)
+const QUEUED_OPEN_WAIT_MS = 120000;
+
+const waitUntil = async (done: () => boolean, ms: number): Promise<boolean> => {
+    const start = Date.now();
+    while (!done()) {
+        if (Date.now() - start > ms) {
+            return false;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    return true;
+};
 
 interface ProjectFileLike {
     name: string;
@@ -421,9 +436,15 @@ const openProjectInTab = (file: ProjectFileLike, history: HistoryLike) => async 
     }
     // case-library templates ('./UserCase/...') open as new untitled projects every time
     const isTemplate = !!file.path && TEMPLATE_PATH.test(file.path);
+    // a file queued behind another open (several files from the OS, a drop) waits for the mode to settle
+    const queuedBehind = openPending > 0;
+    openPending++;
     const focusOpen = async (path: string | undefined): Promise<string | null> => {
         const open = !isTemplate ? findDocumentByPath(getTabsState(getState()), path) : null;
         if (open) {
+            if (queuedBehind) {
+                await waitUntil(() => !busyHeads(getState()).includes(open.headType), QUEUED_OPEN_WAIT_MS);
+            }
             await dispatch(activateTab(open.id, history));
             return open.id;
         }
@@ -448,7 +469,11 @@ const openProjectInTab = (file: ProjectFileLike, history: HistoryLike) => async 
                 return openNow;
             }
             // busy without our own "opening" flag
-            const busy = isHeadBusy({ ...getState(), project: { general: {} } }, headType, documentStore.loadingHeads());
+            const isBusy = () => isHeadBusy({ ...getState(), project: { general: {} } }, headType, documentStore.loadingHeads());
+            if (queuedBehind && isBusy()) {
+                await waitUntil(() => !isBusy(), QUEUED_OPEN_WAIT_MS);
+            }
+            const busy = isBusy();
             if (busy && getTabsState(getState()).activeDocByHead[headType]) {
                 showBusyToast(getState, headType);
                 return null;
@@ -474,6 +499,7 @@ const openProjectInTab = (file: ProjectFileLike, history: HistoryLike) => async 
         }
     });
     openQueue = job.catch(() => undefined);
+    job.then(() => { openPending--; }, () => { openPending--; });
     return job;
 };
 

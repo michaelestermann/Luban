@@ -2738,5 +2738,10 @@
     "key-Tabs/Loaded into Workspace · 1 file from {{name}}": "In den Workspace geladen · 1 Datei aus {{name}}",
     "key-Tabs/Loaded into Workspace · {{count}} files from {{name}}": "In den Workspace geladen · {{count}} Dateien aus {{name}}",
     "key-Tabs/Back to {{name}}": "Zurück zu {{name}}",
-    "key-Tabs/from {{name}}": "aus {{name}}"
+    "key-Tabs/from {{name}}": "aus {{name}}",
+    "key-Tabs/Scroll tabs left": "Tabs nach links blättern",
+    "key-Tabs/Scroll tabs right": "Tabs nach rechts blättern",
+    "key-Tabs/All tabs": "Alle Tabs",
+    "key-Tabs/Search {{count}} open projects": "{{count}} offene Projekte durchsuchen",
+    "key-Tabs/No open project matches.": "Kein offenes Projekt passt."
 }

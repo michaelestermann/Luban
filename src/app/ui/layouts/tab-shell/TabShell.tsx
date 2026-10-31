@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector, useStore } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 
 import { tabsActions } from '../../../flux/project/actions-tabs';
-import { TabsState, initialPanelCollapsed } from '../../../flux/project/tabs-model';
+import { TabsState, droppedFilesToOpen, initialPanelCollapsed } from '../../../flux/project/tabs-model';
 import log from '../../../lib/log';
 import UniApi from '../../../lib/uni-api';
 import { machineStore } from '../../../store/local-storage';
@@ -121,6 +121,25 @@ const TabShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     useEffect(() => {
         dispatch(tabsActions.persistSession());
     }, [dispatch, tabs]);
+
+    // project files (and G-code outside the Workspace) dropped anywhere on the window open in tabs; the drop
+    // zones of the pages ignore them (components/Dropzone)
+    const activeTabRef = useRef(tabs.activeTabId);
+    activeTabRef.current = tabs.activeTabId;
+    useEffect(() => {
+        const onDrop = (e: DragEvent) => {
+            const files = Array.from(e.dataTransfer?.files || []) as Array<File & { path?: string }>;
+            const open = droppedFilesToOpen(files.map((f) => f.name), activeTabRef.current);
+            for (const index of open) {
+                const file = files[index];
+                if (file.path) {
+                    UniApi.Event.emit('appbar-menu:open-file', { name: file.name, path: file.path }, []);
+                }
+            }
+        };
+        window.addEventListener('drop', onDrop);
+        return () => window.removeEventListener('drop', onDrop);
+    }, []);
 
     // E2E hook of development builds: unload a background tab as memory pressure would
     useEffect(() => {

@@ -510,8 +510,10 @@ class AppLayout extends React.PureComponent {
         initFileOpen: async () => {
             // 4.17 tabs: the tabs of the last session come back first (they replace the 4.16 recovery service)
             await this.props.restoreSession(this.props.history);
-            const file = await UniApi.File.popFile();
-            if (file) {
+            // files Luban was started with (4.17: a list, one tab each; 4.16 stored one file)
+            const pending = await UniApi.File.popFile();
+            const files = Array.isArray(pending) ? pending : [pending];
+            for (const file of files.filter(Boolean)) {
                 await this.actions.openProject(file);
             }
         },

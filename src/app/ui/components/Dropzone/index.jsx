@@ -5,6 +5,9 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import styles from './index.styl';
 
+const PROJECT_EXTENSIONS = ['.snap3dp', '.snaplzr', '.snapcnc'];
+const OPENED_IN_TABS = [...PROJECT_EXTENSIONS, '.gcode', '.nc', '.cnc'];
+
 
 // react-dropzone doc: https://react-dropzone.js.org/
 // do not use the "accept" prop.
@@ -30,6 +33,14 @@ class Dropzone extends PureComponent {
 
         const acceptExtNames = this.props.accept.split(',').map(name => name.trim().toLowerCase());
         if (acceptExtNames.length === 0 || !onDropAccepted || !onDropRejected) {
+            return;
+        }
+        // 4.17 tabs: project files (and G-code this zone does not take) open in tabs (TabShell drop handler)
+        acceptedFiles = acceptedFiles.filter((file) => {
+            const ext = path.extname(file.name).toLowerCase();
+            return !OPENED_IN_TABS.includes(ext) || (acceptExtNames.includes(ext) && !PROJECT_EXTENSIONS.includes(ext));
+        });
+        if (acceptedFiles.length === 0) {
             return;
         }
         const files = acceptedFiles.filter((file) => {
