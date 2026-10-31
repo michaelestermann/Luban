@@ -4,6 +4,7 @@
  */
 import { getDecomposeHref } from '../../../lib/svg-decompose';
 import { elementD, FLATTEN_TOLERANCE, Matrix, Outline, outlineFromD, outlineFromPolylines, unionShapes, viewBoxMatrix } from './shape-ops';
+import { LruCache, toleranceBucket } from './outline-cache';
 import { normalizePenPath } from '../path-edit/point-edit';
 import { parsePath } from '../path-edit/path-geometry';
 
@@ -24,10 +25,12 @@ const PARSER_TOLERANCE = 0.3 * 25.4 / 72;
 
 const SHAPE_TAGS = ['path', 'rect', 'ellipse', 'circle', 'line'];
 
-// parsed sources by url and tolerance
-const parsed = new Map<string, Promise<ParsedSvg | null>>();
+// parsed sources by url and tolerance bucket (the tolerance depends on the model's size): the most
+// recently used ones only
+const parsed = new LruCache<string, Promise<ParsedSvg | null>>(20);
 
-async function parseSvg(url: string, tolerance: number): Promise<ParsedSvg | null> {
+async function parseSvg(url: string, wanted: number): Promise<ParsedSvg | null> {
+    const tolerance = toleranceBucket(wanted);
     const key = `${url}|${tolerance}`;
     if (!parsed.has(key)) {
         parsed.set(key, (async () => {

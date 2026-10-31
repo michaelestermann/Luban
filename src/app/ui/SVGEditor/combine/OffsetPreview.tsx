@@ -16,6 +16,8 @@ interface OffsetPreviewProps {
 }
 
 const BLUE = '#1d4ed8';
+// ms the values must rest before the preview is computed again
+const PREVIEW_DELAY = 250;
 
 /** Dashed preview of the offset outlines while the Offset values are open (canvas overlay, screen space). */
 const OffsetPreview: React.FC<OffsetPreviewProps> = ({ headType, isActive, getScreenCTM, getContentGroup }) => {
@@ -64,10 +66,24 @@ const OffsetPreview: React.FC<OffsetPreviewProps> = ({ headType, isActive, getSc
         return () => cancelAnimationFrame(frame);
     }, [active, getScreenCTM]);
 
+    // values while typing: the offset runs on the main thread, so it waits until they rest for a moment
+    const [settled, setSettled] = useState<OffsetSettings | null>(session);
+    const opened = !!session;
+    useEffect(() => {
+        if (!session) {
+            setSettled(null);
+            return undefined;
+        }
+        const timer = setTimeout(() => setSettled(session), PREVIEW_DELAY);
+        return () => clearTimeout(timer);
+    }, [session]);
+    // the first preview right away when the values open
+    useEffect(() => setSettled(session), [opened]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // offset only when the values or the outlines change, not on zoom
     const polygons = useMemo(
-        () => (session ? outlines.reduce((all, outline) => all.concat(...offsetGroups(outline, session)), [] as Pt[][]) : []),
-        [outlines, session]
+        () => (settled ? outlines.reduce((all, outline) => all.concat(...offsetGroups(outline, settled)), [] as Pt[][]) : []),
+        [outlines, settled]
     );
 
     const ctm = active ? getScreenCTM() : null;
