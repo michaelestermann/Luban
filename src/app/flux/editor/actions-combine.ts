@@ -109,7 +109,7 @@ function replaceModels(dispatch, getState, headType: HeadType, { removed, placem
     const layerAfter = placements.reduce(
         (list, p) => replaceInLayers(list, removed.includes(p.anchor) ? [p.anchor] : [], p.added, p.anchor),
         modelGroup.models
-    );
+    ).filter(m => !removed.includes(m));
     const membership: MembershipChange[] = [];
     for (const toolPath of toolPathGroup.toolPaths) {
         const before = [...toolPath.modelMap.keys()] as string[];
