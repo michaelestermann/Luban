@@ -60,3 +60,34 @@ export function insertAt<T>(list: T[], item: T, index: number): T[] {
     const at = index < 0 ? rest.length : Math.min(index, rest.length);
     return [...rest.slice(0, at), item, ...rest.slice(at)];
 }
+
+type WithPositionZ = { transformation?: { positionZ?: number } };
+
+/**
+ * Models of a project file in layer order (back to front). A file saved with its layer order
+ * (`ordered`) lists them back to front. Older files only kept positionZ in order: the objects with a
+ * positionZ are sorted by it (stable) among their places in the file, objects without one (drawn
+ * shapes had 0) keep their place.
+ */
+export function savedLayerOrder<T extends WithPositionZ>(models: T[], ordered: boolean): T[] {
+    if (ordered) {
+        return models.slice();
+    }
+    const z = (model: T) => model.transformation?.positionZ;
+    const ranked = (model: T) => typeof z(model) === 'number' && z(model) > 0;
+    const sorted = models
+        .map((model, index) => ({ model, index }))
+        .filter(item => ranked(item.model))
+        .sort((a, b) => (z(a.model) - z(b.model)) || (a.index - b.index))
+        .map(item => item.model);
+    let next = 0;
+    return models.map(model => (ranked(model) ? sorted[next++] : model));
+}
+
+/** Saved model configs (back to front) with positionZ following that order; the input stays unchanged. */
+export function withLayerPositionZ<T extends WithPositionZ>(configs: T[], margin: number): T[] {
+    return configs.map((config, i) => ({
+        ...config,
+        transformation: { ...config.transformation, positionZ: Math.round((i + 1) * margin * 1e6) / 1e6 },
+    }));
+}

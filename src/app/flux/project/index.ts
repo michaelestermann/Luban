@@ -40,6 +40,7 @@ import { synchronizeMeshFile } from '../printing/actions-mesh';
 import { actions as workspaceActions } from '../workspace';
 
 import ThreeModel from '../../models/ThreeModel';
+import { savedLayerOrder, withLayerPositionZ } from '../../models/z-order';
 
 /* eslint-disable-next-line import/no-cycle */
 import { actions as appGlobalActions } from '../app-global';
@@ -80,6 +81,9 @@ const INITIAL_STATE = {
     },
 };
 const ACTION_UPDATE_STATE = 'EDITOR_ACTION_UPDATE_STATE';
+
+// positionZ step between two layers (as ModelGroup2D)
+const LAYER_POSITION_Z_MARGIN = 0.02;
 
 export const actions = {
     updateState: (headType, state) => {
@@ -195,6 +199,10 @@ export const actions = {
         }
 
         if (headType === HEAD_CNC || headType === HEAD_LASER) {
+            // the models are listed in the layer order (back to front); positionZ follows it for older readers
+            envObj.models = withLayerPositionZ(envObj.models, LAYER_POSITION_Z_MARGIN);
+            envObj.layerOrdered = true;
+
             const toolPaths = editorState.toolPathGroup.getToolPaths();
             envObj.toolpaths = toolPaths;
         }
@@ -315,7 +323,7 @@ export const actions = {
 
         await modState?.SVGActions?.svgContentGroup.removeAllElements();
         // eslint-disable-next-line prefer-const
-        let { models, toolpaths, materials, origin, coordinateMode, coordinateSize, machineInfo, ...restState } = envObj;
+        let { models, toolpaths, materials, origin, coordinateMode, coordinateSize, machineInfo, layerOrdered, ...restState } = envObj;
         if (envHeadType === HEAD_CNC || envHeadType === HEAD_LASER) {
             if (materials) {
                 // For old project file, it may have x = 0 and y = 0
@@ -395,7 +403,12 @@ export const actions = {
                 }));
             }
         }
-        models = bubbleSortByAttribute(models, ['transformation', 'positionZ']);
+        if (envHeadType === HEAD_CNC || envHeadType === HEAD_LASER) {
+            // the layer order of the file: its model order, or positionZ in older files
+            models = savedLayerOrder(models, !!layerOrdered);
+        } else {
+            models = bubbleSortByAttribute(models, ['transformation', 'positionZ']);
+        }
 
         // Recover models
         // Compatible with mesh mode
