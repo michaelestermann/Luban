@@ -6,6 +6,7 @@ import { SOURCE_TYPE_RASTER, TOOLPATH_TYPE_VECTOR } from '../../../constants';
 import slice from '../../../slicer/call-engine';
 import { generateDrillToolPathFiles } from '../../../lib/ToolPathGenerator/DrillToolPathGenerator';
 import logger from '../../../lib/logger';
+import { ensureVisibleSvgSource } from '../../../lib/svg-source-visibility';
 import sendMessage from '../utils/sendMessage';
 
 const log = logger('worker:generateToolPath');
@@ -30,6 +31,9 @@ const generateLaserToolPathFromEngine = async (allTasks, onProgress) => {
                 if (fs.existsSync(uploadPath)) {
                     modelInfo.uploadName = newUploadName;
                 }
+            }
+            if (type === TOOLPATH_TYPE_VECTOR) {
+                modelInfo.uploadName = ensureVisibleSvgSource(process.env.Tmpdir, modelInfo.uploadName, modelInfo.visible);
             }
             const gcodeConfig = modelInfo?.gcodeConfig;
             if (headType === 'laser') {

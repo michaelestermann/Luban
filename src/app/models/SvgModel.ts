@@ -14,6 +14,7 @@ import Resource from './Resource';
 import { MINIMUM_WIDTH_AND_HEIGHT, SOURCE_TYPE, SVG_MOVE_MINI_DISTANCE } from '../constants';
 import BaseModel, { ModelTransformation, ModelInfo, TSize, SvgModelElement, TMode } from './BaseModel';
 import ModelGroup2D from './ModelGroup2D';
+import { cleanSourceClone } from './svg-source';
 
 type TElementAttributes = {
     x: number;
@@ -679,6 +680,7 @@ class SvgModel extends BaseModel {
             const paths = SvgModel.calculationPath(dPath);
             const segments = paths.map((item) => {
                 const clone = elem.cloneNode(true) as SVGPathElement;
+                cleanSourceClone(clone, this.visible);
                 clone.setAttribute('d', item);
                 clone.setAttribute('transform', 'scale(1 1)');
                 clone.setAttribute('font-size', clone.getAttribute('font-size'));
@@ -687,6 +689,7 @@ class SvgModel extends BaseModel {
             modelContent = segments.join('');
         } else {
             const clone = elem.cloneNode(true) as SVGElement;
+            cleanSourceClone(clone, this.visible);
             clone.setAttribute('transform', 'scale(1 1)');
             clone.setAttribute('font-size', clone.getAttribute('font-size'));
             modelContent = new XMLSerializer().serializeToString(clone);
