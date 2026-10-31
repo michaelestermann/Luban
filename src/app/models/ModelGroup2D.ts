@@ -263,7 +263,9 @@ class ModelGroup2D extends EventEmitter {
      * groups in the selection are flattened (their children are pulled out)
      * because we do not support nested groups.
      */
-    public group(): { newGroup: SvgGroup | null } {
+    // `existing`: the group object to use again (redo of a group step, undo of an ungroup step), so
+    // other undo steps that hold the group keep working
+    public group(existing: SvgGroup | null = null): { newGroup: SvgGroup | null } {
         if (!this.canGroup()) {
             return { newGroup: null };
         }
@@ -308,11 +310,16 @@ class ModelGroup2D extends EventEmitter {
         this.models = this.models.filter((entity) => !childModels.includes(entity as SvgModel));
 
         // Build the new group and attach children
-        const { name, baseName } = this._createGroupName();
-        const newGroup = new SvgGroup(
-            { name, baseName, headType: this.headType as 'laser' | 'cnc' },
-            this,
-        );
+        let newGroup = existing;
+        if (newGroup) {
+            newGroup.children.slice().forEach((child) => newGroup.removeChild(child));
+        } else {
+            const { name, baseName } = this._createGroupName();
+            newGroup = new SvgGroup(
+                { name, baseName, headType: this.headType as 'laser' | 'cnc' },
+                this,
+            );
+        }
         for (const child of childModels) {
             newGroup.addChild(child);
         }

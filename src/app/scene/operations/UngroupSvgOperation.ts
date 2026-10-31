@@ -24,6 +24,7 @@ export default class UngroupSvgOperation extends Operation<State> {
     private modelGroup: ModelGroup2D;
     private snapshot: GroupSnapshot;
     private previousSelectedGroupID: string | null;
+    private group: SvgGroup;
 
     public constructor(state: State) {
         super();
@@ -36,6 +37,7 @@ export default class UngroupSvgOperation extends Operation<State> {
             index: state.modelGroup.models.indexOf(state.target),
         };
         this.previousSelectedGroupID = state.modelGroup.selectedGroupID ?? null;
+        this.group = state.target;
     }
 
     public redo() {
@@ -57,7 +59,8 @@ export default class UngroupSvgOperation extends Operation<State> {
         if (children.length < 2) return;
         mg.selectedModelArray = children;
         mg.selectedGroupID = null;
-        const { newGroup } = mg.group();
+        // the same group object comes back (other undo steps hold it)
+        const { newGroup } = mg.group(this.group);
         if (newGroup) {
             newGroup.modelID = this.snapshot.groupID;
             newGroup.name = this.snapshot.name;

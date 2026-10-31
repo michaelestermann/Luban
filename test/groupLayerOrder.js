@@ -3,6 +3,7 @@ import './fixtures/stub-document';
 import ModelGroup2D from '../src/app/models/ModelGroup2D';
 import SvgModel from '../src/app/models/SvgModel';
 import GroupSvgOperation from '../src/app/scene/operations/GroupSvgOperation';
+import UngroupSvgOperation from '../src/app/scene/operations/UngroupSvgOperation';
 
 // leaf models with a fake SVG element in a shared parent, so the DOM order can be checked
 const setup = (names) => {
@@ -33,5 +34,22 @@ test('grouping keeps the members in layer order, the SVG elements follow, and un
     operation.undo();
     t.equal(layout(), 'a b c d');
     t.equal(dom(), 'abcd');
+    t.end();
+});
+
+test('redo of grouping and undo of ungrouping put the same group object back (later steps hold it)', (t) => {
+    const { modelGroup, byName } = setup(['a', 'b', 'c']);
+    const operation = new GroupSvgOperation({ modelGroup, targetModels: [byName('a'), byName('b')] });
+    operation.redo();
+    const group = modelGroup.models.find((m) => m.type === '2d-group');
+    operation.undo();
+    operation.redo();
+    t.equal(modelGroup.models.find((m) => m.type === '2d-group'), group, 'redo');
+    t.deepEqual(group.children.map((c) => c.modelID), ['a', 'b']);
+    const ungroup = new UngroupSvgOperation({ modelGroup, target: group });
+    ungroup.redo();
+    t.equal(modelGroup.models.includes(group), false);
+    ungroup.undo();
+    t.equal(modelGroup.models.find((m) => m.type === '2d-group'), group, 'undo of ungroup');
     t.end();
 });
