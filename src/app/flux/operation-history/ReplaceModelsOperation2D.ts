@@ -56,9 +56,8 @@ export default class ReplaceModelsOperation2D extends Operation<ReplaceModelsPro
 
     private applyMembership(which: 'before' | 'after') {
         const { toolPathGroup, membership, onChange } = this.state;
-        for (const change of membership) {
-            new UpdateToolPathMembershipOperation({ toolPath: change.toolPath, toolPathGroup, onChange }).apply(change[which]);
-        }
+        const changes = membership.map(change => ({ toolPath: change.toolPath, ids: change[which] }));
+        UpdateToolPathMembershipOperation.applyAll(changes, toolPathGroup, onChange);
     }
 
     public redo() {

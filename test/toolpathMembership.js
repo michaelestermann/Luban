@@ -99,3 +99,14 @@ test('undoing the removal of a middle member puts it back in its place (machinin
     t.deepEqual([...toolPath.modelMap.keys()], ['a', 'b', 'c']);
     t.end();
 });
+
+test('several membership changes are all set before the tool paths are checked', (t) => {
+    const a = { id: 'a', status: 'success', modelMap: new Map([['x', {}]]) };
+    const b = { id: 'b', status: 'success', modelMap: new Map([['x', {}]]) };
+    const seen = [];
+    const toolPathGroup = { _updated: () => {}, checkoutToolPathStatus: () => seen.push([...a.modelMap.keys(), '|', ...b.modelMap.keys()].join('')) };
+    // combine: x is replaced by y in both operations
+    UpdateToolPathMembershipOperation.applyAll([{ toolPath: a, ids: ['y'] }, { toolPath: b, ids: ['y'] }], toolPathGroup);
+    t.deepEqual(seen, ['y|y', 'y|y'], 'no check sees the old member x');
+    t.end();
+});

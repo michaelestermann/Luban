@@ -65,9 +65,8 @@ export default class ArrayOperation2D extends Operation<ArrayProp> {
 
     private applyMembership(which: 'before' | 'after') {
         const { toolPathGroup, membership } = this.state;
-        for (const change of membership) {
-            new UpdateToolPathMembershipOperation({ toolPath: change.toolPath, toolPathGroup }).apply(change[which]);
-        }
+        const changes = membership.map(change => ({ toolPath: change.toolPath, ids: change[which] }));
+        UpdateToolPathMembershipOperation.applyAll(changes, toolPathGroup);
     }
 
     public redo() {

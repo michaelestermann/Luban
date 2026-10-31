@@ -20,8 +20,23 @@ export default class UpdateToolPathMembershipOperation extends Operation {
         };
     }
 
+    /**
+     * Sets the members of several tool paths, then checks them (models taken out of one tool path and
+     * put into another must not be checked half done).
+     */
+    static applyAll(changes, toolPathGroup, onChange = null) {
+        const operations = changes.map(({ toolPath }) => new UpdateToolPathMembershipOperation({ toolPath, toolPathGroup, onChange }));
+        operations.forEach((operation, i) => operation.setMembers(changes[i].ids));
+        operations.forEach((operation) => operation.refresh());
+    }
+
     apply(ids) {
-        const { toolPath, toolPathGroup } = this.state;
+        this.setMembers(ids);
+        this.refresh();
+    }
+
+    setMembers(ids) {
+        const { toolPath } = this.state;
         const old = toolPath.modelMap;
         const next = new Map();
         for (const id of ids) {
@@ -40,6 +55,10 @@ export default class UpdateToolPathMembershipOperation extends Operation {
         for (const [id, value] of next) {
             old.set(id, value);
         }
+    }
+
+    refresh() {
+        const { toolPath, toolPathGroup } = this.state;
         toolPath.status = WARNING; // needs a new preview
         toolPathGroup.checkoutToolPathStatus();
         toolPath.status = WARNING;
