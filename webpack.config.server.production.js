@@ -36,7 +36,7 @@ module.exports = {
         extensions: ['.js', '.json', '.jsx', '.ts'],
         fallback: {
             'path': require.resolve('path-browserify'),
-            'fs': require.resolve('browserify-fs'),
+            'fs': false,
             'timers': require.resolve('timers-browserify'),
             'stream': require.resolve('stream-browserify')
         }

@@ -65,7 +65,7 @@ module.exports = {
         extensions: ['.js', '.json', '.jsx', '.styl', '.ts', '.tsx'],
         fallback: {
             path: require.resolve('path-browserify'),
-            fs: require.resolve('browserify-fs'),
+            fs: false, // the shared parsers only use fs on the server side
             timers: require.resolve('timers-browserify'),
             stream: require.resolve('stream-browserify'),
             process: require.resolve('process/browser')
