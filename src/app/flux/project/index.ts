@@ -41,6 +41,7 @@ import { actions as workspaceActions } from '../workspace';
 
 import ThreeModel from '../../models/ThreeModel';
 import { savedLayerOrder, withLayerPositionZ } from '../../models/z-order';
+import { createTabsState, TabsState } from './tabs-model';
 
 /* eslint-disable-next-line import/no-cycle */
 import { actions as appGlobalActions } from '../app-global';
@@ -79,8 +80,13 @@ const INITIAL_STATE = {
         // opening project
         opening: false,
     },
+    // 4.17 tabs: registry of open documents (see tabs-model.ts)
+    tabs: createTabsState(),
 };
 const ACTION_UPDATE_STATE = 'EDITOR_ACTION_UPDATE_STATE';
+const ACTION_SET_TABS = 'project/SET_TABS';
+
+export const getTabs = (state): TabsState => state.project.tabs;
 
 // positionZ step between two layers (as ModelGroup2D)
 const LAYER_POSITION_Z_MARGIN = 0.02;
@@ -91,6 +97,13 @@ export const actions = {
             type: ACTION_UPDATE_STATE,
             headType,
             state
+        };
+    },
+
+    setTabsState: (tabs: TabsState) => {
+        return {
+            type: ACTION_SET_TABS,
+            tabs
         };
     },
 
@@ -887,6 +900,9 @@ export const actions = {
 
 export default function reducer(state = INITIAL_STATE, action) {
     const { type, headType } = action;
+    if (type === ACTION_SET_TABS) {
+        return Object.assign({}, state, { tabs: action.tabs });
+    }
     if (!headType || type !== ACTION_UPDATE_STATE) return state;
     const editorState = Object.assign({}, state[headType], action.state);
 
