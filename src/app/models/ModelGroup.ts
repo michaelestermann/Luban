@@ -598,7 +598,8 @@ class ModelGroup extends EventEmitter {
     public updateModelNameMap(modelName: string, baseName: string, action: string) {
         let modelNumber: number | string = replace(modelName, baseName, '').replace('(', '').replace(')', '');
         modelNumber = modelNumber ? Number(modelNumber) : 1;
-        const modelNameMap = this.namesMap.get(baseName);
+        // the counter may have been reset by removeAllModels (another project): start it again
+        const modelNameMap = this.namesMap.get(baseName) ?? { number: 0, count: 0 };
         let tempNumber = modelNameMap.number || 0;
         let tempCount = modelNameMap.count || 0;
         switch (action) {
@@ -662,6 +663,8 @@ class ModelGroup extends EventEmitter {
     public removeAllModels() {
         this.unselectAllModels();
         this._removeAllModels();
+        // no object is left, so no name is taken: the next project numbers its names from 1 again
+        this.namesMap.clear();
 
         this.modelChanged();
         this.childrenChanged();
