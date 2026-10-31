@@ -35,7 +35,9 @@
     .left {
         float: left;
         width: calc(100% - 380px);
-        overflow: auto
+        overflow: auto;
+        // one row: MainToolBar switches to icon-only buttons when the labelled row does not fit
+        white-space: nowrap
     }
     .left::-webkit-scrollbar {
         display: none;
@@ -69,6 +71,17 @@
     text-overflow: ellipsis;
     //white-space: normal !important;
     margin-top: 2px;
+}
+
+// Labelled buttons do not fit (narrow window, project panel expanded): icons only, same row height
+.toolbar-dense {
+    .bar-items {
+        .bar-icon-dense {
+            min-width: 40px;
+            max-width: 48px;
+            padding: 13px 8px 0;
+        }
+    }
 }
 
 // Compact row (Laser/CNC editor): icon buttons | stepper | primary action

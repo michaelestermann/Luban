@@ -9,7 +9,7 @@ import SvgIcon from '../components/SvgIcon';
 import { longLangWithType } from '../../constants';
 // import Anchor from '../components/Anchor';
 
-function MenuItem({ menuItem, actions, lang, headType, compact = false }) {
+function MenuItem({ menuItem, actions, lang, headType, compact = false, dense = false }) {
     const { type = 'button', name = 'Copy', iconClassName, title, inputInfo, disabled = false } = menuItem;
     const { customRender = noop } = menuItem;
     function handleClick(e) {
@@ -37,6 +37,24 @@ function MenuItem({ menuItem, actions, lang, headType, compact = false }) {
                                 name={name}
                                 disabled={disabled}
                                 className={classNames(styles['bar-icon-compact'], iconClassName)}
+                                onClick={(e) => handleClick(e)}
+                                inputInfo={inputInfo}
+                                type={['static']}
+                            />
+                        </span>
+                    </Tooltip>
+                );
+            }
+            if (dense) {
+                // the labelled row does not fit: icon only, the title stays as tooltip and accessible name
+                return (
+                    <Tooltip title={i18n._(title)}>
+                        <span aria-label={i18n._(title)} className="display-inline">
+                            <SvgIcon
+                                size={24}
+                                name={name}
+                                disabled={disabled}
+                                className={classNames(styles['bar-icon'], styles['bar-icon-dense'], iconClassName)}
                                 onClick={(e) => handleClick(e)}
                                 inputInfo={inputInfo}
                                 type={['static']}
@@ -73,7 +91,8 @@ MenuItem.propTypes = {
     actions: PropTypes.object.isRequired,
     lang: PropTypes.string,
     headType: PropTypes.string,
-    compact: PropTypes.bool
+    compact: PropTypes.bool,
+    dense: PropTypes.bool
 };
 
 export default MenuItem;

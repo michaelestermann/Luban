@@ -30,7 +30,79 @@ class MainToolBar extends React.PureComponent {
         renderRight: PropTypes.func
     };
 
-    state = {};
+    // dense: icon-only buttons (title as tooltip) while the labelled buttons do not fit in one row
+    state = { dense: false };
+
+    leftRef = React.createRef();
+
+    // width the labelled buttons need, measured before switching to dense
+    neededWidth = 0;
+
+    resizeObserver = null;
+
+    mutationObserver = null;
+
+    componentDidMount() {
+        const el = this.leftRef.current;
+        if (el && typeof ResizeObserver !== 'undefined') {
+            this.resizeObserver = new ResizeObserver(() => this.measure());
+            this.resizeObserver.observe(el);
+        }
+        if (el && typeof MutationObserver !== 'undefined') {
+            // MenuItems also re-render on their own (their item type is component state)
+            this.mutationObserver = new MutationObserver(() => this.measure());
+            this.mutationObserver.observe(el, { childList: true, subtree: true });
+        }
+        this.measure();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.itemsSignature(prevProps.leftItems) !== this.itemsSignature(this.props.leftItems) && this.state.dense) {
+            // other buttons: measure the labelled row again
+            this.showLabels();
+            return;
+        }
+        this.measure();
+    }
+
+    componentWillUnmount() {
+        this.resizeObserver && this.resizeObserver.disconnect();
+        this.resizeObserver = null;
+        this.mutationObserver && this.mutationObserver.disconnect();
+        this.mutationObserver = null;
+    }
+
+    itemsSignature(items) {
+        const names = [];
+        (items || []).filter(item => item).forEach((item) => {
+            if (item.children) {
+                item.children.forEach(child => names.push(child.name));
+            } else {
+                names.push(item.name);
+            }
+        });
+        return `${this.props.lang}|${names.join(',')}`;
+    }
+
+    showLabels() {
+        this.neededWidth = 0;
+        this.setState({ dense: false });
+    }
+
+    measure() {
+        const el = this.leftRef.current;
+        if (!el || this.props.compact) {
+            return;
+        }
+        if (!this.state.dense) {
+            if (el.scrollWidth > el.clientWidth + 1) {
+                this.neededWidth = el.scrollWidth;
+                this.setState({ dense: true });
+            }
+        } else if (this.neededWidth && el.clientWidth >= this.neededWidth) {
+            this.setState({ dense: false });
+        }
+    }
 
     actions = {
         handleClick: (callback, event) => {
@@ -94,10 +166,11 @@ class MainToolBar extends React.PureComponent {
                 className={classNames(
                     'clearfix',
                     styles['toolbar-container'],
+                    this.state.dense && styles['toolbar-dense'],
                     mainBarClassName || ''
                 )}
             >
-                <div className={classNames(styles.left, styles['bar-items'])}>
+                <div ref={this.leftRef} className={classNames(styles.left, styles['bar-items'])}>
                     {
                         leftItems && (leftItems.filter(item => item).map((menuItem) => {
                             if (menuItem.children) {
@@ -119,6 +192,7 @@ class MainToolBar extends React.PureComponent {
                                                         actions={actions}
                                                         lang={lang}
                                                         headType={headType}
+                                                        dense={this.state.dense}
                                                     />
                                                 );
                                             })
@@ -133,6 +207,7 @@ class MainToolBar extends React.PureComponent {
                                         actions={actions}
                                         lang={lang}
                                         headType={headType}
+                                        dense={this.state.dense}
                                     />
                                 );
                             }
