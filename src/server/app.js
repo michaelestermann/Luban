@@ -26,6 +26,7 @@ import settings from './config/settings';
 import { ERR_FORBIDDEN, ERR_UNAUTHORIZED, IP_WHITELIST } from './constants';
 import DataStorage from './DataStorage';
 import logger from './lib/logger';
+import { createErrorHandler, notFound } from './lib/middleware/error-handlers';
 import multipart from './lib/middleware/multipart';
 import optionsFallthrough from './lib/middleware/options-fallthrough';
 import urljoin from './lib/urljoin';
@@ -265,14 +266,8 @@ const createApplication = () => {
     }));
 
     // Error handling
-    app.use((err, req, res) => {
-        if (err) {
-            log.error(err);
-            res.status(500).send({ error: err.message });
-        } else {
-            res.status(404).send({ msg: 'Not found' });
-        }
-    });
+    app.use(notFound);
+    app.use(createErrorHandler(log));
     // app.use(errlog());
     // app.use(errclient({
     //     error: 'XHR error'
