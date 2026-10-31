@@ -13,6 +13,7 @@ import SVGShapeLibrary from './SVGShapeLibrary';
 import PointEditOverlay from './path-edit/PointEditOverlay';
 import MeasureOverlay from './measure/MeasureOverlay';
 import DimensionsOverlay from './measure/DimensionsOverlay';
+import ShapeActionKeys from './combine/ShapeActionKeys';
 
 
 export type SVGEditorHandle = {
@@ -442,6 +443,12 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             getScreenCTM={getCanvasScreenCTM}
                             getSvgContainer={getSvgContainer}
                             setMode={(mode) => leftBarRef.current?.actions.setMode(mode)}
+                        />
+                        <ShapeActionKeys
+                            headType={props.headType as 'laser' | 'cnc'}
+                            mode={props.SVGCanvasMode}
+                            editing={!!props.SVGCanvasExt?.elem}
+                            isActive={props.isActive}
                         />
                     </div>
                     <SVGLeftBar

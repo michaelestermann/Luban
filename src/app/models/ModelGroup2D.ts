@@ -597,6 +597,11 @@ class ModelGroup2D extends EventEmitter {
         this.setLayerOrder(reorderFromDisplay(this.models, fromDisplay, toDisplay));
     }
 
+    /** Sets models[] (back to front) and applies it to positionZ and the SVG elements (combine / offset undo). */
+    public applyLayerOrder(models: TModel[]) {
+        this.setLayerOrder(models);
+    }
+
     // models[] in this order (back to front), applied to positionZ and the SVG elements
     private setLayerOrder(models: TModel[]) {
         this.models = models;

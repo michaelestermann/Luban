@@ -2577,5 +2577,14 @@
     "key-CncLaser/Dimensions-Between objects": "Between objects",
     "key-CncLaser/Dimensions-Click a value to type a new distance. Not in the G-code.": "Click a value to type a new distance. Not in the G-code.",
     "key-CncLaser/Dimensions-Distance in mm": "Distance in mm",
-    "key-CncLaser/Dimensions-Click to type a new distance": "Click to type a new distance"
+    "key-CncLaser/Dimensions-Click to type a new distance": "Click to type a new distance",
+    "key-CncLaser/Combine-Combine": "Combine",
+    "key-CncLaser/Combine-Weld, subtract or intersect the shapes": "Weld, subtract or intersect the shapes",
+    "key-CncLaser/Combine-Weld": "Weld",
+    "key-CncLaser/Combine-Subtract": "Subtract",
+    "key-CncLaser/Combine-Intersect": "Intersect",
+    "key-CncLaser/Combine-The shapes could not be read": "The shapes could not be read",
+    "key-CncLaser/Combine-The shapes do not overlap": "The shapes do not overlap",
+    "key-CncLaser/Combine-Nothing is left of the shapes": "Nothing is left of the shapes",
+    "key-CncLaser/SelectionBar-More actions": "More actions"
 }

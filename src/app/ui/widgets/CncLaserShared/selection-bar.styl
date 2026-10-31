@@ -86,6 +86,39 @@
     gap: 4px;
 }
 
+// Combine ▾ and ⋯ menus: action and its key
+.action-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 180px;
+    margin: -4px -8px;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #2f3441;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        background: #eef1f6;
+    }
+}
+
+.menu-key {
+    color: #9aa1b0;
+    font-size: 12px;
+}
+
 // mode bar of the point editing mode
 .mode-title {
     padding: 0 4px 0 8px;

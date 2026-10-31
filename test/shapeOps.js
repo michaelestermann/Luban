@@ -15,6 +15,7 @@ import {
     polygonsArea,
     outlineIsEmpty,
     combineMembership,
+    unionShapes,
 } from '../src/app/ui/SVGEditor/combine/shape-ops';
 import { parsePath } from '../src/app/ui/SVGEditor/path-edit/path-geometry';
 
@@ -142,6 +143,15 @@ test('weld: overlapping, disjoint, inside and three shapes', (t) => {
     const ring = outlineFromD('M0 0 H30 V30 H0 Z M10 10 H20 V20 H10 Z');
     const ringWeld = weld([ring, rect(40, 0, 5, 5)]);
     t.ok(near(polygonsArea(ringWeld), 900 - 100 + 25), 'hole kept');
+    t.end();
+});
+
+test('unionShapes: overlapping shapes of one file are one area', (t) => {
+    const file = unionShapes([rect(0, 0, 10, 10), rect(5, 0, 10, 10), outlineFromD('M0 20 L5 20')]);
+    t.equal(file.closed.length, 1);
+    t.ok(near(polygonsArea(file.closed), 150), 'no even-odd hole where they overlap');
+    t.equal(file.open.length, 1, 'open parts kept');
+    t.ok(near(polygonsArea(intersect([file, rect(4, 0, 2, 10)])), 20));
     t.end();
 });
 

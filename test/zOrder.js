@@ -1,5 +1,5 @@
 import test from 'tape';
-import { moveToEdge, orderedMemberIds, reorderFromDisplay } from '../src/app/models/z-order';
+import { moveToEdge, orderedMemberIds, reorderFromDisplay, replaceInLayers } from '../src/app/models/z-order';
 
 const e = id => ({ modelID: id });
 
@@ -34,5 +34,18 @@ test('dragging in the object list (front on top) reorders the layers', (t) => {
     t.deepEqual(reorderFromDisplay(models, 0, 2).map(x => x.modelID), ['front', 'back', 'mid']);
     // drag the bottom row (back) to the top -> it becomes the frontmost
     t.deepEqual(reorderFromDisplay(models, 2, 0).map(x => x.modelID), ['mid', 'front', 'back']);
+    t.end();
+});
+
+test('replaceInLayers: added models take the place of the anchor', (t) => {
+    const ids = list => list.join('');
+    // combine: inputs b and d leave, the result r goes where the bottom input b was
+    t.equal(ids(replaceInLayers(['a', 'b', 'c', 'd', 'e'], ['b', 'd'], ['r'], 'b')), 'arce');
+    // offset keeping the original: results right above it
+    t.equal(ids(replaceInLayers(['a', 'b', 'c'], [], ['r', 's'], 'b')), 'abrsc');
+    // added models already in the list (just created) are moved
+    t.equal(ids(replaceInLayers(['a', 'b', 'c', 'r'], ['b'], ['r'], 'b')), 'arc');
+    // unknown anchor: on top
+    t.equal(ids(replaceInLayers(['a', 'b'], [], ['r'], 'x')), 'abr');
     t.end();
 });

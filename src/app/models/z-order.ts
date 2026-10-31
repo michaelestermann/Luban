@@ -23,3 +23,15 @@ export function orderedMemberIds(memberIds: string[], leafModels: { modelID: str
 export function reorderFromDisplay<T>(models: T[], fromDisplay: number, toDisplay: number): T[] {
     return moveItem(models.slice().reverse(), fromDisplay, toDisplay).reverse();
 }
+
+/**
+ * Layer order after models were replaced (combine, offset): removed ones leave, added ones go where
+ * the anchor is (in its place if it was removed, right above it if it stays).
+ */
+export function replaceInLayers<T>(models: T[], removed: T[], added: T[], anchor: T): T[] {
+    const index = models.indexOf(anchor);
+    const keep = (item: T) => !removed.includes(item) && !added.includes(item);
+    const below = (index === -1 ? models : models.slice(0, index + 1)).filter(keep);
+    const above = (index === -1 ? [] : models.slice(index + 1)).filter(keep);
+    return [...below, ...added, ...above];
+}

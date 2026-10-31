@@ -1,7 +1,7 @@
 import { Popover, Tooltip } from 'antd';
 import classNames from 'classnames';
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
 
 import { HEAD_LASER, PAGE_EDITOR } from '../../../constants';
 import { actions as editorActions } from '../../../flux/editor';
@@ -11,6 +11,7 @@ import SvgIcon from '../../components/SvgIcon';
 import PointEditBar from './PointEditBar';
 import MeasureBar from './MeasureBar';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
+import { COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, ShapeAction } from './shape-actions';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 import styles from './selection-bar.styl';
 
@@ -58,6 +59,8 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const SVGCanvasMode = useSelector(state => state[headType]?.SVGCanvasMode);
     const SVGCanvasExt = useSelector(state => state[headType]?.SVGCanvasExt);
     const [alignOpen, setAlignOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState<string | null>(null);
+    const store = useStore();
 
     const selectedModels = modelGroup?.getSelectedModelArray?.() || [];
     const drawing = SVGCanvasMode === 'draw' || !!SVGCanvasExt?.elem;
@@ -91,6 +94,10 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     // one path with open subpaths: Close path / Join ends
     const pathElem = selectedModels.length === 1 && selectedModels[0].elem?.nodeName === 'path' ? selectedModels[0].elem : null;
     const openPath = pathElem ? openPathState(pathElem.getAttribute('d')) : { open: false, canJoin: false };
+
+    // Combine ▾ and ⋯ show only the actions that fit
+    const combineActions = fittingActions(COMBINE_ACTIONS, store.getState(), headType);
+    const moreActions = fittingActions(MORE_ACTIONS, store.getState(), headType);
 
     const onGroup = () => {
         if (canUngroup) {
@@ -135,6 +142,36 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                 />
             ))}
         </div>
+    );
+
+    const renderActionMenu = (menu: string, items: ShapeAction[], button: React.ReactNode) => (
+        <Popover
+            content={(
+                <div className={styles['action-menu']} role="menu">
+                    {items.map(item => (
+                        <button
+                            key={item.id}
+                            type="button"
+                            role="menuitem"
+                            className={styles['menu-item']}
+                            onClick={() => {
+                                setMenuOpen(null);
+                                item.run(dispatch, headType);
+                            }}
+                        >
+                            <span>{item.label()}</span>
+                            {item.keyHint && <span className={styles['menu-key']}>{item.keyHint}</span>}
+                        </button>
+                    ))}
+                </div>
+            )}
+            trigger="click"
+            placement="bottom"
+            visible={menuOpen === menu}
+            onVisibleChange={(visible) => setMenuOpen(visible ? menu : null)}
+        >
+            {button}
+        </Popover>
     );
 
     return (
@@ -195,6 +232,19 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     {i18n._('key-CncLaser/MainToolBar-Decompose')}
                 </button>
             )}
+            {combineActions.length > 0 && renderActionMenu('combine', combineActions, (
+                <span className={styles['tip-wrapper']}>
+                    <button
+                        type="button"
+                        className={styles['mode-button']}
+                        title={i18n._('key-CncLaser/Combine-Weld, subtract or intersect the shapes')}
+                    >
+                        <svg {...stroke}><circle cx="9" cy="12" r="5.5" /><circle cx="15" cy="12" r="5.5" /></svg>
+                        {i18n._('key-CncLaser/Combine-Combine')}
+                        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
+                    </button>
+                </span>
+            ))}
             {canAlign && (
                 <Popover
                     content={alignMenu}
@@ -210,6 +260,13 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     </span>
                 </Popover>
             )}
+            {moreActions.length > 0 && renderActionMenu('more', moreActions, (
+                <span className={styles['tip-wrapper']}>
+                    <button type="button" className={styles['icon-button']} aria-label={i18n._('key-CncLaser/SelectionBar-More actions')} title={i18n._('key-CncLaser/SelectionBar-More actions')}>
+                        <svg {...stroke}><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></svg>
+                    </button>
+                </span>
+            ))}
             {renderIconButton(i18n._('key-App/Menu-Duplicate'), !canDuplicate, () => {
                 dispatch(editorActions.duplicateSelectedModel(headType));
             }, (

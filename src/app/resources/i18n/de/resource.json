@@ -2575,5 +2575,14 @@
     "key-CncLaser/Dimensions-Between objects": "Zwischen Objekten",
     "key-CncLaser/Dimensions-Click a value to type a new distance. Not in the G-code.": "Auf einen Wert klicken, um einen neuen Abstand einzugeben. Nicht im G-Code.",
     "key-CncLaser/Dimensions-Distance in mm": "Abstand in mm",
-    "key-CncLaser/Dimensions-Click to type a new distance": "Klicken, um einen neuen Abstand einzugeben"
+    "key-CncLaser/Dimensions-Click to type a new distance": "Klicken, um einen neuen Abstand einzugeben",
+    "key-CncLaser/Combine-Combine": "Kombinieren",
+    "key-CncLaser/Combine-Weld, subtract or intersect the shapes": "Formen verschmelzen, abziehen oder schneiden",
+    "key-CncLaser/Combine-Weld": "Verschmelzen",
+    "key-CncLaser/Combine-Subtract": "Abziehen",
+    "key-CncLaser/Combine-Intersect": "Schnittmenge",
+    "key-CncLaser/Combine-The shapes could not be read": "Die Formen konnten nicht gelesen werden",
+    "key-CncLaser/Combine-The shapes do not overlap": "Die Formen überlappen sich nicht",
+    "key-CncLaser/Combine-Nothing is left of the shapes": "Von den Formen bleibt nichts übrig",
+    "key-CncLaser/SelectionBar-More actions": "Weitere Aktionen"
 }

@@ -81,6 +81,7 @@ import { baseActions } from './actions-base';
 /* eslint-disable-next-line import/no-cycle */
 import { processActions } from './actions-process';
 import { groupActions } from './actions-group';
+import { combineActions } from './actions-combine';
 import { resolveObjectClick } from '../../models/group-selection';
 /* eslint-disable-next-line import/no-cycle */
 import { actions as operationHistoryActions } from '../operation-history';
@@ -300,6 +301,8 @@ export const actions = {
     ...processActions,
 
     ...groupActions,
+
+    ...combineActions,
 
     _init: headType => (dispatch, getState) => {
         const { modelGroup, toolPathGroup, initFlag } = getState()[headType];

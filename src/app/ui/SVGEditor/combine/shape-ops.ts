@@ -335,6 +335,14 @@ export function offsetOutline(outline: Outline, distance: number, side: OffsetSi
     return { outside: fromInt(outside, c), inside: fromInt(inside, c) };
 }
 
+/** One outline of several shapes: their areas welded, their open parts kept. */
+export function unionShapes(outlines: Outline[]): Outline {
+    if (outlines.length === 1) {
+        return outlines[0];
+    }
+    return { closed: weld(outlines), open: mergeOutlines(outlines).open };
+}
+
 // ---- results ----
 
 /** Area of polygons, holes (opposite turn) counted negative. */
