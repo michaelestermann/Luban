@@ -19,6 +19,9 @@ export default class GroupSvgOperation extends Operation<State> {
     private targetModels: SvgModel[];
     private newGroup: SvgGroup | null = null;
     private previousSelectedGroupID: string | null = null;
+    // layer order and group members before grouping (undo restores them exactly)
+    private layerBefore: (SvgModel | SvgGroup)[] = [];
+    private membersBefore: { group: SvgGroup, children: SvgModel[] }[] = [];
 
     public constructor(state: State) {
         super();
@@ -33,6 +36,10 @@ export default class GroupSvgOperation extends Operation<State> {
         // operation was initially performed.
         mg.selectedModelArray = this.targetModels.slice();
         mg.selectedGroupID = null;
+        this.layerBefore = mg.models.slice();
+        this.membersBefore = mg.models
+            .filter((entity): entity is SvgGroup => entity.type === '2d-group')
+            .map((group) => ({ group, children: group.children.slice() }));
         const { newGroup } = mg.group();
         this.newGroup = newGroup;
     }
@@ -45,6 +52,12 @@ export default class GroupSvgOperation extends Operation<State> {
         mg.selectedGroupID = this.newGroup.modelID;
         mg.selectedModelArray = this.newGroup.children.slice();
         mg.ungroup();
+        // members taken from other groups go back, and every object to its old layer
+        for (const { group, children } of this.membersBefore) {
+            group.children.splice(0);
+            children.forEach((child) => group.addChild(child));
+        }
+        mg.applyLayerOrder(this.layerBefore.slice());
         this.newGroup = null;
         mg.selectedGroupID = this.previousSelectedGroupID;
     }

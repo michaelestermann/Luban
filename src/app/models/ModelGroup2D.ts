@@ -268,7 +268,9 @@ class ModelGroup2D extends EventEmitter {
             return { newGroup: null };
         }
 
-        const selected = this.selectedModelArray.slice();
+        // the members keep their layer order (not the order they were selected in)
+        const layer = this.getModels<SvgModel>();
+        const selected = this.selectedModelArray.slice().sort((a, b) => layer.indexOf(a as SvgModel) - layer.indexOf(b as SvgModel));
 
         // The selection is already flat SvgModels (even when a group is
         // selected at top-level, selectedModelArray holds its children).
@@ -322,8 +324,10 @@ class ModelGroup2D extends EventEmitter {
         // entire editor. Groups are a purely logical construct tracked
         // in the data model only.
 
-        // Insert new group into models[] at the computed index
+        // Insert new group into models[] at the computed index; the SVG elements follow (members
+        // that were apart in the layer order are now together)
         this.models.splice(insertIndex, 0, newGroup);
+        this.setLayerOrder(this.models);
 
         // The children keep their tool paths: grouping only changes how
         // they are selected and moved, single members can still be in
