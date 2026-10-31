@@ -38,21 +38,37 @@ class RectTagParser extends BaseTagParser {
         if (rx === 0 && ry === 0) {
             this.moveTo(x, y);
             this.lineTo(x + width, y);
+            this.markSegment('line');
             this.lineTo(x + width, y + height);
+            this.markSegment('line');
             this.lineTo(x, y + height);
+            this.markSegment('line');
         } else {
-            // quarter ellipses as cubics (control points at kappa of the radius)
+            // quarter ellipses as cubics (control points at kappa of the radius), each ending exactly at its end point
             const kx = rx * KAPPA;
             const ky = ry * KAPPA;
+            const corner = rx === ry ? 'arc' : 'curve';
             this.moveTo(x + rx, y);
             this.lineTo(x + width - rx, y);
+            this.markSegment('line');
             this.cubicBezTo(x + width - rx, y, x + width - rx + kx, y, x + width, y + ry - ky, x + width, y + ry);
+            this.lineTo(x + width, y + ry);
+            this.markSegment(corner);
             this.lineTo(x + width, y + height - ry);
+            this.markSegment('line');
             this.cubicBezTo(x + width, y + height - ry, x + width, y + height - ry + ky, x + width - rx + kx, y + height, x + width - rx, y + height);
+            this.lineTo(x + width - rx, y + height);
+            this.markSegment(corner);
             this.lineTo(x + rx, y + height);
+            this.markSegment('line');
             this.cubicBezTo(x + rx, y + height, x + rx - kx, y + height, x, y + height - ry + ky, x, y + height - ry);
+            this.lineTo(x, y + height - ry);
+            this.markSegment(corner);
             this.lineTo(x, y + ry);
+            this.markSegment('line');
             this.cubicBezTo(x, y + ry, x, y + ry - ky, x + rx - kx, y, x + rx, y);
+            this.lineTo(x + rx, y);
+            this.markSegment(corner);
         }
 
         this.commitPath(true);

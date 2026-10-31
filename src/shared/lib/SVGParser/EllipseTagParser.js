@@ -13,9 +13,13 @@ class EllipseTagParser extends BaseTagParser {
         if (rx > 0 && ry > 0) {
             this.moveTo(cx - rx, cy);
             this.arcTo(cx - rx, cy, rx, ry, 0, 0, 0, cx, cy + ry);
+            this.markSegment(rx === ry ? 'arc' : 'curve');
             this.arcTo(cx, cy + ry, rx, ry, 0, 0, 0, cx + rx, cy);
+            this.markSegment(rx === ry ? 'arc' : 'curve');
             this.arcTo(cx + rx, cy, rx, ry, 0, 0, 0, cx, cy - ry);
+            this.markSegment(rx === ry ? 'arc' : 'curve');
             this.arcTo(cx, cy - ry, rx, ry, 0, 0, 0, cx - rx, cy);
+            this.markSegment(rx === ry ? 'arc' : 'curve');
 
             this.commitPath(true);
         }

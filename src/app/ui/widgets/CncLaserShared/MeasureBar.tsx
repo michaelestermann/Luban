@@ -12,7 +12,7 @@ interface MeasureBarProps {
  * Mode bar of the measure tool: replaces the selection bar while measuring.
  */
 const MeasureBar: React.FC<MeasureBarProps> = ({ onDone }) => {
-    const help = i18n._('key-CncLaser/Measure-Click an object or two points · Esc to finish');
+    const help = i18n._('key-CncLaser/Measure-Click an object, then a part of it · or two points · Esc to go back');
     return (
         <div className={styles['selection-bar']} role="toolbar" aria-label={i18n._('key-CncLaser/Measure-Measure')}>
             <span className={styles['mode-title']}>{i18n._('key-CncLaser/Measure-Measure')}</span>

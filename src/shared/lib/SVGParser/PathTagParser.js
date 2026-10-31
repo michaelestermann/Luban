@@ -61,6 +61,7 @@ class PathTagParser extends BaseTagParser {
         this.lineTo(this.cpx, this.cpy);
         this.cpx2 = this.cpx;
         this.cpy2 = this.cpy;
+        this.markSegment('line');
     }
 
     pathHLineTo(x, relative) {
@@ -72,6 +73,7 @@ class PathTagParser extends BaseTagParser {
         this.lineTo(this.cpx, this.cpy);
         this.cpx2 = this.cpx;
         this.cpy2 = this.cpy;
+        this.markSegment('line');
     }
 
     pathVLineTo(y, relative) {
@@ -83,6 +85,7 @@ class PathTagParser extends BaseTagParser {
         this.lineTo(this.cpx, this.cpy);
         this.cpx2 = this.cpx;
         this.cpy2 = this.cpy;
+        this.markSegment('line');
     }
 
     pathCubicBezTo(x1, y1, x2, y2, x, y, relative) {
@@ -100,6 +103,7 @@ class PathTagParser extends BaseTagParser {
         this.cpy = y;
         this.cpx2 = x2;
         this.cpy2 = y2;
+        this.markSegment('curve');
     }
 
     pathCubicBezShortTo(x2, y2, x, y, relative) {
@@ -117,6 +121,7 @@ class PathTagParser extends BaseTagParser {
         this.cpy = y;
         this.cpx2 = x2;
         this.cpy2 = y2;
+        this.markSegment('curve');
     }
 
     // Quadratic Bézier Curve
@@ -133,6 +138,7 @@ class PathTagParser extends BaseTagParser {
         this.cpy = y;
         this.cpx2 = x1;
         this.cpy2 = y1;
+        this.markSegment('curve');
     }
 
     // Quadratic Bézier Curve
@@ -149,6 +155,7 @@ class PathTagParser extends BaseTagParser {
         this.cpy = y;
         this.cpx2 = x1;
         this.cpy2 = y1;
+        this.markSegment('curve');
     }
 
     /**
@@ -173,6 +180,8 @@ class PathTagParser extends BaseTagParser {
         this.cpy = y;
         this.cpx2 = this.cpx;
         this.cpy2 = this.cpy;
+        // an arc with equal radii is circular (rotation does not matter then)
+        this.markSegment(Math.abs(rx - ry) <= 1e-9 * Math.max(Math.abs(rx), Math.abs(ry)) ? 'arc' : 'curve');
     }
 
     parse(node, attributes) {

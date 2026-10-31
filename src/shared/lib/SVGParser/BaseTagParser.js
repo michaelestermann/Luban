@@ -12,6 +12,18 @@ class BaseTagParser {
         this.points = [];
 
         this.paths = [];
+
+        // node marks of the current outline (measure tool): index of each piece's last point and its kind
+        this.breaks = [];
+        this.kinds = [];
+    }
+
+    // the piece just drawn ends at the last point; kind: 'line', 'curve' or 'arc' (circular)
+    markSegment(kind) {
+        if (this.points.length > 1) {
+            this.breaks.push(this.points.length - 1);
+            this.kinds.push(kind);
+        }
     }
 
     moveTo(x, y) {
@@ -217,6 +229,8 @@ class BaseTagParser {
             this.addPath(closed);
             this.points = [];
         }
+        this.breaks = [];
+        this.kinds = [];
         this.closed = false;
     }
 
@@ -231,6 +245,9 @@ class BaseTagParser {
         // Path correction
         if (closed && (lastPoint[0] !== firstPoint[0] || lastPoint[1] !== firstPoint[1])) {
             this.lineTo(firstPoint[0], firstPoint[1]);
+            if (this.breaks.length > 0) {
+                this.markSegment('line');
+            }
         } else if (!closed && lastPoint[0] === firstPoint[0] && lastPoint[1] === firstPoint[1]) {
             closed = true;
         }
@@ -239,6 +256,10 @@ class BaseTagParser {
             closed: closed,
             points: this.points
         };
+        if (this.breaks.length > 0) {
+            path.breaks = this.breaks;
+            path.kinds = this.kinds;
+        }
 
         // transform
         for (let i = 0, l = this.points.length; i < l; i++) {

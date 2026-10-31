@@ -12,9 +12,13 @@ class CircleTagParser extends BaseTagParser {
         if (r > 0) {
             this.moveTo(cx - r, cy);
             this.arcTo(cx - r, cy, r, r, 0, 0, 0, cx, cy + r);
+            this.markSegment('arc');
             this.arcTo(cx, cy + r, r, r, 0, 0, 0, cx + r, cy);
+            this.markSegment('arc');
             this.arcTo(cx + r, cy, r, r, 0, 0, 0, cx, cy - r);
+            this.markSegment('arc');
             this.arcTo(cx, cy - r, r, r, 0, 0, 0, cx - r, cy);
+            this.markSegment('arc');
 
             this.commitPath(true);
         }
