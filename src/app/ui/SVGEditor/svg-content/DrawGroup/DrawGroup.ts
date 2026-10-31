@@ -1180,6 +1180,11 @@ class DrawGroup {
     }
 
     /** Canvas position of the selected end point, follows a running drag. */
+    /** The path being point edited (hidden while editing, its box is still valid). */
+    public getEditingElement(): SVGPathElement | null {
+        return this.isEditingPoints() ? this.originGraph : null;
+    }
+
     public getSelectedPointPosition(): { x: number, y: number } | null {
         const rect = this.getSelectedNode() && this.selected.point;
         if (!rect) {

@@ -93,7 +93,7 @@ const SVGLeftBar = forwardRef((props, ref) => {
         actions
     }));
 
-    const { mode, editable, selectEditing } = props;
+    const { mode, editable } = props;
     return (
         <React.Fragment>
             <div className={classNames(styles['svg-left-bar'])}>
@@ -218,30 +218,7 @@ const SVGLeftBar = forwardRef((props, ref) => {
                         </div>
                     </div>
                 </div>
-                {
-                    mode === 'select' && selectEditing && (
-                        <div
-                            className="position-absolute width-152 margin-left-72 margin-top-64 border-default-grey-1 border-radius-8 background-color-white"
-                        >
-                            <div className="border-bottom-normal padding-vertical-8 padding-horizontal-16 height-40">
-                                {i18n._('key-Laser/LeftBar-Draw Path')}
-                            </div>
-                            <div className={classNames(styles['center-pen'], 'width-152')}>
-                                <Anchor
-                                    onClick={() => {
-                                        actions.stopDraw();
-                                    }}
-                                >
-                                    <div
-                                        className={classNames('width-120', styles['center-pen-done'])}
-                                    >
-                                        <span>{i18n._('key-Laser/LeftBar-Draw Path Done')}</span>
-                                    </div>
-                                </Anchor>
-                            </div>
-                        </div>
-                    )
-                }
+                {/* point editing (select + selectEditing): the mode bar above the canvas replaces the old panel */}
                 {
                     mode === 'draw' && (
                         <div

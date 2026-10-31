@@ -119,12 +119,23 @@ const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScree
                 const y = ctm.b * point.x + ctm.d * point.y + ctm.f - box.top;
                 const width = cardRef.current ? cardRef.current.offsetWidth : 232;
                 const height = cardRef.current ? cardRef.current.offsetHeight : 190;
-                // right of the point, left of it if there is no room
-                let left = x + GAP;
-                if (left + width > box.width - MARGIN && x - GAP - width >= MARGIN) {
-                    left = x - GAP - width;
-                }
-                const top = Math.max(MARGIN, Math.min(y - 28, box.height - height - MARGIN));
+                // first side of the point that fits and does not cover the shape: right, left, below, above
+                const shape = drawGroup.getEditingElement()?.getBoundingClientRect();
+                const clampTop = (t: number) => Math.max(MARGIN, Math.min(t, box.height - height - MARGIN));
+                const clampLeft = (l: number) => Math.max(MARGIN, Math.min(l, box.width - width - MARGIN));
+                const candidates = [
+                    { left: x + GAP, top: clampTop(y - 28) },
+                    { left: x - GAP - width, top: clampTop(y - 28) },
+                    { left: clampLeft(x - width / 2), top: y + GAP },
+                    { left: clampLeft(x - width / 2), top: y - GAP - height },
+                ];
+                const fits = (c: { left: number, top: number }) => c.left >= MARGIN && c.top >= MARGIN
+                    && c.left + width <= box.width - MARGIN && c.top + height <= box.height - MARGIN;
+                const clear = (c: { left: number, top: number }) => !shape
+                    || c.left + box.left >= shape.right || c.left + box.left + width <= shape.left
+                    || c.top + box.top >= shape.bottom || c.top + box.top + height <= shape.top;
+                const pick = candidates.find(c => fits(c) && clear(c)) || candidates.find(fits) || candidates[0];
+                const { left, top } = pick;
                 setPosition((prev) => (prev && prev.left === left && prev.top === top ? prev : { left, top }));
             }
             frame = requestAnimationFrame(update);
