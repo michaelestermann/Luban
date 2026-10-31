@@ -100,7 +100,7 @@
     "@types/lodash": "^4.14.182",
     "@types/node-schedule": "^1.3.2",
     "@types/superagent": "^3.8.3",
-    "@xmldom/xmldom": "^0.8.2",
+    "@xmldom/xmldom": "^0.8.15",
     "antd": "4.24.14",
     "async": "3.2.6",
     "bcrypt-nodejs": "0.0.3",
@@ -116,7 +116,6 @@
     "colornames": "1.1.1",
     "commander": "7.2.0",
     "compression": "1.8.2",
-    "connect-multiparty": "2.2.0",
     "connect-restreamer": "1.0.3",
     "consolidate": "0.15.1",
     "cookie-parser": "1.4.7",
@@ -133,7 +132,7 @@
     "esprima-next": "5.7.0",
     "expr-eval": "1.2.3",
     "express": "4.22.3",
-    "express-jwt": "6.1.2",
+    "express-jwt": "8.5.1",
     "express-session": "1.19.0",
     "file-saver": "1.3.8",
     "font-awesome": "4.7.0",
@@ -143,9 +142,9 @@
     "hogan.js": "3.0.2",
     "i18next": "^22.5.1",
     "i18next-browser-languagedetector": "7.1.0",
+    "i18next-fs-backend": "2.6.9",
     "i18next-http-backend": "^2.2.2",
     "i18next-http-middleware": "3.9.11",
-    "i18next-node-fs-backend": "2.1.3",
     "immutability-helper": "2.9.1",
     "infinite-tree": "1.16.2",
     "intro.js": "5.1.0",
@@ -155,7 +154,7 @@
     "jpeg-js": "0.4.4",
     "jquery": "3.5.1",
     "js-polyfills": "0.1.43",
-    "jsonwebtoken": "~9.0.0",
+    "jsonwebtoken": "~9.0.3",
     "jsuri": "1.3.1",
     "jszip": "^3.10.0",
     "keycode": "2.2.1",
@@ -168,12 +167,14 @@
     "morgan": "1.12.1",
     "mousetrap": "1.6.5",
     "multicast-dns": "7.2.5",
+    "multiparty": "4.3.1",
     "mv": "2.1.1",
     "namespace-constants": "0.5.0",
     "node-fetch": "2.7.0",
     "node-schedule": "2.1.0",
     "node-wifi": "2.0.16",
     "normalize.css": "8.0.1",
+    "on-finished": "2.4.1",
     "opencv-wasm": "^4.3.0-10",
     "opentype.js": "0.9.0",
     "overlap-area": "^1.0.0",
@@ -185,6 +186,7 @@
     "potrace": "2.1.8",
     "prop-types": "15.6.2",
     "pubsub-js": "1.5.8",
+    "qs": "6.17.1",
     "range_check": "1.4.0",
     "rc-motion": "^2.4.4",
     "rc-slider": "8.6.13",
@@ -234,6 +236,7 @@
     "threads": "1.7.0",
     "three": "0.124.0",
     "three-mesh-bvh": "0.5.14",
+    "type-is": "1.6.18",
     "uuid": "8.3.2",
     "watch": "1.0.2",
     "winston": "3.0.1",
@@ -338,6 +341,14 @@
     "word-wrap": "1.2.5",
     "worker-loader": "3.0.8",
     "xlsx": "0.18.5"
+  },
+  "overrides": {
+    "socketio-jwt": {
+      "jsonwebtoken": "^9.0.3"
+    },
+    "watch": {
+      "exec-sh": "0.4.0"
+    }
   },
   "config": {
     "commitizen": {

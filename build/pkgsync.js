@@ -40,6 +40,13 @@ pkgApp.repository = pkg.repository;
 
 // Copy only Node.js dependencies to application package.json
 pkgApp.dependencies = _.pick(pkg.dependencies, deps);
+// Keep the security overrides for transitive dependencies in the packaged app as well
+// (electron-builder installs the app dependencies from this package.json without the root lock file)
+if (pkg.overrides) {
+    pkgApp.overrides = pkg.overrides;
+} else {
+    delete pkgApp.overrides;
+}
 pkgApp.config = pkg.config;
 
 const target = path.resolve(__dirname, '../src/package.json');

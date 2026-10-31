@@ -1,19 +1,18 @@
 /* eslint callback-return: 0 */
 import bodyParser from 'body-parser';
 import compress from 'compression';
-import multiparty from 'connect-multiparty';
 import connectRestreamer from 'connect-restreamer';
 import engines from 'consolidate';
 import cookieParser from 'cookie-parser';
 import errorhandler from 'errorhandler';
 import express from 'express';
-import expressJwt from 'express-jwt';
+import { expressjwt } from 'express-jwt';
 import session from 'express-session';
 import * as fs from 'fs-extra';
 import 'hogan.js'; // required by consolidate
 import i18next from 'i18next';
 import i18nextHttpMiddleware from 'i18next-http-middleware';
-import i18nextBackend from 'i18next-node-fs-backend';
+import i18nextBackend from 'i18next-fs-backend';
 import jwt from 'jsonwebtoken';
 import _ from 'lodash';
 import methodOverride from 'method-override';
@@ -27,6 +26,7 @@ import settings from './config/settings';
 import { ERR_FORBIDDEN, ERR_UNAUTHORIZED, IP_WHITELIST } from './constants';
 import DataStorage from './DataStorage';
 import logger from './lib/logger';
+import multipart from './lib/middleware/multipart';
 import optionsFallthrough from './lib/middleware/options-fallthrough';
 import urljoin from './lib/urljoin';
 import { registerApis } from './services';
@@ -156,8 +156,8 @@ const createApplication = () => {
 
     // For multipart bodies, please use the following modules:
     // - [busboy](https://github.com/mscdex/busboy) and [connect-busboy](https://github.com/mscdex/connect-busboy)
-    // - [multiparty](https://github.com/andrewrk/node-multiparty) and [connect-multiparty](https://github.com/andrewrk/connect-multiparty)
-    app.use(multiparty(settings.middleware.multiparty));
+    // - [multiparty](https://github.com/pillarjs/multiparty) (see lib/middleware/multipart, replaces connect-multiparty)
+    app.use(multipart(settings.middleware.multiparty));
 
     // https://github.com/dominictarr/connect-restreamer
     // connect's bodyParser has a problem when using it with a proxy.
@@ -209,7 +209,7 @@ const createApplication = () => {
     app.use(i18nextHttpMiddleware.handle(i18next));
 
     // Secure API Access
-    app.use(urljoin(settings.route, 'api'), expressJwt({
+    app.use(urljoin(settings.route, 'api'), expressjwt({
         secret: config.get('secret'),
         algorithms: ['HS256'],
         credentialsRequired: true,
