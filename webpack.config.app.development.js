@@ -123,6 +123,9 @@ module.exports = {
         new HtmlWebpackPlugin({
             filename: 'index.html',
             template: path.resolve(__dirname, 'src/app/resources/assets/index.html'),
+            // keep the html-webpack-plugin 4 output: blocking scripts at the end of <body>
+            inject: 'body',
+            scriptLoading: 'blocking',
         }),
         new webpack.ProvidePlugin({
             process: 'process/browser'
