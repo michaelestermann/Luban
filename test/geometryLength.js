@@ -11,6 +11,8 @@ import {
     formatMm,
     geometryRows,
     sumLengths,
+    cutLength,
+    selectionGeometry,
 } from '../src/app/ui/SVGEditor/measure/geometry-length';
 import { parsePath, ellipseToPath } from '../src/app/ui/SVGEditor/path-edit/path-geometry';
 
@@ -92,5 +94,21 @@ test('geometryRows per shape kind', (t) => {
     t.deepEqual(geometryRows({ kind: 'svg', length: null }), [], 'length not known yet');
     t.deepEqual(geometryRows({ kind: 'image' }), [], 'raster image');
     t.deepEqual(geometryRows({ kind: 'text' }), [], 'text');
+    t.end();
+});
+
+test('cutLength and selectionGeometry', (t) => {
+    t.equal(cutLength({ kind: 'rect', width: 30, height: 22 }), 104, 'rectangle perimeter');
+    t.equal(cutLength({ kind: 'circle', width: 40, height: 40 }), circleCircumference(20), 'circle');
+    t.equal(cutLength({ kind: 'path', length: 12 }), 12, 'path');
+    t.equal(cutLength({ kind: 'svg', length: null }), null, 'svg still loading');
+    t.equal(cutLength({ kind: 'image' }), undefined, 'raster has no cut length');
+
+    const rect = { kind: 'rect', width: 30, height: 22 };
+    t.equal(selectionGeometry([]), null, 'nothing selected');
+    t.equal(selectionGeometry([rect]), rect, 'one object: its own geometry');
+    t.deepEqual(selectionGeometry([rect, { kind: 'path', length: 6 }, { kind: 'text' }]), { kind: 'multiple', length: 110 }, 'sum, text ignored');
+    t.deepEqual(selectionGeometry([rect, { kind: 'svg', length: null }]), { kind: 'multiple', length: null }, 'pending svg');
+    t.equal(selectionGeometry([{ kind: 'image' }, { kind: 'text' }]), null, 'only raster and text');
     t.end();
 });

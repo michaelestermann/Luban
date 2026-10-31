@@ -163,3 +163,33 @@ export function geometryRows(info: GeometryInfo): GeometryRow[] {
             return [];
     }
 }
+
+// length the tool travels along the outline; undefined = no outline (raster image, text), null = not known yet
+export function cutLength(info: GeometryInfo): number | null | undefined {
+    const { kind, width = 0, height = 0, length = null } = info;
+    switch (kind) {
+        case 'circle':
+        case 'ellipse':
+            return ellipsePerimeter(width / 2, height / 2);
+        case 'rect':
+            return rectPerimeter(width, height);
+        case 'path':
+        case 'svg':
+        case 'multiple':
+            return length;
+        default:
+            return undefined;
+    }
+}
+
+// one object: its own geometry; several: the total cut length of those with an outline
+export function selectionGeometry(items: GeometryInfo[]): GeometryInfo | null {
+    if (items.length === 1) {
+        return items[0];
+    }
+    const lengths = items.map(cutLength).filter(l => l !== undefined);
+    if (lengths.length === 0) {
+        return null;
+    }
+    return { kind: 'multiple', length: sumLengths(lengths) };
+}

@@ -11,6 +11,7 @@ import TipTrigger from '../../components/TipTrigger';
 import { NumberInput as Input } from '../../components/Input';
 import { anchorOffset, DEFAULT_ANCHOR } from '../../../lib/anchor';
 import FramePicker from './FramePicker';
+import GeometryRow from './GeometryRow';
 
 import { actions as editorActions } from '../../../flux/editor';
 
@@ -328,6 +329,7 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                     </div>
                 </div>
             </TipTrigger>
+            {!drawing && selectedModelArray.length > 0 && <GeometryRow models={selectedModelArray} />}
         </div>
     );
 };

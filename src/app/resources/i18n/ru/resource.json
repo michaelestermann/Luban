@@ -2544,5 +2544,13 @@
     "key-CncLaser/JobPanel-Work area": "Work area",
     "key-CncLaser/JobPanel-Before file {{file}}": "Before file {{file}}",
     "key-CncLaser/JobPanel-Before files {{files}}": "Before files {{files}}",
-    "key-CncLaser/JobPanel-Swap the bit as shown in the list and set the Z zero again on the machine. Luban adds no tool-change pause.": "Swap the bit as shown in the list and set the Z zero again on the machine. Luban adds no tool-change pause."
+    "key-CncLaser/JobPanel-Swap the bit as shown in the list and set the Z zero again on the machine. Luban adds no tool-change pause.": "Swap the bit as shown in the list and set the Z zero again on the machine. Luban adds no tool-change pause.",
+    "key-CncLaser/Geometry-Geometry": "Geometry",
+    "key-CncLaser/Geometry-Length": "Length",
+    "key-CncLaser/Geometry-Total cut length": "Total cut length",
+    "key-CncLaser/Geometry-Circumference": "Circumference",
+    "key-CncLaser/Geometry-Perimeter": "Perimeter",
+    "key-CncLaser/Geometry-Radius": "Radius",
+    "key-CncLaser/Geometry-Width": "Width",
+    "key-CncLaser/Geometry-Height": "Height"
 }
