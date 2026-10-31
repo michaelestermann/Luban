@@ -9,6 +9,7 @@ import modal from '../../../../lib/modal';
 import styles from '../styles.styl';
 import GroupRow from './GroupRow';
 import ModelItem from './model-item';
+import { useCardReorder } from '../use-card-reorder';
 
 
 interface ObjectListBoxProps {
@@ -81,6 +82,11 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
     // persisted in Redux). Default: expanded.
     const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
+    // drag and drop changes the layer order (no grip: the whole row is dragged)
+    const reorder = useCardReorder((from, to) => {
+        dispatch(editorActions.moveLayer(headType, from, to));
+    }, !!inProgress);
+
     const toggleGroup = useCallback((groupID: string) => {
         setCollapsedGroups((prev) => ({ ...prev, [groupID]: !prev[groupID] }));
     }, []);
@@ -91,42 +97,53 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
                 fill ? styles['object-list-fill'] : [styles['object-list-box'], 'width-264'],
             )}
         >
-            <div className={classNames('padding-vertical-4')}>
+            <div className={classNames('padding-vertical-4')} {...reorder.containerProps}>
                 {
-                    // layer order: the front object on top
-                    allModels && allModels.slice().reverse().map((entity) => {
+                    // layer order: the front object on top; drag a row up or down to change it
+                    allModels && allModels.slice().reverse().map((entity, index) => {
+                        const rowProps = {
+                            key: entity.modelID,
+                            ...reorder.cardProps(index),
+                            className: classNames(styles['layer-row'], {
+                                [styles['layer-dragging']]: reorder.draggingIndex === index,
+                                [styles['layer-drop-before']]: reorder.dropSide(index) === 'before',
+                                [styles['layer-drop-after']]: reorder.dropSide(index) === 'after'
+                            })
+                        };
                         if (entity && entity.type === '2d-group') {
                             return (
-                                <GroupRow
-                                    key={entity.modelID}
-                                    group={entity}
-                                    collapsed={!!collapsedGroups[entity.modelID]}
-                                    onToggleCollapsed={toggleGroup}
-                                    selected={selectedGroupID === entity.modelID}
-                                    selectedModelArray={selectedModelArray}
-                                    toolPaths={toolPaths}
-                                    inProgress={inProgress}
-                                    onSelectGroup={onSelectItem}
-                                    onSelectMember={onSelectMember}
-                                    onToggleGroupVisible={actions.onToggleGroupVisible}
-                                    onToggleMemberVisible={actions.onToggleMemberVisible}
-                                />
+                                <div {...rowProps}>
+                                    <GroupRow
+                                        group={entity}
+                                        collapsed={!!collapsedGroups[entity.modelID]}
+                                        onToggleCollapsed={toggleGroup}
+                                        selected={selectedGroupID === entity.modelID}
+                                        selectedModelArray={selectedModelArray}
+                                        toolPaths={toolPaths}
+                                        inProgress={inProgress}
+                                        onSelectGroup={onSelectItem}
+                                        onSelectMember={onSelectMember}
+                                        onToggleGroupVisible={actions.onToggleGroupVisible}
+                                        onToggleMemberVisible={actions.onToggleMemberVisible}
+                                    />
+                                </div>
                             );
                         }
                         const model = entity;
                         return (
-                            <ModelItem
-                                model={model}
-                                key={model.modelID}
-                                visible={model.visible}
-                                styles={styles}
-                                isSelected={selectedModelArray && selectedModelArray.includes(model)}
-                                onSelect={onSelectItem}
-                                onToggleVisible={actions.onClickModelHideBox}
-                                inProgress={inProgress}
-                                placement="right"
-                                dotColors={getModelOperationColors(toolPaths, model.modelID)}
-                            />
+                            <div {...rowProps}>
+                                <ModelItem
+                                    model={model}
+                                    visible={model.visible}
+                                    styles={styles}
+                                    isSelected={selectedModelArray && selectedModelArray.includes(model)}
+                                    onSelect={onSelectItem}
+                                    onToggleVisible={actions.onClickModelHideBox}
+                                    inProgress={inProgress}
+                                    placement="right"
+                                    dotColors={getModelOperationColors(toolPaths, model.modelID)}
+                                />
+                            </div>
                         );
                     })
                 }

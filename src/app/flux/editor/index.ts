@@ -1606,6 +1606,14 @@ export const actions = {
         modelGroup.bringSelectedModelToFront(svgModel);
     },
 
+    /** Object list drag and drop: rows are shown front on top. */
+    moveLayer: (headType, fromDisplay: number, toDisplay: number) => (dispatch, getState) => {
+        const { modelGroup } = getState()[headType];
+        modelGroup.moveLayer(fromDisplay, toDisplay);
+        dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
+        dispatch(baseActions.render(headType));
+    },
+
     sendSelectedModelToBack: headType => (dispatch, getState) => {
         const { modelGroup } = getState()[headType];
         modelGroup.moveSelectedToEdge('back');

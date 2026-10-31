@@ -1,5 +1,5 @@
 import test from 'tape';
-import { moveToEdge, orderedMemberIds } from '../src/app/models/z-order';
+import { moveToEdge, orderedMemberIds, reorderFromDisplay } from '../src/app/models/z-order';
 
 const e = id => ({ modelID: id });
 
@@ -25,5 +25,14 @@ test('an operation cuts its objects in the order of its chips, not of the object
     const memberIds = ['c', 'a', 'b'];
     const leafs = [{ modelID: 'a', visible: true }, { modelID: 'b', visible: false }, { modelID: 'c', visible: true }];
     t.deepEqual(orderedMemberIds(memberIds, leafs), ['c', 'a'], 'chip order, hidden and missing objects left out');
+    t.end();
+});
+
+test('dragging in the object list (front on top) reorders the layers', (t) => {
+    const models = [e('back'), e('mid'), e('front')]; // list shows: front, mid, back
+    // drag the top row (front) below the last row (back) -> it becomes the backmost
+    t.deepEqual(reorderFromDisplay(models, 0, 2).map(x => x.modelID), ['front', 'back', 'mid']);
+    // drag the bottom row (back) to the top -> it becomes the frontmost
+    t.deepEqual(reorderFromDisplay(models, 2, 0).map(x => x.modelID), ['mid', 'front', 'back']);
     t.end();
 });

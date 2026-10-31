@@ -17,7 +17,7 @@ import { emitUpdateScaleEvent } from '../ui/components/SMCanvas/TransformControl
 import { ModelInfo as SVGModelInfo, TMode } from './BaseModel';
 import SvgModel from './SvgModel';
 import SvgGroup from './SvgGroup';
-import { moveToEdge } from './z-order';
+import { moveToEdge, reorderFromDisplay } from './z-order';
 import { ModelInfo, ModelTransformation } from './ThreeBaseModel';
 import { ModelEvents } from './events';
 
@@ -589,7 +589,17 @@ class ModelGroup2D extends EventEmitter {
                 entities.push(entity);
             }
         }
-        this.models = moveToEdge(this.models, entities, edge);
+        this.setLayerOrder(moveToEdge(this.models, entities, edge));
+    }
+
+    /** Drag and drop in the object list (which shows the front on top). */
+    public moveLayer(fromDisplay: number, toDisplay: number) {
+        this.setLayerOrder(reorderFromDisplay(this.models, fromDisplay, toDisplay));
+    }
+
+    // models[] in this order (back to front), applied to positionZ and the SVG elements
+    private setLayerOrder(models: TModel[]) {
+        this.models = models;
         const leafs = this.getModels<SvgModel>();
         leafs.forEach((leaf, i) => {
             leaf.updateTransformation({ 'positionZ': (i + 1) * INDEXMARGIN });
