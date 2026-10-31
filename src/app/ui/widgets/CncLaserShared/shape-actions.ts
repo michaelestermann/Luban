@@ -2,7 +2,7 @@
  * Shape actions on the selection, shared by the selection bar ("Combine ▾" and "⋯" menus) and the
  * right-click context menus. Each entry knows when it fits the selection, its key and how to run it.
  */
-import { actions as editorActions } from '../../../flux/editor';
+import { actions as editorActions, roundCornerTargets } from '../../../flux/editor';
 import { canEditShapes, CombineKind } from '../../../flux/editor/actions-combine';
 import i18n from '../../../lib/i18n';
 import { selectionActionState } from '../../SVGEditor/combine/selection-actions';
@@ -16,7 +16,34 @@ export interface ShapeAction {
     // key shown in the menu and tooltip
     keyHint?: string;
     fits: (state: unknown, headType: HeadType) => boolean;
-    run: (dispatch: (action: unknown) => unknown, headType: HeadType) => void;
+    // anchor: screen point a dialog opens at (button, cursor)
+    run: (dispatch: (action: unknown) => unknown, headType: HeadType, anchor?: ScreenPoint) => void;
+}
+
+export interface ScreenPoint {
+    x: number;
+    y: number;
+    // 'start': open right of the point (cursor), else centred below it (button)
+    align?: 'center' | 'start';
+}
+
+// where the last right-click was: the "Round corners" values open there from the context menu
+let contextMenuPoint: ScreenPoint | null = null;
+if (typeof window !== 'undefined') {
+    window.addEventListener('contextmenu', (event) => {
+        contextMenuPoint = { x: event.clientX, y: event.clientY, align: 'start' };
+    }, true);
+}
+
+// the "Round corners" button of the selection bar, else below the selection on the canvas
+function roundCornersAnchor(): ScreenPoint {
+    const button = Array.from(document.querySelectorAll('[data-round-corners]'))
+        .map(elem => elem.getBoundingClientRect())
+        .find(rect => rect.width > 0 && rect.x > 0);
+    if (button) {
+        return { x: button.left + button.width / 2, y: button.bottom + 6 };
+    }
+    return { x: window.innerWidth / 2, y: window.innerHeight / 3 };
 }
 
 // computed once per selection and render, shared by all actions, the selection bar and the context menu
@@ -61,6 +88,16 @@ export const MORE_ACTIONS: ShapeAction[] = [
     },
 ];
 
+/** "Round corners": rectangles and editable paths with sharp corners; opens the radius next to the button. */
+export const ROUND_CORNERS_ACTION: ShapeAction = {
+    id: 'round-corners',
+    label: () => i18n._('key-CncLaser/RoundCorners-Round corners'),
+    keyHint: 'R',
+    fits: (state, headType) => canEditShapes(state, headType)
+        && roundCornerTargets(state[headType]?.modelGroup).length > 0,
+    run: (dispatch, headType, anchor) => dispatch(editorActions.startRoundCorners(headType, anchor || roundCornersAnchor())),
+};
+
 export const fittingActions = (actions: ShapeAction[], state: unknown, headType: HeadType) => actions.filter(a => a.fits(state, headType));
 
 export interface ContextMenuItem {
@@ -91,6 +128,11 @@ export function shapeContextMenuItems(
             label: i18n._('key-CncLaser/Combine-Combine'),
             items: combineItems.map(action => ({ type: 'item', label: withKey(action), onClick: () => action.run(dispatch, headType) })),
         });
+    }
+    if (ROUND_CORNERS_ACTION.fits(state, headType)) {
+        // the values open where the menu was opened
+        const at = contextMenuPoint;
+        items.push({ type: 'item', label: withKey(ROUND_CORNERS_ACTION), onClick: () => ROUND_CORNERS_ACTION.run(dispatch, headType, at || undefined) });
     }
     for (const action of fittingActions(MORE_ACTIONS, state, headType)) {
         items.push({ type: 'item', label: withKey(action), onClick: () => action.run(dispatch, headType) });

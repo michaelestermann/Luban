@@ -78,6 +78,8 @@ import {
     CORNER_KEYS, CornerRadii, ROUNDED_RECT_ATTRIBUTE, clampRadii, flipRadii, planCorners, readCorners, roundedRectPathD
 } from '../../ui/SVGEditor/path-edit/rect-corners';
 import LayerOrderOperation2D from '../operation-history/LayerOrderOperation2D';
+import RoundCornersOperation2D from '../operation-history/RoundCornersOperation2D';
+import { RoundTarget, initialRoundRadius, roundTargetResult, roundTargets } from '../../ui/SVGEditor/path-edit/round-corners';
 import RenameOperation2D from '../operation-history/RenameOperation2D';
 import { cleanObjectName, getEntityName } from '../../models/object-name';
 import MoveOperation2D from '../operation-history/MoveOperation2D';
@@ -89,7 +91,7 @@ import { baseActions } from './actions-base';
 /* eslint-disable-next-line import/no-cycle */
 import { processActions } from './actions-process';
 import { groupActions } from './actions-group';
-import { combineActions } from './actions-combine';
+import { canEditShapes, combineActions } from './actions-combine';
 import { arrayActions } from './actions-array';
 import { resolveObjectClick } from '../../models/group-selection';
 /* eslint-disable-next-line import/no-cycle */
@@ -313,6 +315,78 @@ function withoutKeys(config: Record<string, string | number | boolean>, keys: st
         delete result[key];
     }
     return result;
+}
+
+/** The selected objects "Round corners" changes (rectangles, editable paths with sharp corners). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function roundCornerTargets(modelGroup): RoundTarget<any>[] {
+    const selected = modelGroup?.getSelectedModelArray?.() || [];
+    return roundTargets(selected, (elem) => SvgModel.isPointEditablePath(elem as Element));
+}
+
+/**
+ * The step that gives a rectangle (or a path made from one) new corner radii (corners as seen on the
+ * screen, clamped to half the shorter side), not applied yet; null if nothing changes. Equal radii
+ * stay on the <rect> (rx / ry); different ones turn it into a path with arcs.
+ */
+function rectCornersOperation(model, SVGActions, radii: CornerRadii): ShapeToPath | null {
+    const elem = model?.elem;
+    const info = elem && readCorners(elem.nodeName, (name) => elem.getAttribute(name));
+    if (!info) {
+        return null;
+    }
+    // the element's own corners: a flip in its transform mirrors them on the screen
+    const flipX = model.transformation.scaleX < 0;
+    const flipY = model.transformation.scaleY < 0;
+    const wanted = clampRadii(flipRadii(radii, flipX, flipY), info.width, info.height).radii;
+    if (CORNER_KEYS.every(key => Math.abs(wanted[key] - info.radii[key]) < 1e-6)) {
+        return null;
+    }
+    const plan = planCorners(info.kind, wanted);
+    let newElem: SVGElement;
+    let newConfig: Record<string, string | number | boolean>;
+    if (plan.kind === 'rect') {
+        newElem = elem.cloneNode(true) as SVGElement;
+        newConfig = withoutKeys(model.config, ['rx', 'ry']);
+        if (plan.radius > 0) {
+            const r = String(Math.round(plan.radius * 10000) / 10000);
+            newElem.setAttribute('rx', r);
+            newElem.setAttribute('ry', r);
+            // written back to the element when the project is opened
+            newConfig = { ...newConfig, rx: r, ry: r };
+        } else {
+            newElem.removeAttribute('rx');
+            newElem.removeAttribute('ry');
+        }
+    } else {
+        const skip = info.kind === 'rect' ? SHAPE_GEOMETRY_ATTRIBUTES.rect : ['d'];
+        newElem = document.createElementNS(NS.SVG, 'path') as SVGPathElement;
+        for (const attr of Array.from(elem.attributes) as Attr[]) {
+            if (!skip.includes(attr.name)) {
+                newElem.setAttribute(attr.name, attr.value);
+            }
+        }
+        newElem.setAttribute('d', roundedRectPathD(info.x, info.y, info.width, info.height, wanted));
+        newElem.setAttribute(SvgModel.POINT_EDITABLE_ATTRIBUTE, 'true');
+        newElem.setAttribute(ROUNDED_RECT_ATTRIBUTE, 'true');
+        if (newElem.hasAttribute('svgNodeName')) {
+            newElem.setAttribute('svgNodeName', 'path');
+        }
+        newConfig = {
+            ...withoutKeys(model.config, ['rx', 'ry']),
+            svgNodeName: 'path',
+            [SvgModel.POINT_EDITABLE_ATTRIBUTE]: 'true',
+            [ROUNDED_RECT_ATTRIBUTE]: 'true'
+        };
+    }
+    return new ShapeToPath({
+        svgModel: model,
+        svgActions: SVGActions,
+        shapeElem: elem,
+        shapeConfig: { ...model.config },
+        pathElem: newElem as SVGPathElement,
+        pathConfig: newConfig
+    });
 }
 
 export const ACTION_UPDATE_STATE = 'editor/ACTION_UPDATE_STATE';
@@ -3217,63 +3291,89 @@ export const actions = {
         const { SVGActions, modelGroup } = getState()[headType];
         const selected = modelGroup.getSelectedModelArray();
         const model = selected.length === 1 ? selected[0] : null;
-        const elem = model?.elem;
-        const info = elem && readCorners(elem.nodeName, (name) => elem.getAttribute(name));
-        if (!info) {
+        const operation = model && rectCornersOperation(model, SVGActions, radii);
+        if (!operation) {
             return;
         }
-        // the element's own corners: a flip in its transform mirrors them on the screen
-        const flipX = model.transformation.scaleX < 0;
-        const flipY = model.transformation.scaleY < 0;
-        const wanted = clampRadii(flipRadii(radii, flipX, flipY), info.width, info.height).radii;
-        if (CORNER_KEYS.every(key => Math.abs(wanted[key] - info.radii[key]) < 1e-6)) {
+        operation.redo();
+        const operations = new CompoundOperation();
+        operations.push(operation);
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(actions.resetProcessState(headType));
+        dispatch(baseActions.render(headType));
+    },
+
+    /**
+     * Opens the "Round corners" values (radius) for the rectangles and editable paths of the selection,
+     * at anchor (screen point); the canvas shows a dashed preview.
+     */
+    startRoundCorners: (headType, anchor: { x: number; y: number; align?: 'center' | 'start' }) => (dispatch, getState) => {
+        const state = getState();
+        const targets = canEditShapes(state, headType) ? roundCornerTargets(state[headType].modelGroup) : [];
+        if (targets.length === 0) {
             return;
         }
-        const plan = planCorners(info.kind, wanted);
-        let newElem: SVGElement;
-        let newConfig: Record<string, string | number | boolean>;
-        if (plan.kind === 'rect') {
-            newElem = elem.cloneNode(true) as SVGElement;
-            newConfig = withoutKeys(model.config, ['rx', 'ry']);
-            if (plan.radius > 0) {
-                const r = String(Math.round(plan.radius * 10000) / 10000);
-                newElem.setAttribute('rx', r);
-                newElem.setAttribute('ry', r);
-                // written back to the element when the project is opened
-                newConfig = { ...newConfig, rx: r, ry: r };
-            } else {
-                newElem.removeAttribute('rx');
-                newElem.removeAttribute('ry');
-            }
-        } else {
-            const skip = info.kind === 'rect' ? SHAPE_GEOMETRY_ATTRIBUTES.rect : ['d'];
-            newElem = document.createElementNS(NS.SVG, 'path') as SVGPathElement;
-            for (const attr of Array.from(elem.attributes) as Attr[]) {
-                if (!skip.includes(attr.name)) {
-                    newElem.setAttribute(attr.name, attr.value);
-                }
-            }
-            newElem.setAttribute('d', roundedRectPathD(info.x, info.y, info.width, info.height, wanted));
-            newElem.setAttribute(SvgModel.POINT_EDITABLE_ATTRIBUTE, 'true');
-            newElem.setAttribute(ROUNDED_RECT_ATTRIBUTE, 'true');
-            if (newElem.hasAttribute('svgNodeName')) {
-                newElem.setAttribute('svgNodeName', 'path');
-            }
-            newConfig = {
-                ...withoutKeys(model.config, ['rx', 'ry']),
-                svgNodeName: 'path',
-                [SvgModel.POINT_EDITABLE_ATTRIBUTE]: 'true',
-                [ROUNDED_RECT_ATTRIBUTE]: 'true'
-            };
+        const current = targets.map(target => (target.kind === 'rect' ? Math.max(...CORNER_KEYS.map(key => target.corners.radii[key])) : 0));
+        dispatch(baseActions.updateState(headType, {
+            roundCornersSession: { radius: initialRoundRadius(current), anchor },
+            offsetSession: null,
+            arraySession: null,
+        }));
+    },
+
+    updateRoundCorners: (headType, radius: number) => (dispatch, getState) => {
+        const session = getState()[headType].roundCornersSession;
+        if (session) {
+            dispatch(baseActions.updateState(headType, { roundCornersSession: { ...session, radius } }));
         }
-        const operation = new ShapeToPath({
-            svgModel: model,
-            svgActions: SVGActions,
-            shapeElem: elem,
-            shapeConfig: { ...model.config },
-            pathElem: newElem as SVGPathElement,
-            pathConfig: newConfig
-        });
+    },
+
+    cancelRoundCorners: (headType) => (dispatch, getState) => {
+        if (getState()[headType].roundCornersSession) {
+            dispatch(baseActions.updateState(headType, { roundCornersSession: null }));
+        }
+    },
+
+    /**
+     * Rounds the corners of the selected rectangles (rx / ry, at most half the shorter side each) and
+     * every sharp line-line corner of the selected editable paths with the session radius. One undo step;
+     * toolpaths are marked stale.
+     */
+    applyRoundCorners: (headType) => (dispatch, getState) => {
+        const { SVGActions, modelGroup, contentGroup, roundCornersSession: session } = getState()[headType];
+        if (!session) {
+            return;
+        }
+        dispatch(baseActions.updateState(headType, { roundCornersSession: null }));
+        const radius = Number(session.radius);
+        if (!(radius >= 0)) {
+            return;
+        }
+        const steps = [];
+        for (const target of roundCornerTargets(modelGroup)) {
+            if (target.kind === 'rect') {
+                const step = rectCornersOperation(target.model, SVGActions, { tl: radius, tr: radius, br: radius, bl: radius });
+                step && steps.push(step);
+                continue;
+            }
+            const rounded = roundTargetResult(target, radius);
+            if (rounded && rounded.d !== target.d) {
+                steps.push(new DrawTransformComplete({
+                    svgModel: target.model,
+                    before: target.d,
+                    after: rounded.d,
+                    drawGroup: contentGroup.drawGroup
+                }));
+            }
+        }
+        if (steps.length === 0) {
+            return;
+        }
+        const onChange = () => {
+            dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
+            dispatch(baseActions.render(headType));
+        };
+        const operation = new RoundCornersOperation2D({ steps, svgActions: SVGActions, onChange });
         operation.redo();
         const operations = new CompoundOperation();
         operations.push(operation);

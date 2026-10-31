@@ -11,7 +11,7 @@ import SvgIcon from '../../components/SvgIcon';
 import PointEditBar from './PointEditBar';
 import MeasureBar from './MeasureBar';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
-import { COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, ShapeAction } from './shape-actions';
+import { COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, ROUND_CORNERS_ACTION, ShapeAction } from './shape-actions';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 import styles from './selection-bar.styl';
 
@@ -58,6 +58,8 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const isOnABPosition = useSelector(state => headType === HEAD_LASER && !!state[HEAD_LASER]?.isOnABPosition);
     const SVGCanvasMode = useSelector(state => state[headType]?.SVGCanvasMode);
     const SVGCanvasExt = useSelector(state => state[headType]?.SVGCanvasExt);
+    // the radius dialog is open (its tooltip would cover it)
+    const roundCornersOpen = useSelector(state => !!state[headType]?.roundCornersSession);
     const [alignOpen, setAlignOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState<string | null>(null);
     const store = useStore();
@@ -98,6 +100,8 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     // Combine ▾ and ⋯ show only the actions that fit
     const combineActions = fittingActions(COMBINE_ACTIONS, store.getState(), headType);
     const moreActions = fittingActions(MORE_ACTIONS, store.getState(), headType);
+    // rectangles (or editable paths with sharp corners) in the selection
+    const canRoundCorners = ROUND_CORNERS_ACTION.fits(store.getState(), headType);
 
     const onGroup = () => {
         if (canUngroup) {
@@ -231,6 +235,22 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     </svg>
                     {i18n._('key-CncLaser/MainToolBar-Decompose')}
                 </button>
+            )}
+            {canRoundCorners && (
+                <Tooltip title={roundCornersOpen ? '' : `${ROUND_CORNERS_ACTION.label()} (${ROUND_CORNERS_ACTION.keyHint})`}>
+                    <button
+                        type="button"
+                        className={styles['text-button']}
+                        data-round-corners="true"
+                        onClick={(event) => {
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            ROUND_CORNERS_ACTION.run(dispatch, headType, { x: rect.left + rect.width / 2, y: rect.bottom + 6 });
+                        }}
+                    >
+                        <svg {...stroke}><path d="M4 20V10a6 6 0 016-6h10" /><path d="M4 4h2M4 4v2" strokeDasharray="1 2" /></svg>
+                        {ROUND_CORNERS_ACTION.label()}
+                    </button>
+                </Tooltip>
             )}
             {combineActions.length > 0 && renderActionMenu('combine', combineActions, (
                 <span className={styles['tip-wrapper']}>

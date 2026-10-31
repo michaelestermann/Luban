@@ -2628,5 +2628,12 @@
     "key-CncLaser/Offset-Nothing is left at this distance": "Nothing is left at this distance",
     "key-CncLaser/ContextMenu-Edit points": "Edit points",
     "key-CncLaser/ObjectList-Name": "Name",
-    "key-CncLaser/ObjectList-Double-click or F2 to rename": "Double-click or F2 to rename"
+    "key-CncLaser/ObjectList-Double-click or F2 to rename": "Double-click or F2 to rename",
+    "key-CncLaser/RoundCorners-Round corners": "Round corners",
+    "key-CncLaser/RoundCorners-Radius": "Radius",
+    "key-CncLaser/RoundCorners-Corners with short sides get a smaller radius": "Corners with short sides get a smaller radius",
+    "key-CncLaser/RoundCorners-Enter a radius of 0 or more": "Enter a radius of 0 or more",
+    "key-CncLaser/RoundCorners-Cancel": "Cancel",
+    "key-CncLaser/RoundCorners-Apply": "Apply",
+    "key-CncLaser/RoundCorners-Each rectangle gets at most half its shorter side (smallest: {{max}} mm)": "Each rectangle gets at most half its shorter side (smallest: {{max}} mm)"
 }

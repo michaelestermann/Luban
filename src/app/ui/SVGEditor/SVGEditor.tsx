@@ -15,6 +15,7 @@ import MeasureOverlay from './measure/MeasureOverlay';
 import DimensionsOverlay from './measure/DimensionsOverlay';
 import SnapOverlay from './snap/SnapOverlay';
 import ShapeActionKeys from './combine/ShapeActionKeys';
+import RoundCorners from './combine/RoundCorners';
 import OffsetPreview from './combine/OffsetPreview';
 import ArrayPreview from './combine/ArrayPreview';
 
@@ -468,6 +469,11 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             isActive={props.isActive}
                             getScreenCTM={getCanvasScreenCTM}
                             getContentGroup={getContentGroup}
+                        />
+                        <RoundCorners
+                            headType={props.headType as 'laser' | 'cnc'}
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
                         />
                         <ShapeActionKeys
                             headType={props.headType as 'laser' | 'cnc'}

@@ -2649,5 +2649,12 @@
     "key-CncLaser/Offset-Nothing is left at this distance": "Bei diesem Abstand bleibt nichts übrig",
     "key-CncLaser/ContextMenu-Edit points": "Punkte bearbeiten",
     "key-CncLaser/ObjectList-Name": "Name",
-    "key-CncLaser/ObjectList-Double-click or F2 to rename": "Doppelklick oder F2 zum Umbenennen"
+    "key-CncLaser/ObjectList-Double-click or F2 to rename": "Doppelklick oder F2 zum Umbenennen",
+    "key-CncLaser/RoundCorners-Round corners": "Ecken abrunden",
+    "key-CncLaser/RoundCorners-Radius": "Radius",
+    "key-CncLaser/RoundCorners-Corners with short sides get a smaller radius": "Ecken mit kurzen Seiten erhalten einen kleineren Radius",
+    "key-CncLaser/RoundCorners-Enter a radius of 0 or more": "Einen Radius von 0 oder mehr eingeben",
+    "key-CncLaser/RoundCorners-Cancel": "Abbrechen",
+    "key-CncLaser/RoundCorners-Apply": "Anwenden",
+    "key-CncLaser/RoundCorners-Each rectangle gets at most half its shorter side (smallest: {{max}} mm)": "Jedes Rechteck erhält höchstens die Hälfte seiner kürzeren Seite (kleinstes: {{max}} mm)"
 }

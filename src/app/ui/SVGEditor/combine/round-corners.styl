@@ -1,0 +1,96 @@
+// "Round corners" values: small dialog at the selection bar button or the cursor
+.dialog {
+    position: fixed;
+    z-index: 1060;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #e3e6ec;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+    font-size: 13px;
+    color: #1f2329;
+}
+
+.title {
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.label {
+    flex: 0 0 auto;
+    min-width: 48px;
+}
+
+.input {
+    flex: 1 1 auto;
+    min-width: 72px;
+    width: 72px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #c9ccd2;
+    border-radius: 6px;
+    outline: none;
+    font: inherit;
+
+    &:focus {
+        border-color: #1d4ed8;
+        box-shadow: 0 0 0 2px rgba(29, 78, 216, .15);
+    }
+}
+
+.unit {
+    color: #86898f;
+}
+
+.hint {
+    margin-top: 6px;
+    color: #86898f;
+    font-size: 12px;
+}
+
+.warning {
+    margin-top: 6px;
+    color: #c2410c;
+    font-size: 12px;
+}
+
+.buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.cancel,
+.apply {
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.cancel {
+    border: 1px solid #c9ccd2;
+    background: #ffffff;
+    color: #1f2329;
+}
+
+.apply {
+    border: 1px solid #1d4ed8;
+    background: #1d4ed8;
+    color: #ffffff;
+
+    &:disabled {
+        opacity: .5;
+        cursor: default;
+    }
+}

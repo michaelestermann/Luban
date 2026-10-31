@@ -3,7 +3,7 @@ import { useDispatch, useSelector, useStore } from 'react-redux';
 
 import { PAGE_EDITOR } from '../../../constants';
 import { ShortcutHandlerPriority, ShortcutManager } from '../../../lib/shortcut';
-import { COMBINE_ACTIONS, MORE_ACTIONS } from '../../widgets/CncLaserShared/shape-actions';
+import { COMBINE_ACTIONS, MORE_ACTIONS, ROUND_CORNERS_ACTION } from '../../widgets/CncLaserShared/shape-actions';
 
 interface ShapeActionKeysProps {
     headType: 'laser' | 'cnc';
@@ -18,9 +18,10 @@ const KEYS: { keys: string[]; id: string }[] = [
     { keys: ['mod+w'], id: 'weld' },
     { keys: ['o'], id: 'offset' },
     { keys: ['a'], id: 'array' },
+    { keys: ['r'], id: 'round-corners' },
 ];
 
-/** Keys of the selection actions (Ctrl+W weld, O offset, A array), active in step 1 in select mode. */
+/** Keys of the selection actions (Ctrl+W weld, O offset, A array, R round corners), active in step 1 in select mode. */
 const ShapeActionKeys = ({ headType, mode, editing, isActive }: ShapeActionKeysProps) => {
     const dispatch = useDispatch();
     const store = useStore();
@@ -34,7 +35,7 @@ const ShapeActionKeys = ({ headType, mode, editing, isActive }: ShapeActionKeysP
             shortcuts[`SHAPE-ACTION-${id}`] = {
                 keys,
                 callback: () => {
-                    const action = [...COMBINE_ACTIONS, ...MORE_ACTIONS].find(a => a.id === id);
+                    const action = [...COMBINE_ACTIONS, ...MORE_ACTIONS, ROUND_CORNERS_ACTION].find(a => a.id === id);
                     if (action && ref.current.mode === 'select' && !ref.current.editing && action.fits(store.getState(), headType)) {
                         action.run(dispatch, headType);
                     }
