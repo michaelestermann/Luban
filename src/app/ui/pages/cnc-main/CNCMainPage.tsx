@@ -144,6 +144,23 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
     useUnsavedTitle(pageHeadType);
     const thumbnail = useRef();
     const series = useSelector(state => state.machine.series, shallowEqual);
+    // the project is larger than the machine: a message (shown from an effect; called during render it
+    // updated antd's message holder while rendering this page and returned its close function as a child)
+    useEffect(() => {
+        if (projectFileOversize) {
+            message.info({
+                content: <span>{i18n._('key-Laser/Page-Project file oversize')}</span>,
+                duration: 5,
+                onClose: () => (
+                    dispatch(editorActions.updateState(HEAD_CNC, {
+                        projectFileOversize: false
+                    }))
+                ),
+                key: HEAD_CNC
+            });
+        }
+    }, [projectFileOversize, dispatch]);
+
     useEffect(() => {
         dispatch(cncActions.init());
         logPageView({
@@ -415,16 +432,6 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
                     toolPathGroup={toolPathGroup}
                 />
             </ProjectLayout>
-            {projectFileOversize && message.info({
-                content: <span>{i18n._('key-Laser/Page-Project file oversize')}</span>,
-                duration: 5,
-                onClose: () => (
-                    dispatch(editorActions.updateState(HEAD_CNC, {
-                        projectFileOversize: false
-                    }))
-                ),
-                key: HEAD_CNC
-            })}
             {warningModal}
             {removeModelsWarningModal}
             {/* Job Setup: Workpiece & Origin */
