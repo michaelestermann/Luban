@@ -1,5 +1,6 @@
 import test from 'tape';
 import { frontmostAt, moveToEdge, orderedMemberIds, reorderFromDisplay, replaceInLayers } from '../src/app/models/z-order';
+import LayerOrderOperation2D from '../src/app/flux/operation-history/LayerOrderOperation2D';
 
 const e = id => ({ modelID: id });
 
@@ -54,5 +55,18 @@ test('a click hits the front-most object where objects overlap (layer order, not
     const list = [{ modelID: 'back', hit: true }, { modelID: 'mid', hit: false }, { modelID: 'front', hit: true }];
     t.equal(frontmostAt(list, m => m.hit).modelID, 'front');
     t.equal(frontmostAt(list, () => false), null, 'nothing hit');
+    t.end();
+});
+
+test('a layer order change is one undo step: undo restores the order before, redo the order after', (t) => {
+    const a = e('a'), b = e('b'), c = e('c');
+    const applied = [];
+    const modelGroup = { applyLayerOrder: (models) => applied.push(models.map(x => x.modelID).join('')) };
+    let changes = 0;
+    const operation = new LayerOrderOperation2D({ modelGroup, layerBefore: [a, b, c], layerAfter: [b, c, a], onChange: () => changes++ });
+    operation.undo();
+    operation.redo();
+    t.deepEqual(applied, ['abc', 'bca']);
+    t.equal(changes, 2, 'the view is refreshed each time');
     t.end();
 });

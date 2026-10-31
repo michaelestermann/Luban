@@ -76,6 +76,7 @@ import { SHAPE_GEOMETRY_ATTRIBUTES, closePathD, joinPathEndsD, shapeToPathD } fr
 import {
     CORNER_KEYS, CornerRadii, ROUNDED_RECT_ATTRIBUTE, clampRadii, flipRadii, planCorners, readCorners, roundedRectPathD
 } from '../../ui/SVGEditor/path-edit/rect-corners';
+import LayerOrderOperation2D from '../operation-history/LayerOrderOperation2D';
 import MoveOperation2D from '../operation-history/MoveOperation2D';
 import RotateOperation2D from '../operation-history/RotateOperation2D';
 import ScaleOperation2D from '../operation-history/ScaleOperation2D';
@@ -1603,9 +1604,7 @@ export const actions = {
         const { modelGroup, SVGActions } = getState()[headType];
         if (!svgModel) {
             // context menu / toolbar: move the selection in the layer order (object list too)
-            modelGroup.moveSelectedToEdge('front');
-            dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
-            dispatch(baseActions.render(headType));
+            dispatch(actions.changeLayerOrder(headType, () => modelGroup.moveSelectedToEdge('front')));
             return;
         }
         SVGActions.bringElementToFront(svgModel.elem);
@@ -1615,14 +1614,29 @@ export const actions = {
     /** Object list drag and drop: rows are shown front on top. */
     moveLayer: (headType, fromDisplay: number, toDisplay: number) => (dispatch, getState) => {
         const { modelGroup } = getState()[headType];
-        modelGroup.moveLayer(fromDisplay, toDisplay);
-        dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
-        dispatch(baseActions.render(headType));
+        dispatch(actions.changeLayerOrder(headType, () => modelGroup.moveLayer(fromDisplay, toDisplay)));
     },
 
     sendSelectedModelToBack: headType => (dispatch, getState) => {
         const { modelGroup } = getState()[headType];
-        modelGroup.moveSelectedToEdge('back');
+        dispatch(actions.changeLayerOrder(headType, () => modelGroup.moveSelectedToEdge('back')));
+    },
+
+    /** Runs a layer order change and records it as one undo step (nothing is recorded when the order stays). */
+    changeLayerOrder: (headType, change: () => void) => (dispatch, getState) => {
+        const { modelGroup } = getState()[headType];
+        const layerBefore = modelGroup.models.slice();
+        change();
+        const layerAfter = modelGroup.models.slice();
+        if (layerAfter.some((model, i) => model !== layerBefore[i])) {
+            const onChange = () => {
+                dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
+                dispatch(baseActions.render(headType));
+            };
+            const operations = new CompoundOperation();
+            operations.push(new LayerOrderOperation2D({ modelGroup, layerBefore, layerAfter, onChange }));
+            dispatch(operationHistoryActions.setOperations(headType, operations));
+        }
         dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
         dispatch(baseActions.render(headType));
     },
