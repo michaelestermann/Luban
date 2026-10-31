@@ -5,7 +5,7 @@ import { PAGE_EDITOR } from '../../../constants';
 import { actions as editorActions } from '../../../flux/editor';
 import i18n from '../../../lib/i18n';
 import { useHelpers } from '../rail/helper-switches';
-import { allObjectChains, Bounds, dimensionChains, DimensionSegment, moveForDimension, workpieceBox } from './dimension-chains';
+import { allObjectChains, Bounds, chainScope, dimensionChains, DimensionSegment, moveForDimension, workpieceBox } from './dimension-chains';
 import { formatMm } from './geometry-length';
 import styles from './measure-overlay.styl';
 
@@ -69,6 +69,7 @@ const DimensionsOverlay: React.FC<DimensionsOverlayProps> = ({ headType, mode, e
     const size = useSelector(state => state?.machine?.size);
     const coordinateSize = useSelector(state => state[headType]?.coordinateSize);
     const coordinateMode = useSelector(state => state[headType]?.coordinateMode);
+    const renderingTimestamp = useSelector(state => state[headType]?.renderingTimestamp);
     const active = options.on && isActive && page === PAGE_EDITOR && mode === 'select' && !editing;
     const rootRef = useRef<HTMLDivElement>(null);
     const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY);
@@ -76,47 +77,66 @@ const DimensionsOverlay: React.FC<DimensionsOverlayProps> = ({ headType, mode, e
     const [editIndex, setEditIndex] = useState<number | null>(null);
     const [draft, setDraft] = useState('');
 
-    // recompute when the view, the selection or the objects change (checked every frame while on)
+    // selected leaves, the selection array they belong to (a new array per selection change) and the boxes
+    // of the other objects: rebuilt when the objects, the selection or the view change, not while dragging
+    const cacheRef = useRef<{ key: string; flat: { elem: Element }[]; selected: unknown[]; others: Bounds[] } | null>(null);
+
+    // Every frame only a few numbers are compared (view, render timestamp, selection and its box); the
+    // objects are measured again only when one of them changes.
     useEffect(() => {
         if (!active) {
             setSnapshot(EMPTY);
             setEditIndex(null);
             return undefined;
         }
+        cacheRef.current = null;
+        let frameKey = '';
         let frame = 0;
         const update = () => {
+            frame = requestAnimationFrame(update);
             const ctm = getScreenCTM();
             const root = rootRef.current?.getBoundingClientRect();
-            const models = modelGroup?.getModels?.() || [];
-            if (ctm && root) {
-                const flat = models.reduce((all, m) => all.concat(m.children || [m]), []).filter(m => m.elem && m.visible !== false && m.elem.isConnected);
-                const selected = new Set(modelGroup.getSelectedModelArray().reduce((all, m) => all.concat(m.children || [m]), []));
-                const rects = flat.map(m => m.elem.getBoundingClientRect());
-                const key = [ctm.a, ctm.d, ctm.e, ctm.f, root.left, root.top, options.scope, options.edges, options.between,
-                    ...rects.map((r, i) => `${selected.has(flat[i]) ? '*' : ''}${r.left},${r.top},${r.width},${r.height}`)].join('|');
-                setSnapshot((prev) => {
-                    if (prev.key === key) {
-                        return prev;
-                    }
-                    const inverse = ctm.inverse();
-                    const work = size && coordinateSize && coordinateMode
-                        ? workpieceBox(size, coordinateSize, coordinateMode.setting.sizeMultiplyFactor) : null;
-                    const boxes = flat.map(m => ({ model: m, box: canvasBounds(m.elem, inverse) })).filter(b => b.box);
-                    const selection = union(boxes.filter(b => selected.has(b.model)).map(b => b.box));
-                    let segments: DimensionSegment[] = [];
-                    if (options.scope === 'all') {
-                        segments = allObjectChains(boxes.map(b => b.box), work, options);
-                    } else if (selection) {
-                        segments = dimensionChains(selection, boxes.filter(b => !selected.has(b.model)).map(b => b.box), work, options);
-                    }
-                    return { key, left: root.left, top: root.top, ctm, selection, segments };
-                });
+            if (!ctm || !root || !modelGroup) {
+                return;
             }
-            frame = requestAnimationFrame(update);
+            const selectedModels = modelGroup.getSelectedModelArray();
+            // the selection frame follows the selection while it is dragged
+            const frameElem = SVGActions?.svgContentGroup?.operatorPoints?.allSelectedElementsBox;
+            const fr = frameElem && selectedModels.length ? frameElem.getBoundingClientRect() : null;
+            const viewKey = [ctm.a, ctm.d, ctm.e, ctm.f, root.left, root.top].join('|');
+            const nextKey = [viewKey, renderingTimestamp, modelGroup.models?.length, selectedModels.length,
+                fr ? `${fr.left},${fr.top},${fr.width},${fr.height}` : ''].join('|');
+            const cache = cacheRef.current;
+            if (nextKey === frameKey && cache?.selected === selectedModels) {
+                return;
+            }
+            frameKey = nextKey;
+            const inverse = ctm.inverse();
+            const staticKey = [viewKey, renderingTimestamp, modelGroup.models?.length].join('|');
+            let current = cache;
+            if (!current || current.key !== staticKey || current.selected !== selectedModels) {
+                const flat = (modelGroup.getModels?.() || []).reduce((all, m) => all.concat(m.children || [m]), [])
+                    .filter(m => m.elem && m.visible !== false && m.elem.isConnected);
+                const selectedLeaves = new Set(selectedModels.reduce((all, m) => all.concat(m.children || [m]), []));
+                const others = flat.filter(m => !selectedLeaves.has(m)).map(m => canvasBounds(m.elem, inverse)).filter(Boolean);
+                current = { key: staticKey, flat: flat.filter(m => selectedLeaves.has(m)), selected: selectedModels, others };
+                cacheRef.current = current;
+            }
+            const selectedBoxes = current.flat.map(m => canvasBounds(m.elem, inverse)).filter(Boolean);
+            const selection = union(selectedBoxes);
+            const work = size && coordinateSize && coordinateMode
+                ? workpieceBox(size, coordinateSize, coordinateMode.setting.sizeMultiplyFactor) : null;
+            let segments: DimensionSegment[] = [];
+            if (chainScope(options.scope, current.others.length + selectedBoxes.length) === 'all') {
+                segments = allObjectChains(current.others.concat(selectedBoxes), work, options);
+            } else if (selection) {
+                segments = dimensionChains(selection, current.others, work, options);
+            }
+            setSnapshot({ key: nextKey, left: root.left, top: root.top, ctm, selection, segments });
         };
         update();
         return () => cancelAnimationFrame(frame);
-    }, [active, getScreenCTM, modelGroup, size, coordinateSize, coordinateMode, options]);
+    }, [active, getScreenCTM, modelGroup, SVGActions, renderingTimestamp, size, coordinateSize, coordinateMode, options]);
 
     // the edited label belongs to a segment that may disappear while typing
     useEffect(() => {

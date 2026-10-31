@@ -1,5 +1,5 @@
 import { test } from 'tape';
-import { dimensionChains, moveForDimension, workpieceBox, allObjectChains } from '../src/app/ui/SVGEditor/measure/dimension-chains';
+import { dimensionChains, moveForDimension, workpieceBox, allObjectChains, chainScope, ALL_OBJECTS_LIMIT } from '../src/app/ui/SVGEditor/measure/dimension-chains';
 
 const box = (minX, minY, maxX, maxY) => ({ minX, minY, maxX, maxY });
 const work = box(0, 0, 200, 100);
@@ -78,5 +78,13 @@ test('allObjectChains: read-only chains of every object, shared gaps once', (t) 
     const segs = allObjectChains([a, b], work, both);
     t.ok(segs.every(s => !s.editable), 'read-only');
     t.equal(segs.filter(s => s.kind === 'object').length, 1, 'gap between a and b once');
+    t.end();
+});
+
+test('chainScope: "all" falls back to the selection on big projects', (t) => {
+    t.equal(ALL_OBJECTS_LIMIT, 150, 'limit');
+    t.equal(chainScope('selection', 10), 'selection', 'selection stays');
+    t.equal(chainScope('all', 150), 'all', 'up to the limit');
+    t.equal(chainScope('all', 151), 'selection', 'above the limit');
     t.end();
 });

@@ -37,6 +37,9 @@ const DimensionsOptions: React.FC<{ helpers: HelperSwitches }> = ({ helpers }) =
                 {scopeButton('selection', i18n._('key-CncLaser/Dimensions-Selection'))}
                 {scopeButton('all', i18n._('key-CncLaser/Dimensions-All objects'))}
             </div>
+            {d.scope === 'all' && (
+                <div className={styles.note}>{i18n._('key-CncLaser/Dimensions-Above 150 objects only the selection.')}</div>
+            )}
             <label className={styles.check}>
                 <input type="checkbox" checked={d.edges} onChange={e => updateHelper('dimensions', { edges: e.target.checked })} />
                 {i18n._('key-CncLaser/Dimensions-To the workpiece edges')}

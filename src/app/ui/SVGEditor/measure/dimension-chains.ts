@@ -149,3 +149,13 @@ export function allObjectChains(boxes: Bounds[], work: Bounds | null, options: C
     });
     return result;
 }
+
+// "All objects" is O(n²) and draws up to 8n labels: above this many objects only the selection is dimensioned
+export const ALL_OBJECTS_LIMIT = 150;
+
+/**
+ * Scope that is actually drawn for the chosen scope and the number of objects.
+ */
+export function chainScope(scope: 'selection' | 'all', count: number): 'selection' | 'all' {
+    return scope === 'all' && count > ALL_OBJECTS_LIMIT ? 'selection' : scope;
+}

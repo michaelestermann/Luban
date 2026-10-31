@@ -2571,6 +2571,7 @@
     "key-CncLaser/Dimensions-Dimensions · options": "Bemaßung · Optionen",
     "key-CncLaser/Dimensions-Selection": "Auswahl",
     "key-CncLaser/Dimensions-All objects": "Alle Objekte",
+    "key-CncLaser/Dimensions-Above 150 objects only the selection.": "Bei mehr als 150 Objekten nur die Auswahl.",
     "key-CncLaser/Dimensions-To the workpiece edges": "Zu den Werkstückkanten",
     "key-CncLaser/Dimensions-Between objects": "Zwischen Objekten",
     "key-CncLaser/Dimensions-Click a value to type a new distance. Not in the G-code.": "Auf einen Wert klicken, um einen neuen Abstand einzugeben. Nicht im G-Code.",
