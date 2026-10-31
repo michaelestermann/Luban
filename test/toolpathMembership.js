@@ -88,3 +88,14 @@ test('undo and redo call onChange so the preview is marked stale', (t) => {
     t.equal(calls, 3);
     t.end();
 });
+
+test('undoing the removal of a middle member puts it back in its place (machining order)', (t) => {
+    const toolPath = { id: 'tp', status: 'success', modelMap: new Map([['a', {}], ['b', { x: 2 }], ['c', {}]]) };
+    const toolPathGroup = { _updated: () => {}, checkoutToolPathStatus: () => {} };
+    const op = new UpdateToolPathMembershipOperation({ toolPath, toolPathGroup, before: ['a', 'b', 'c'], after: ['a', 'c'] });
+    op.redo();
+    t.deepEqual([...toolPath.modelMap.keys()], ['a', 'c']);
+    op.undo();
+    t.deepEqual([...toolPath.modelMap.keys()], ['a', 'b', 'c']);
+    t.end();
+});

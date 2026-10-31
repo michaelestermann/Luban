@@ -35,8 +35,10 @@ export default class UpdateToolPathMembershipOperation extends Operation {
                 old.delete(id);
             }
         }
+        // in the order of ids: the member order is the machining order (an undone removal goes back to its place)
+        old.clear();
         for (const [id, value] of next) {
-            if (!old.has(id)) old.set(id, value);
+            old.set(id, value);
         }
         toolPath.status = WARNING; // needs a new preview
         toolPathGroup.checkoutToolPathStatus();
