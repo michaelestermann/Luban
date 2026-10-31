@@ -88,6 +88,9 @@ const ACTION_SET_TABS = 'project/SET_TABS';
 
 export const getTabs = (state): TabsState => state.project.tabs;
 
+/** The document that is live in the slice of `headType`, or undefined (no tabs yet → 4.16 head-type env). */
+export const activeDocId = (state, headType: string): string | undefined => state.project?.tabs?.activeDocByHead?.[headType];
+
 // positionZ step between two layers (as ModelGroup2D)
 const LAYER_POSITION_Z_MARGIN = 0.02;
 
@@ -122,6 +125,8 @@ export const actions = {
 
     autoSaveEnvironment: (headType, isSaveEditor = false) => async (dispatch, getState) => {
         const editorState = getState()[headType];
+        // the document this autosave belongs to (taken before the mesh syncs below are awaited)
+        const docId = activeDocId(getState(), headType);
         const { initState } = getState().project[headType];
         const { modelGroup } = editorState;
         // Use getAllEntities() so groups are included in the save
@@ -221,11 +226,11 @@ export const actions = {
         }
         const content = JSON.stringify(envObj);
         dispatch(actions.updateState(headType, { content, unSaved: true, initState: false }));
-        await api.env.saveEnv({ content });
+        await api.env.saveEnv({ content, docId });
     },
 
-    getLastEnvironment: (headType) => async (dispatch) => {
-        const { body: { content } } = await api.env.getEnv({ headType });
+    getLastEnvironment: (headType) => async (dispatch, getState) => {
+        const { body: { content } } = await api.env.getEnv({ headType, docId: activeDocId(getState(), headType) });
 
         if (content) {
             try {
@@ -239,14 +244,28 @@ export const actions = {
         }
     },
 
-    clearSavedEnvironment: (headType) => async (dispatch) => {
+    clearSavedEnvironment: (headType) => async (dispatch, getState) => {
         try {
-            await api.env.removeEnv({ headType });
+            await api.env.removeEnv({ headType, docId: activeDocId(getState(), headType) });
         } catch (e) {
             log.error(e);
         }
 
         dispatch(actions.updateState(headType, { unSaved: false }));
+    },
+
+    /**
+     * A project replaces the live document of `headType`. 4.16 (no document registry): the auto-save of
+     * every head type is cleared. With a document of that head: only that document's env is cleared.
+     */
+    clearEnvironmentsForNewProject: (headType) => async (dispatch, getState) => {
+        if (activeDocId(getState(), headType)) {
+            await dispatch(actions.clearSavedEnvironment(headType));
+            return;
+        }
+        for (const type of [HEAD_PRINTING, HEAD_CNC, HEAD_LASER]) {
+            await dispatch(actions.clearSavedEnvironment(type));
+        }
     },
 
     recoverModels: (promiseArray = [], modActions, models, envHeadType, isGuideTours = false) => (dispatch) => {
@@ -311,7 +330,7 @@ export const actions = {
         if (backendRecover) {
             UniformToolpathConfig(envObj);
             content = JSON.stringify(envObj);
-            await api.env.recoverEnv({ content });
+            await api.env.recoverEnv({ content, docId: activeDocId(getState(), envHeadType) });
         }
         if (envObj?.machineInfo?.headType === HEAD_PRINTING && printingToolhead === SINGLE_EXTRUDER_TOOLHEAD_FOR_SM2) {
             allModels.forEach((model) => {
@@ -508,9 +527,7 @@ export const actions = {
         }
         // // TODO: set current content to avoid <unSaved> flag mis-set
         if (shouldSetFileName) {
-            for (const type of [HEAD_PRINTING, HEAD_CNC, HEAD_LASER]) {
-                await dispatch(actions.clearSavedEnvironment(type));
-            }
+            await dispatch(actions.clearEnvironmentsForNewProject(envHeadType));
         }
         await dispatch(actions.updateState(envHeadType, { unSaved: true }));
 
@@ -556,7 +573,7 @@ export const actions = {
         const { unSaved, openedFile, targetFile } = getState().project[headType];
         let tmpFile, newTargetFile;
         if (unSaved || !openedFile) {
-            const { body: { targetFile: insideTargetFile } } = await api.env.packageEnv({ headType });
+            const { body: { targetFile: insideTargetFile } } = await api.env.packageEnv({ headType, docId: activeDocId(getState(), headType) });
             newTargetFile = insideTargetFile;
             tmpFile = `/Tmp/${newTargetFile}`;
             dispatch(actions.updateState(headType, { targetFile: newTargetFile }));
@@ -635,7 +652,7 @@ export const actions = {
             return true;
         }
 
-        const { body: { targetFile } } = await api.env.packageEnv({ headType });
+        const { body: { targetFile } } = await api.env.packageEnv({ headType, docId: activeDocId(getState(), headType) });
         await dispatch(actions.updateState(headType, { targetFile }));
         const tmpFile = `/Tmp/${targetFile}`;
         await new Promise((resolve) => {
@@ -756,9 +773,7 @@ export const actions = {
 
         await dispatch(actions.closeProject(oldHeadType));
 
-        for (const type of [HEAD_PRINTING, HEAD_CNC, HEAD_LASER]) {
-            await dispatch(actions.clearSavedEnvironment(type));
-        }
+        await dispatch(actions.clearEnvironmentsForNewProject(newHeadType));
 
         if (newHeadType === HEAD_CNC || newHeadType === HEAD_LASER) {
             dispatch(editorActions.updateState(newHeadType, {

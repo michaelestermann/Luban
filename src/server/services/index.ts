@@ -173,6 +173,8 @@ function registerApis(app) {
     app.post(urljoin(settings.route, 'api/file/buildFirmwareFile'), api.file.buildFirmwareFile);
 
     app.get(urljoin(settings.route, 'api/file/getEnv'), api.file.getEnv);
+    app.post(urljoin(settings.route, 'api/file/getEnv'), api.file.getEnv);
+    app.post(urljoin(settings.route, 'api/file/listEnvDocs'), api.file.listEnvDocs);
     app.post(urljoin(settings.route, 'api/file/saveEnv'), api.file.saveEnv);
     app.post(urljoin(settings.route, 'api/file/recoverEnv'), api.file.recoverEnv);
     app.post(urljoin(settings.route, 'api/file/removeEnv'), api.file.removeEnv);

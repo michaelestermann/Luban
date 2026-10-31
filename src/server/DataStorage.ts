@@ -229,6 +229,8 @@ class DataStorage {
         await fs.ensureDir(`${this.envDir}/printing`);
         await fs.ensureDir(`${this.envDir}/laser`);
         await fs.ensureDir(`${this.envDir}/cnc`);
+        // 4.17 tabs: one auto-save environment per document
+        await fs.ensureDir(`${this.envDir}/docs`);
 
         const srcDir = this.envDir;
         if (fs.existsSync(srcDir)) {

@@ -23,6 +23,7 @@ import { parseLubanGcodeHeader } from '../../lib/parseGcodeHeader';
 import { pathWithRandomSuffix } from '../../lib/random-utils';
 import { textSerialChannel } from '../machine/channels/TextSerialChannel';
 import serializeByKey from '../../lib/serialize-by-key';
+import { ENV_DOCS_DIR, isValidDocId, resolveEnvDir } from '../../lib/env-dir';
 
 const log = logger('api:file');
 
@@ -349,11 +350,26 @@ export const uploadUpdateFile = async (req, res) => {
 };
 
 /**
+ * Env dir of a request: `env/docs/{docId}` when the body has a docId, else `env/{headType}`.
+ * Answers 400 and returns null for an invalid docId.
+ */
+const envDirOfRequest = (res, headType, docId) => {
+    try {
+        return resolveEnvDir(DataStorage.envDir, headType, docId);
+    } catch (e) {
+        res.status(ERR_BAD_REQUEST).send({ msg: 'invalid docId' });
+        return null;
+    }
+};
+
+/**
  * get environment data from saved file
+ * (GET kept for 4.16 callers; GET bodies are usually empty, so the query is read too. New callers use POST.)
  */
 export const getEnv = async (req, res) => {
-    const { headType } = req.body;
-    const envDir = `${DataStorage.envDir}/${headType}`;
+    const { headType, docId } = { ...req.query, ...req.body };
+    const envDir = envDirOfRequest(res, headType, docId);
+    if (!envDir) return;
     const targetPath = `${envDir}/config.json`;
     try {
         const exists = fs.existsSync(targetPath);
@@ -372,14 +388,15 @@ export const getEnv = async (req, res) => {
     }
 };
 
-const writeEnv = async (config, content) => {
+const writeEnv = async (config, content, docId) => {
     const { activePresetIds } = config;
 
     const machineInfo = config?.machineInfo;
     const headType = machineInfo?.headType;
-    const envDir = `${DataStorage.envDir}/${headType}`;
+    const envDir = resolveEnvDir(DataStorage.envDir, headType, docId);
     // TODO: not just remove the category but only change the file when model changed
     rmDir(envDir, false);
+    fs.ensureDirSync(envDir);
 
     const configDir = getConfigDir(machineInfo);
 
@@ -441,10 +458,14 @@ const envWriteQueue = serializeByKey();
  * save editor environment as files, and copy related resource files
  */
 export const saveEnv = async (req, res) => {
-    const { content } = req.body;
+    const { content, docId } = req.body;
+    if (docId !== undefined && docId !== null && !isValidDocId(docId)) {
+        res.status(ERR_BAD_REQUEST).send({ msg: 'invalid docId' });
+        return;
+    }
     try {
         const config = JSON.parse(content);
-        const result = await envWriteQueue(config?.machineInfo?.headType, () => writeEnv(config, content));
+        const result = await envWriteQueue(docId ?? config?.machineInfo?.headType, () => writeEnv(config, content, docId));
         res.send(result);
         res.end();
     } catch (e) {
@@ -461,11 +482,12 @@ export const saveEnv = async (req, res) => {
  */
 export const recoverEnv = async (req, res) => {
     try {
-        const { content } = req.body;
+        const { content, docId } = req.body;
         const config = JSON.parse(content); // TODO: envObj
         const { activePresetIds } = config;
         const headType = config?.machineInfo?.headType;
-        const envDir = `${DataStorage.envDir}/${headType}`;
+        const envDir = envDirOfRequest(res, headType, docId);
+        if (!envDir) return;
 
         const configDir = getConfigDir(config?.machineInfo);
 
@@ -506,9 +528,18 @@ export const recoverEnv = async (req, res) => {
  * remove editor saved environment files
  */
 export const removeEnv = async (req, res) => {
-    const { headType } = req.body;
-    const envDir = `${DataStorage.envDir}/${headType}`;
-    rmDir(envDir, false);
+    const { headType, docId } = req.body;
+    const envDir = envDirOfRequest(res, headType, docId);
+    if (!envDir) return;
+    // queued with the writes of the same env, so a running autosave cannot write the folder back half-way
+    await envWriteQueue(docId ?? headType, async () => {
+        // a document env is removed completely, a head type env is only emptied (as in 4.16)
+        if (docId && fs.existsSync(envDir)) {
+            rmDir(envDir, true);
+        } else if (!docId) {
+            rmDir(envDir, false);
+        }
+    });
     res.send(true);
     res.end();
 };
@@ -522,14 +553,17 @@ export const packageEnv = async (req, res) => {
         'laser': '.snaplzr',
         'cnc': '.snapcnc'
     };
-    const { headType } = req.body;
-    const envDir = `${DataStorage.envDir}/${headType}`;
+    const { headType, docId } = req.body;
+    const envDir = envDirOfRequest(res, headType, docId);
+    if (!envDir) return;
     // const targetPath = `${envDir}/config.json`;
     // const content = fs.readFileSync(targetPath).toString();
     // const config = JSON.parse(content);
 
     const targetFile = `${uuid().substring(0, 8)}${tails[headType]}`;
-    await zipFolder(envDir, `../../Tmp/${targetFile}`);
+    // the archive goes to Tmp; a doc env is one level deeper than a head type env
+    const tmpFromEnv = path.relative(envDir, DataStorage.tmpDir).split(path.sep).join('/');
+    await zipFolder(envDir, `${tmpFromEnv}/${targetFile}`);
     // config.models.forEach((model) => {
     //     const { originalName, uploadName } = model;
     //     fs.existsSync(`${DataStorage.tmpDir}/${originalName}`)
@@ -542,6 +576,23 @@ export const packageEnv = async (req, res) => {
     res.end();
 };
 
+/**
+ * ids of the documents that have an auto-saved environment (`env/docs/{docId}/config.json`)
+ */
+export const listEnvDocs = async (req, res) => {
+    const docsDir = `${DataStorage.envDir}/${ENV_DOCS_DIR}`;
+    try {
+        const names = fs.existsSync(docsDir) ? fs.readdirSync(docsDir) : [];
+        const docIds = names.filter((name) => isValidDocId(name) && fs.existsSync(`${docsDir}/${name}/config.json`));
+        res.send({ docIds });
+        res.end();
+    } catch (e) {
+        log.error(`Failed to list environments: ${e}`);
+        res.status(ERR_INTERNAL_SERVER_ERROR).send({
+            msg: `Failed to list environments: ${e}`
+        });
+    }
+};
 
 export const uploadFileToTmp = (req, res) => {
     const { name, casePath } = req.body;
