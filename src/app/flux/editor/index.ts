@@ -70,6 +70,8 @@ import DrawLine from '../operation-history/DrawLine';
 import DrawStart from '../operation-history/DrawStart';
 import DrawTransform from '../operation-history/DrawTransform';
 import DrawTransformComplete from '../operation-history/DrawTransformComplete';
+import ShapeToPath from '../operation-history/ShapeToPath';
+import { SHAPE_GEOMETRY_ATTRIBUTES, closePathD, joinPathEndsD, shapeToPathD } from '../../ui/SVGEditor/path-edit/shape-to-path';
 import MoveOperation2D from '../operation-history/MoveOperation2D';
 import RotateOperation2D from '../operation-history/RotateOperation2D';
 import ScaleOperation2D from '../operation-history/ScaleOperation2D';
@@ -3080,6 +3082,67 @@ export const actions = {
             dispatch(projectActions.autoSaveEnvironment(headType));
         }
     },
+    /**
+     * Converts a draw tool shape (rect, ellipse, circle, line) to an equal <path> for point editing,
+     * one undo step. Returns the path element, or null if the element can't be converted.
+     */
+    convertShapeToPath: (headType, elem) => (dispatch, getState) => {
+        const { SVGActions } = getState()[headType];
+        const model = elem && SVGActions.getSVGModelByElement(elem);
+        const d = model && shapeToPathD(elem.nodeName, (name) => elem.getAttribute(name));
+        if (!d) {
+            return null;
+        }
+        const geometry = SHAPE_GEOMETRY_ATTRIBUTES[elem.nodeName];
+        const pathElem = document.createElementNS(NS.SVG, 'path') as SVGPathElement;
+        for (const attr of Array.from(elem.attributes) as Attr[]) {
+            if (!geometry.includes(attr.name)) {
+                pathElem.setAttribute(attr.name, attr.value);
+            }
+        }
+        pathElem.setAttribute('d', d);
+        pathElem.setAttribute(SvgModel.POINT_EDITABLE_ATTRIBUTE, 'true');
+        if (pathElem.hasAttribute('svgNodeName')) {
+            pathElem.setAttribute('svgNodeName', 'path');
+        }
+
+        const operation = new ShapeToPath({
+            svgModel: model,
+            svgActions: SVGActions,
+            shapeElem: elem,
+            shapeConfig: { ...model.config },
+            pathElem,
+            pathConfig: { ...model.config, svgNodeName: 'path', [SvgModel.POINT_EDITABLE_ATTRIBUTE]: 'true' }
+        });
+        operation.redo();
+        const operations = new CompoundOperation();
+        operations.push(operation);
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(actions.resetProcessState(headType));
+        return pathElem;
+    },
+
+    /**
+     * Closes the open subpaths of the selected path: 'close' adds a straight closing segment,
+     * 'join' merges ends that are within 1 mm. One undo step.
+     */
+    closeSelectedPath: (headType, how: 'close' | 'join') => (dispatch, getState) => {
+        const { SVGActions } = getState()[headType];
+        const elements = SVGActions.getSelectedElements();
+        const elem = elements.length === 1 ? elements[0] : null;
+        if (!elem || elem.nodeName !== 'path') {
+            return;
+        }
+        const before = elem.getAttribute('d');
+        const after = how === 'join' ? joinPathEndsD(before) : closePathD(before);
+        if (!after) {
+            return;
+        }
+        elem.setAttribute('d', after);
+        dispatch(actions.drawTransformComplete(headType, elem, before, after));
+        dispatch(baseActions.render(headType));
+    },
+
     drawStart: (headType, elem) => (dispatch, getState) => {
         const { contentGroup } = getState()[headType];
 

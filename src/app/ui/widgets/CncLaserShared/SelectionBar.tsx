@@ -9,6 +9,7 @@ import i18n from '../../../lib/i18n';
 import { canDecomposeSelection } from '../../../lib/svg-decompose';
 import SvgIcon from '../../components/SvgIcon';
 import PointEditBar from './PointEditBar';
+import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 import styles from './selection-bar.styl';
 
@@ -83,6 +84,9 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const canDecomposeSelected = canDecomposeSelection(selectedModels, { isRotate, isOnABPosition, isSVGClipping: modeBlocked });
     const canAlign = selectedModels.filter(model => model.visible).length > 1;
     const canDuplicate = selectedModels[0].visible !== false;
+    // one path with open subpaths: Close path / Join ends
+    const pathElem = selectedModels.length === 1 && selectedModels[0].elem?.nodeName === 'path' ? selectedModels[0].elem : null;
+    const openPath = pathElem ? openPathState(pathElem.getAttribute('d')) : { open: false, canJoin: false };
 
     const onGroup = () => {
         if (canUngroup) {
@@ -132,6 +136,38 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     return (
         <div className={styles['selection-bar']} role="toolbar" aria-label={i18n._('key-CncLaser/SelectionBar-Selection actions')}>
             <span className={styles.label} title={label}>{label}</span>
+            {openPath.open && (
+                <>
+                    <span className={styles['open-label']}>{i18n._('key-CncLaser/SelectionBar-Open path')}</span>
+                    <Tooltip title={i18n._('key-CncLaser/SelectionBar-Close every open end with a straight line')}>
+                        <button
+                            type="button"
+                            className={styles['mode-button']}
+                            onClick={() => dispatch(editorActions.closeSelectedPath(headType, 'close'))}
+                        >
+                            <svg {...stroke}><path d="M5 18V7l7-3 7 3v11" /><path d="M5 18h14" strokeDasharray="2 2" /></svg>
+                            {i18n._('key-CncLaser/SelectionBar-Close path')}
+                        </button>
+                    </Tooltip>
+                    <Tooltip
+                        title={openPath.canJoin
+                            ? i18n._('key-CncLaser/SelectionBar-Join ends that are less than 1 mm apart')
+                            : i18n._('key-CncLaser/SelectionBar-No open ends are less than 1 mm apart')}
+                    >
+                        <span className={styles['tip-wrapper']}>
+                            <button
+                                type="button"
+                                className={styles['mode-button']}
+                                disabled={!openPath.canJoin}
+                                onClick={() => dispatch(editorActions.closeSelectedPath(headType, 'join'))}
+                            >
+                                <svg {...stroke}><path d="M4 16c2-8 6-10 8-4s6 4 8-4" /><circle cx="12" cy="12" r="1.5" /></svg>
+                                {i18n._('key-CncLaser/SelectionBar-Join ends')}
+                            </button>
+                        </span>
+                    </Tooltip>
+                </>
+            )}
             {renderIconButton(groupTitle, !canGroup && !canUngroup, onGroup, (
                 canUngroup ? (
                     <svg {...stroke}><rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" /></svg>

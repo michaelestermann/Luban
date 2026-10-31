@@ -797,7 +797,41 @@ class SvgModel extends BaseModel {
     }
 
     public isDrawGraphic() {
-        return this.elem.getAttribute('id')?.includes('graph');
+        return SvgModel.isPointEditablePath(this.elem);
+    }
+
+    // marks a draw tool shape converted to a path (point editing); kept in the config, so it survives saving
+    public static POINT_EDITABLE_ATTRIBUTE = 'data-point-editable';
+
+    /** Paths drawn with the pen tool or converted from draw tool shapes: edited point by point, `d` kept in the config. */
+    public static isPointEditablePath(elem: Element) {
+        if (!elem || elem.nodeName !== 'path') {
+            return !!elem?.getAttribute('id')?.includes('graph');
+        }
+        return !!elem.getAttribute('id')?.includes('graph') || elem.getAttribute(SvgModel.POINT_EDITABLE_ATTRIBUTE) === 'true';
+    }
+
+    /**
+     * Replaces the element by another one with the same id and transform (shape to path conversion and its
+     * undo). Model, config, transformation and toolpath membership stay.
+     */
+    public replaceElement(elem: SvgModelElement, config: Record<string, string | number | boolean>, preSelectionGroup?: SVGGElement) {
+        const old = this.elem;
+        if (old.parentNode) {
+            old.parentNode.replaceChild(elem, old);
+        }
+        this.elem = elem;
+        this.config = config;
+        if (this.pathPreSelectionArea) {
+            this.pathPreSelectionArea.remove();
+            this.pathPreSelectionArea = null;
+        }
+        this.generatePathPreSelectionArea();
+        if (preSelectionGroup) {
+            this.setPreSelection(preSelectionGroup);
+        }
+        this.onTransform();
+        this.updateSource();
     }
 
     public refreshElemAttrs() {

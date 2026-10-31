@@ -20,6 +20,7 @@ import {
 import { library } from './lib/ext-shapes';
 import { NS } from './lib/namespaces';
 import SVGContentGroup from './svg-content/SVGContentGroup';
+import { SHAPE_GEOMETRY_ATTRIBUTES } from './path-edit/shape-to-path';
 
 const STEP_COUNT = 10;
 const THRESHOLD_DIST = 0.8;
@@ -1460,12 +1461,16 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
             this.setMode('textedit');
         } else if (this.isPointEditable(mouseTarget)) {
             this.enterPointEditing(mouseTarget);
+        } else if (this.props.editable && SHAPE_GEOMETRY_ATTRIBUTES[tagName] && this.props.editorActions?.convertShapeToPath) {
+            // draw tool shapes become paths first (own undo step)
+            const path = this.props.editorActions.convertShapeToPath(mouseTarget);
+            path && this.enterPointEditing(path);
         }
     };
 
-    // paths drawn with the pen tool
+    // paths drawn with the pen tool or converted from draw tool shapes
     public isPointEditable(elem: Element) {
-        return elem.tagName === 'path' && !!elem.getAttribute('id')?.includes('graph');
+        return elem.tagName === 'path' && SvgModel.isPointEditablePath(elem);
     }
 
     // Starts point editing of a path element: its points can be moved, inserted, deleted and split,

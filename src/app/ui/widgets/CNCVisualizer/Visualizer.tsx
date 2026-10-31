@@ -141,6 +141,7 @@ interface VisualizerProps {
 
     onDrawLine: (line, closedLoop) => void;
     onDrawDelete: () => void;
+    convertShapeToPath: (elem: Element) => SVGPathElement | null;
 
     showSVGShapeLibrary: boolean;
     updateShowSVGShapeLibrary: (isShow: boolean) => void;
@@ -428,6 +429,9 @@ class Visualizer extends React.Component<VisualizerProps> {
         },
         onDrawTransform: ({ before, after }) => {
             this.props.onDrawTransform(before, after);
+        },
+        convertShapeToPath: (elem) => {
+            return this.props.convertShapeToPath(elem);
         },
         onDrawTransformComplete: ({ elem, before, after }) => {
             this.props.onDrawTransformComplete(elem, before, after);
@@ -955,6 +959,7 @@ const mapDispatchToProps = (dispatch) => {
         onDrawDelete: () => dispatch(editorActions.drawDelete('cnc')),
         onDrawTransform: (before, after) => dispatch(editorActions.drawTransform('cnc', before, after)),
         onDrawTransformComplete: (elem, before, after) => dispatch(editorActions.drawTransformComplete('cnc', elem, before, after)),
+        convertShapeToPath: (elem) => dispatch(editorActions.convertShapeToPath('cnc', elem)),
         onDrawStart: (elem) => dispatch(editorActions.drawStart('cnc', elem)),
         onDrawComplete: (elem) => dispatch(editorActions.drawComplete('cnc', elem)),
         onBoxSelect: (bbox, onlyContainSelect) => dispatch(editorActions.boxSelect('cnc', bbox, onlyContainSelect)),
