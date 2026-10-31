@@ -4,7 +4,7 @@
 
 [class~='appbar'] {
     .content-flex {
-        height: calc(100vh - 90px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 90px);
     }
 }
 
@@ -18,12 +18,12 @@
 
     :global(.ant-spin.ant-spin-spinning) {
         max-height: none;
-        height: calc(100vh - 70px)
+        height: calc(100vh - var(--tab-strip-height, 0px) - 70px)
     }
 
     .content-flex {
         display: flex;
-        height: calc(100vh - 70px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 70px);
         overflow: hidden;
         background-color: #F5F5F7; // use the same color as scene background
 
@@ -35,7 +35,7 @@
     }
 
     .long-lang-content-height {
-        height: calc(100vh - 74px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 74px);
     }
 
     .configuration-panel {
@@ -50,7 +50,7 @@
 // Laser/CNC editor: compact toolbar row (52px), left panel | canvas | right panel
 [class~='appbar'] {
     .project-layout.with-panels .content-flex {
-        height: calc(100vh - 79px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 79px);
     }
 }
 
@@ -61,11 +61,11 @@
     }
 
     :global(.ant-spin.ant-spin-spinning) {
-        height: calc(100vh - 54px)
+        height: calc(100vh - var(--tab-strip-height, 0px) - 54px)
     }
 
     .content-flex {
-        height: calc(100vh - 54px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 54px);
         background-color: #eef1f5;
         position: relative;
     }

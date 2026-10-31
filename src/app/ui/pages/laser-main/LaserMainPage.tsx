@@ -8,12 +8,14 @@ import { HEAD_LASER, PROCESS_MODE_GREYSCALE, PROCESS_MODE_VECTOR } from '../../.
 import { actions as editorActions } from '../../../flux/editor';
 import { RootState } from '../../../flux/index.def';
 import { actions as laserActions } from '../../../flux/laser';
+import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
 import { machineStore } from '../../../store/local-storage';
 import Dropzone from '../../components/Dropzone';
 import ProjectLayout from '../../layouts/ProjectLayout';
-import { logPageView, renderModal, renderPopup, useUnsavedTitle } from '../../utils';
+import { logPageView, renderModal, useUnsavedTitle } from '../../utils';
+import { useActivateTab } from '../../layouts/tab-shell/TabShell';
 import Thumbnail from '../../widgets/CncLaserShared/Thumbnail';
 import StackedModel from '../../widgets/LaserStackedModel';
 import LaserVisualizer from '../../widgets/LaserVisualizer';
@@ -22,13 +24,9 @@ import useRenderRemoveModelsWarning from '../CncLaserShared/RemoveAllModelsWarni
 import RenderProjectRightView from '../CncLaserShared/ProjectRightView';
 import ProjectLeftView from '../CncLaserShared/ProjectLeftView';
 import { usePanelCollapse } from '../CncLaserShared/PanelChrome';
-import HomePage from '../HomePage';
-import Workspace from '../Workspace';
 import StarterGuide from './StarterGuide';
 import JobSetupModal from './modals/JobSetupModal';
 import ProjectOversizeMessage from './modals/ProjectOversizeMessage';
-import { SnapmakerRayMachine } from '../../../machines';
-import { LaserWorkspaceRay } from '../laser-workspace-ray';
 import { PageMode } from '../PageMode';
 import MaterialTestConfigurations from '../../views/MaterialTestConfigurations/MaterialTestConfigurations';
 
@@ -66,9 +64,9 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
     const [isDraggingWidget, setIsDraggingWidget] = useState(false);
 
     // subview
-    const [showHomePage, setShowHomePage] = useState(false);
-    const [showWorkspace, setShowWorkspace] = useState(false);
-    const openWorkspace = useCallback(() => setShowWorkspace(true), []);
+    // 4.17 tabs: Workspace is a tab of the strip
+    const activateTab = useActivateTab();
+    const openWorkspace = useCallback(() => { activateTab(WORKSPACE_TAB); }, [activateTab]);
     const [showJobType, setShowJobType] = useState(true);
     const [showMaterialTest, setShowMaterialTest] = useState(false);
 
@@ -134,28 +132,13 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
         renderMainToolBar
     } = useRenderMainToolBar({
         headType: HEAD_LASER,
-        setShowHomePage,
         setShowJobType,
         setShowMaterialTest,
-        setShowWorkspace,
+        onOpenWorkspace: openWorkspace,
         onChangeSVGClippingMode,
         onChangeABPositionMode,
         isSVGClipping: pageMode === PageMode.SVGClipping
     });
-    const renderHomepage = () => {
-        const onClose = () => {
-            setShowHomePage(false);
-            logPageView({
-                pathname: '/laser',
-                isRotate
-            });
-        };
-        return showHomePage && renderPopup({
-            onClose,
-            component: HomePage
-        });
-    };
-
     const warningRemovingModels = useRenderRemoveModelsWarning({ headType: HEAD_LASER });
     // side panels: collapse state per page (not persisted)
     const [leftCollapsed, toggleLeftCollapsed] = usePanelCollapse();
@@ -201,29 +184,6 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
             });
         }
     };
-
-    /**
-     * Render function of workspace.
-     */
-    const renderWorkspace = useCallback(() => {
-        if (!showWorkspace) {
-            return null;
-        }
-
-        const onClose = () => {
-            setShowWorkspace(false);
-        };
-
-        let component = Workspace;
-        if (activeMachine?.identifier === SnapmakerRayMachine.identifier) {
-            component = LaserWorkspaceRay;
-        }
-
-        return renderPopup({
-            onClose,
-            component,
-        });
-    }, [showWorkspace, activeMachine?.identifier, isRotate]);
 
     function renderStackedModelModal() {
         const onClose = () => {
@@ -332,8 +292,6 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
                 )
             }
             {setBackgroundModal}
-            {renderHomepage()}
-            {renderWorkspace()}
             {renderStackedModelModal()}
         </div>
     );

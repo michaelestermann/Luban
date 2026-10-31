@@ -7,17 +7,17 @@
 
 .laser-table {
     width: 100%;
-    height: 'calc(100vh - %s)' % 66px;
+    height: calc(100vh - var(--tab-strip-height, 0px) - 66px);
 }
 
 [class~='appbar'] {
     .laser-table {
         width: 100%;
-        height: calc(100vh - 90px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 90px);
     }
 
     .svg-content {
-        height: calc(100vh - 90px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 90px);
     }
 }
 
@@ -47,7 +47,7 @@
     width: 100%;
     padding-left: 64px;
     // height: 100%
-    height: calc(100vh - 66px);
+    height: calc(100vh - var(--tab-strip-height, 0px) - 66px);
 }
 
 .svg-control-bar {

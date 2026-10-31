@@ -300,3 +300,20 @@ test('pickDocumentToUnload returns the least recently used non-live loaded doc, 
     t.equal(pickDocumentToUnload(s, ['d'], 0.5, 0.4), 'b', 'custom threshold');
     t.end();
 });
+
+test('pathForTab and tabIdForPath are inverse for home, workspace and live docs', (t) => {
+    let s = withDocs(doc('a', 'cnc'), doc('b', 'laser'), doc('c', 'cnc'));
+    s = activateTab(s, 'a', 1);
+    s = activateTab(s, 'b', 2);
+    for (const tabId of [HOME_TAB, WORKSPACE_TAB, 'a', 'b']) {
+        t.equal(tabIdForPath(s, pathForTab(s, tabId)), tabId, `${tabId} round trip`);
+    }
+    for (const p of ['/', '/workspace', '/cnc', '/laser']) {
+        t.equal(pathForTab(s, tabIdForPath(s, p)), p, `${p} round trip`);
+    }
+    // a parked doc maps to its head route, which shows the live doc of that head
+    t.equal(pathForTab(s, 'c'), '/cnc', 'parked doc → head route');
+    t.equal(tabIdForPath(s, '/cnc'), 'a', 'head route → live doc');
+    t.equal(tabIdForPath(s, '/printing'), null, 'no live printing doc');
+    t.end();
+});

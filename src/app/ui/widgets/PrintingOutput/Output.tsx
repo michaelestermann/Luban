@@ -1,13 +1,14 @@
 import classNames from 'classnames';
 import { noop } from 'lodash';
 import path from 'path';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import { HEAD_PRINTING } from '../../../constants';
 import type { RootState } from '../../../flux/index.def';
 import { actions as printingActions } from '../../../flux/printing';
 import { actions as projectActions } from '../../../flux/project';
+import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import gcodeActions from '../../../flux/workspace/actions-gcode';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
@@ -19,27 +20,9 @@ import Dropdown from '../../components/Dropdown';
 import Menu from '../../components/Menu';
 import SvgIcon from '../../components/SvgIcon';
 import { toast } from '../../components/Toast';
-import Workspace from '../../pages/Workspace';
-import { renderPopup } from '../../utils';
+import { useActivateTab } from '../../layouts/tab-shell/TabShell';
 import { SceneToast } from '../../views/toasts/SceneToast';
 import Thumbnail from './Thumbnail';
-
-function useRenderWorkspace() {
-    const [showWorkspace, setShowWorkspace] = useState(false);
-
-    function renderWorkspace() {
-        const onClose = () => setShowWorkspace(false);
-        return showWorkspace && renderPopup({
-            onClose,
-            component: Workspace
-        });
-    }
-
-    return {
-        renderWorkspace,
-        setShowWorkspace
-    };
-}
 
 const Output: React.FC = () => {
     const stage = useSelector((state: RootState) => state.printing?.stage, shallowEqual);
@@ -58,7 +41,8 @@ const Output: React.FC = () => {
 
     const dispatch = useDispatch();
     const thumbnail = useRef(null);
-    const { renderWorkspace, setShowWorkspace } = useRenderWorkspace();
+    // 4.17 tabs: the loaded G-code is shown in the Workspace tab
+    const activateTab = useActivateTab();
     const actions = {
         onToggleDisplayGcode: () => {
             if (displayedType === 'gcode') {
@@ -78,7 +62,7 @@ const Output: React.FC = () => {
             }
             gcodeFile.thumbnail = thumbnail.current.getDataURL() || defaultThumbnail;
             dispatch(gcodeActions.renderGcodeFile(gcodeFile));
-            setShowWorkspace(true);
+            activateTab(WORKSPACE_TAB);
             logGcodeExport(HEAD_PRINTING, 'workspace');
             window.scrollTo(0, 0);
         },
@@ -220,7 +204,6 @@ const Output: React.FC = () => {
                 ref={thumbnail}
                 modelGroup={modelGroup}
             />
-            {renderWorkspace()}
         </div>
     );
 };

@@ -263,7 +263,7 @@ const SVGLeftBar = forwardRef((props, ref) => {
                 {
                     extShape.showExtShape && mode === 'ext' && (
                         <div
-                            style={{ 'height': 'calc(100vh - 26px - 68px - 12px)' }}
+                            style={{ 'height': 'calc(100vh - var(--tab-strip-height, 0px) - 26px - 68px - 12px)' }}
                             className={classNames('position-absolute overflow-hidden margin-left-72 margin-bottom-8 z-index-1 border-default-grey-1 border-radius-8 background-color-white', styles['width-366'])}
                         >
                             <div className="border-bottom-normal padding-horizontal-16 height-40">

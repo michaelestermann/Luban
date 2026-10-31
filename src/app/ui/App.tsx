@@ -20,6 +20,7 @@ import UniApi from '../lib/uni-api';
 import { SnapmakerRayMachine } from '../machines';
 import { ToastContainer } from './components/Toast';
 import AppLayout from './layouts/AppLayout';
+import TabShell from './layouts/tab-shell/TabShell';
 import HomePage from './pages/HomePage';
 import Settings from './pages/global-modals/settings-modal';
 import Workspace from './pages/Workspace';
@@ -36,6 +37,10 @@ Canvas2dZoom.register('');
 interface AppProps {
     enableShortcut: boolean;
     activeMachine: Machine | null;
+    // 4.17 tabs: the edit page of a mode is mounted again when another document of that mode becomes live
+    printingDocKey: string;
+    laserDocKey: string;
+    cncDocKey: string;
 }
 
 interface AppState {
@@ -160,6 +165,7 @@ class App extends React.PureComponent<AppProps, AppState> {
             return <h1>Something went wrong. Please reload the app</h1>;
         }
 
+        const { printingDocKey, laserDocKey, cncDocKey } = this.props;
         const workspaceComponent = this.props.activeMachine?.identifier === SnapmakerRayMachine.identifier
             ? LaserWorkspaceRay
             : Workspace;
@@ -167,15 +173,17 @@ class App extends React.PureComponent<AppProps, AppState> {
         return (
             <HashRouter ref={this.router}>
                 <AppLayout>
-                    <Switch>
-                        <Route path="/" exact component={HomePage} />
-                        <Route path="/workspace" component={workspaceComponent} />
-                        <Route path="/printing" component={PrintMainPage} />
-                        <Route path="/laser" component={LaserMainPage} />
-                        <Route path="/cnc" component={CNCMainPage} />
-                        <Route path="/settings" component={Settings} />
-                        <Route component={HomePage} />
-                    </Switch>
+                    <TabShell>
+                        <Switch>
+                            <Route path="/" exact component={HomePage} />
+                            <Route path="/workspace" component={workspaceComponent} />
+                            <Route path="/printing" render={(p) => <PrintMainPage {...p} key={printingDocKey} />} />
+                            <Route path="/laser" render={(p) => <LaserMainPage {...p} key={laserDocKey} />} />
+                            <Route path="/cnc" render={(p) => <CNCMainPage {...p} key={cncDocKey} />} />
+                            <Route path="/settings" component={Settings} />
+                            <Route component={HomePage} />
+                        </Switch>
+                    </TabShell>
                     <ToastContainer
                         position="top-center"
                         autoClose={5000}
@@ -202,8 +210,12 @@ const mapStateToProps = (state) => {
     let enableShortcut = state[window.location.hash.slice(2)]?.enableShortcut;
     enableShortcut = (typeof enableShortcut === 'undefined' ? true : enableShortcut);
     const { shouldCheckForUpdate } = machineInfo;
+    const activeDocByHead = state.project.tabs.activeDocByHead;
 
     return {
+        printingDocKey: activeDocByHead.printing ?? 'none',
+        laserDocKey: activeDocByHead.laser ?? 'none',
+        cncDocKey: activeDocByHead.cnc ?? 'none',
         activeMachine,
         enableShortcut,
         menuDisabledCount,

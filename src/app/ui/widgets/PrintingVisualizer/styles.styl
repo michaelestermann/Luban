@@ -13,7 +13,7 @@ $left-bar-width = 58px;
 $bottom-bar-height = 0;
 
 .canvas-container {
-    height: calc(100vh - 66px);
+    height: calc(100vh - var(--tab-strip-height, 0px) - 66px);
     position: relative;
 }
 

@@ -42,6 +42,8 @@ import { actions as workspaceActions } from '../workspace';
 import ThreeModel from '../../models/ThreeModel';
 import { savedLayerOrder, withLayerPositionZ } from '../../models/z-order';
 import { createTabsState, TabsState } from './tabs-model';
+/* eslint-disable-next-line import/no-cycle */
+import { tabsActions } from './actions-tabs';
 
 /* eslint-disable-next-line import/no-cycle */
 import { actions as appGlobalActions } from '../app-global';
@@ -713,16 +715,20 @@ export const actions = {
             // End of Compatible with old project file
 
             const oldHeadType = getCurrentHeadType(history?.location?.pathname) || headType;
+            // 4.17 tabs: the projects of other modes stay open in their tabs; the project replaces the live
+            // document of its own mode, so that one is offered for saving and closed
             if (!isGuideTours) {
-                await dispatch(actions.save(oldHeadType, {
+                await dispatch(actions.save(headType, {
                     message: i18n._(
                         'key-Project/Save-Save the changes you made in the {{headType}} G-code Generator? Your changes will be lost if you don’t save them.',
-                        { headType: i18n._(HEAD_TYPE_ENV_NAME[oldHeadType]) }
+                        { headType: i18n._(HEAD_TYPE_ENV_NAME[headType]) }
                     )
                 }));
             }
 
-            await dispatch(actions.closeProject(oldHeadType));
+            await dispatch(actions.closeProject(headType));
+            // 4.17 tabs: the project gets the live document of its mode (registered if there is none)
+            dispatch(tabsActions.ensureLiveDocument(headType));
             content && dispatch(actions.updateState(headType, { findLastEnvironment: false, content, unSaved: false }));
             if (oldHeadType === headType && !unReload) {
                 history.push('/');
@@ -763,15 +769,21 @@ export const actions = {
             history.push(to);
             return;
         }
-        const done = await dispatch(actions.save(oldHeadType, {
-            message: i18n._('key-Project/Save-Save the changes you made in the {{headType}} G-code Generator? Your changes will be lost if you don’t save them.', { headType: i18n._(HEAD_TYPE_ENV_NAME[oldHeadType]) })
+        // 4.17 tabs: the projects of other modes stay open in their tabs; the new project replaces the live
+        // document of its own mode, so that one is offered for saving and closed
+        const replacedHeadType = newHeadType || oldHeadType;
+        const done = await dispatch(actions.save(replacedHeadType, {
+            message: i18n._('key-Project/Save-Save the changes you made in the {{headType}} G-code Generator? Your changes will be lost if you don’t save them.', { headType: i18n._(HEAD_TYPE_ENV_NAME[replacedHeadType]) })
         }));
         if (!done) {
             // action cancelled
             return;
         }
 
-        await dispatch(actions.closeProject(oldHeadType));
+        await dispatch(actions.closeProject(replacedHeadType));
+
+        // 4.17 tabs: the new project gets the live document of its mode (registered if there is none)
+        dispatch(tabsActions.ensureLiveDocument(newHeadType, { isRotate }));
 
         await dispatch(actions.clearEnvironmentsForNewProject(newHeadType));
 

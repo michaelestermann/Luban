@@ -1,21 +1,19 @@
 import { Machine, MachineType } from '@snapmaker/luban-platform';
 import classNames from 'classnames';
 import { cloneDeep, reverse, slice } from 'lodash';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 
 import { HEAD_CNC, HEAD_LASER, HEAD_PRINTING, MAX_RECENT_FILES_LENGTH } from '../../../constants';
 import { RootState } from '../../../flux/index.def';
 import { actions as projectActions } from '../../../flux/project';
+import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
 import UniApi from '../../../lib/uni-api';
-import { SnapmakerRayMachine } from '../../../machines';
 import Anchor from '../../components/Anchor';
 import { Button } from '../../components/Buttons';
-import { renderPopup } from '../../utils';
-import Workspace from '../Workspace';
-import { LaserWorkspaceRay } from '../laser-workspace-ray';
+import { useActivateTab } from '../../layouts/tab-shell/TabShell';
 import print3DEntryIcon from './images/icon_3d_120x120.svg';
 import cncEntryIcon from './images/icon_cnc_120x120.svg';
 import laserEntryIcon from './images/icon_laser_120x120.svg';
@@ -27,7 +25,6 @@ const StartProject: React.FC = () => {
     // redux correlation
     const dispatch = useDispatch();
     const history = useHistory();
-    const location = useLocation();
 
     const project = useSelector((state: RootState) => state.project);
     const activeMachine = useSelector((state: RootState) => state.machine.activeMachine) as Machine;
@@ -35,35 +32,12 @@ const StartProject: React.FC = () => {
     const newRecentFile = reverse(cloneDeep(project.general.recentFiles));
 
     // useState
-    const [showWorkspace, setShowWorkspace] = useState(false);
     const [beginSelected, setBeginSelected] = useState('start-project');
 
-    // method
-    const renderWorkspace = useCallback(() => {
-        if (!showWorkspace) {
-            return null;
-        }
-
-        const onClose = () => setShowWorkspace(false);
-
-        let component = Workspace;
-        if (activeMachine?.identifier === SnapmakerRayMachine.identifier) {
-            component = LaserWorkspaceRay;
-        }
-
-        return renderPopup({
-            onClose,
-            component,
-        });
-    }, [showWorkspace, activeMachine?.identifier]);
-
-    function handleSwitchToWorkspace(pathname) {
-        const oldPathname = location?.pathname;
-        if (oldPathname === '/') {
-            history.push(pathname);
-        } else {
-            setShowWorkspace(true);
-        }
+    // 4.17 tabs: Workspace is a tab of the strip (also when the Home page is shown)
+    const activateTab = useActivateTab();
+    function handleSwitchToWorkspace() {
+        activateTab(WORKSPACE_TAB);
     }
 
     const onClickToUpload = () => {
@@ -201,7 +175,7 @@ const StartProject: React.FC = () => {
                                     )
                                 }
                                 <div className={classNames(styles['link-bar-item'], 'margin-horizontal-16')}>
-                                    <Anchor onClick={() => handleSwitchToWorkspace('/workspace')} title={i18n._('key-HomePage/Begin-Workspace')}>
+                                    <Anchor onClick={() => handleSwitchToWorkspace()} title={i18n._('key-HomePage/Begin-Workspace')}>
                                         <div className={classNames(styles.imgWrapper)}>
                                             <img src={workspaceEntryIcon} alt="" />
                                         </div>
@@ -238,7 +212,6 @@ const StartProject: React.FC = () => {
                     }
                 </div>
             </div>
-            {renderWorkspace()}
         </div>
     );
 };

@@ -9,6 +9,7 @@ import classNames from 'classnames';
 import { HEAD_CNC, HEAD_LASER, HEAD_PRINTING } from '../../../constants';
 import { machineStore } from '../../../store/local-storage';
 import MainToolBar from '../../layouts/MainToolBar';
+import { getTabStripHeight } from '../../layouts/tab-shell/TabShell';
 import { logPageView, useRenderRecoveryModal } from '../../utils';
 import CaseLibrary from './CaseLibrary';
 import MoreInfo from './MoreInfo';
@@ -37,12 +38,16 @@ const HomePage: React.FC<HomePageProps> = (props) => { // Todo, what's the props
         const style = window.getComputedStyle(startProjectBlock);
         const removeUnit = (v) => parseFloat(v.slice(0, -2));
         const height = removeUnit(style.height) + removeUnit(style.paddingBlock) + removeUnit(style.borderBlock) + removeUnit(style.marginBlock);
-        const bottomBlockHeight = window.innerHeight - height - (isPopup ? 66 + 26 : 0);
+        // 4.17 tabs: the tab strip takes the top of the window
+        const bottomBlockHeight = window.innerHeight - getTabStripHeight() - height - (isPopup ? 66 + 26 : 0);
         resourcesBlock.current && (resourcesBlock.current.style.height = `${bottomBlockHeight - 32}px`); // 32 is bottomBlock margin-top
     };
 
     useEffect(() => {
-        document.querySelector('body').setAttribute('style', 'height: calc(100vh - 82px); background: #f5f5f7;');
+        // set single properties: the body also carries --tab-strip-height
+        const body = document.querySelector('body');
+        body.style.height = 'calc(100vh - var(--tab-strip-height, 0px) - 82px)';
+        body.style.background = '#f5f5f7';
     }, []);
 
     useEffect(() => {

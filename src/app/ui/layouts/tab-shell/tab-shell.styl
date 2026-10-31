@@ -1,0 +1,210 @@
+// Luban 4.17 tabs: tab strip (design D, 40px)
+
+.tab-shell {
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-strip {
+    height: 40px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    padding: 0 8px;
+    background: #e6eaf0;
+    border-bottom: 1px solid #e3e6ec;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 30;
+    user-select: none;
+}
+
+.tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 6px 0 10px;
+    border-radius: 8px 8px 0 0;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #2f3441;
+    background: transparent;
+    flex: 0 1 190px;
+    min-width: 0;
+    box-sizing: border-box;
+    cursor: pointer;
+
+    &:hover {
+        background: #f3f5f8;
+    }
+
+    .name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+        flex: 1;
+        text-align: left;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+        outline: none;
+    }
+
+    .icon {
+        display: inline-flex;
+        flex: 0 0 auto;
+    }
+
+    .unsaved-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 4px;
+        background: #1f2430;
+        flex: 0 0 auto;
+        display: block;
+    }
+
+    .close {
+        width: 20px;
+        height: 20px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: #5b6170;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex: 0 0 auto;
+        padding: 0;
+
+        &:hover {
+            background: #dfe4ec;
+            color: #1f2430;
+        }
+    }
+
+    &:hover .close {
+        display: flex;
+    }
+
+    &:hover .unsaved-dot {
+        display: none;
+    }
+}
+
+.tab.active {
+    background: #fff;
+    color: #1f2430;
+    box-shadow: 0 -1px 0 #e3e6ec inset;
+
+    .close {
+        display: flex;
+    }
+
+    &.dirty .close {
+        display: none;
+    }
+
+    &.dirty:hover .close {
+        display: flex;
+    }
+}
+
+.tab.home {
+    flex: 0 0 40px;
+    justify-content: center;
+    padding: 0;
+
+    .name {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #1d4ed8;
+        flex: 0 0 auto;
+    }
+}
+
+.tab.workspace {
+    flex: 0 0 auto;
+    padding-right: 12px;
+
+    .name {
+        font-weight: 600;
+    }
+}
+
+.conn-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background: #9aa1b0;
+    display: block;
+    flex: 0 0 auto;
+}
+
+.conn-dot.connected {
+    background: #16a34a;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 9px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.separator {
+    width: 1px;
+    height: 16px;
+    background: #cfd5df;
+    flex: 0 0 auto;
+    margin: 0 6px 10px;
+}
+
+.doc-tabs {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.icon-button {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 1px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #2f3441;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+    padding: 0;
+
+    &:hover {
+        background: #f3f5f8;
+    }
+}
+
+.tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+}

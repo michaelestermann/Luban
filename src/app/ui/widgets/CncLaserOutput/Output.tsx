@@ -10,16 +10,14 @@ import {
 import { actions as editorActions } from '../../../flux/editor';
 import { RootState } from '../../../flux/index.def';
 import { actions as projectActions } from '../../../flux/project';
+import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
 import UniApi from '../../../lib/uni-api';
-import { SnapmakerRayMachine } from '../../../machines';
 import { Button } from '../../components/Buttons';
 import { getEditorStep } from '../../pages/CncLaserShared/editor-step';
-import Workspace from '../../pages/Workspace';
-import { LaserWorkspaceRay } from '../../pages/laser-workspace-ray';
-import { renderPopup } from '../../utils';
+import { useActivateTab } from '../../layouts/tab-shell/TabShell';
 import Thumbnail from '../CncLaserShared/Thumbnail';
 import ExportDropdown from './ExportDropdown';
 import styles from './styles.styl';
@@ -38,7 +36,6 @@ const Output: React.FC<OutputViewProps> = (props) => {
     const { headType, loadGcodeOptions } = props;
 
     const isOnABPosition = useSelector((state: RootState) => state.laser.isOnABPosition);
-    const activeMachine = useSelector((state: RootState) => state.machine.activeMachine);
 
     const displayedType = useSelector((state: RootState) => state[headType]?.displayedType);
     const gcodeFile = useSelector(state => state[headType]?.gcodeFile);
@@ -53,7 +50,6 @@ const Output: React.FC<OutputViewProps> = (props) => {
     const series = useSelector((state: RootState) => state.machine?.series, shallowEqual);
 
     // states
-    const [showWorkspace, setShowWorkspace] = useState(false);
     const [showExportOptions, setShowExportOptions] = useState(false);
 
     const dispatch = useDispatch();
@@ -102,7 +98,9 @@ const Output: React.FC<OutputViewProps> = (props) => {
         }
     };
 
-    const onOpenWorkspace = useCallback(() => setShowWorkspace(true), []);
+    // 4.17 tabs: the loaded G-code is shown in the Workspace tab
+    const activateTab = useActivateTab();
+    const onOpenWorkspace = useCallback(() => { activateTab(WORKSPACE_TAB); }, [activateTab]);
 
     useEffect(() => {
         UniApi.Event.on('appbar-menu:cnc-laser.export-gcode', actions.onExport);
@@ -124,24 +122,6 @@ const Output: React.FC<OutputViewProps> = (props) => {
         dispatch(editorActions.commitGenerateGcode(headType));
     }, [shouldGenerateGcodeCounter]);
 
-
-    const renderWorkspace = useCallback(() => {
-        if (!showWorkspace) {
-            return null;
-        }
-
-        const onClose = () => setShowWorkspace(false);
-
-        let component = Workspace;
-        if (activeMachine?.identifier === SnapmakerRayMachine.identifier) {
-            component = LaserWorkspaceRay;
-        }
-
-        return showWorkspace && renderPopup({
-            onClose,
-            component,
-        });
-    }, [showWorkspace, activeMachine?.identifier]);
 
     const isEditor = page === PAGE_EDITOR;
     // the preview toggle and Export only exist once the toolpaths are previewed
@@ -183,7 +163,6 @@ const Output: React.FC<OutputViewProps> = (props) => {
                 myRef={thumbnail}
                 toolPathGroup={toolPathGroup}
             />
-            {renderWorkspace()}
         </div>
     );
 };

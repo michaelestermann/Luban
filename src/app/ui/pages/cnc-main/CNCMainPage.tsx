@@ -9,6 +9,7 @@ import { actions as cncActions } from '../../../flux/cnc';
 import { actions as editorActions } from '../../../flux/editor';
 import { actions as machineActions } from '../../../flux/machine';
 import { actions as projectActions } from '../../../flux/project';
+import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
 import { getUploadModeByFilename } from '../../../lib/units';
@@ -28,7 +29,8 @@ import Space from '../../components/Space';
 import Steps from '../../components/Steps';
 import SvgIcon from '../../components/SvgIcon';
 import ProjectLayout from '../../layouts/ProjectLayout';
-import { logPageView, renderModal, renderPopup, useUnsavedTitle } from '../../utils';
+import { logPageView, renderModal, useUnsavedTitle } from '../../utils';
+import { useActivateTab } from '../../layouts/tab-shell/TabShell';
 import CNCVisualizer from '../../widgets/CNCVisualizer';
 import Thumbnail from '../../widgets/CncLaserShared/Thumbnail';
 import useRenderMainToolBar from '../CncLaserShared/MainToolBar';
@@ -36,8 +38,6 @@ import RenderProjectRightView from '../CncLaserShared/ProjectRightView';
 import ProjectLeftView from '../CncLaserShared/ProjectLeftView';
 import { usePanelCollapse } from '../CncLaserShared/PanelChrome';
 import useRenderRemoveModelsWarning from '../CncLaserShared/RemoveAllModelsWarning';
-import HomePage from '../HomePage';
-import Workspace from '../Workspace';
 import {
     cnc4AxisStepOne,
     laserCncIntroStepFive,
@@ -126,9 +126,9 @@ interface CNCMainPageProps {
 const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
     const widgets = useSelector(state => state?.widget[pageHeadType]?.default?.widgets, shallowEqual);
     const [isDraggingWidget, setIsDraggingWidget] = useState(false);
-    const [showHomePage, setShowHomePage] = useState(false);
-    const [showWorkspace, setShowWorkspace] = useState(false);
-    const openWorkspace = useCallback(() => setShowWorkspace(true), []);
+    // 4.17 tabs: Workspace is a tab of the strip
+    const activateTab = useActivateTab();
+    const openWorkspace = useCallback(() => { activateTab(WORKSPACE_TAB); }, [activateTab]);
     const [showJobType, setShowJobType] = useState(true);
     const [enabledIntro, setEnabledIntro] = useState(null);
     const initIndex = 0;
@@ -179,25 +179,9 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
 
     const { renderStlModal, renderMainToolBar } = useRenderMainToolBar({
         headType: HEAD_CNC,
-        setShowHomePage,
         setShowJobType,
-        setShowWorkspace
+        onOpenWorkspace: openWorkspace
     });
-
-    const renderHomepage = () => {
-        const onClose = () => {
-            setShowHomePage(false);
-            logPageView({
-                pathname: '/cnc',
-                isRotate: materials?.isRotate
-            });
-        };
-        return showHomePage && renderPopup({
-            onClose,
-            component: HomePage,
-            key: 'homepage'
-        });
-    };
 
     const warningModal = useRenderWarning();
     const removeModelsWarningModal = useRenderRemoveModelsWarning({ headType: HEAD_CNC });
@@ -232,21 +216,6 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
             });
         }
     };
-
-    function renderWorkspace() {
-        const onClose = () => {
-            setShowWorkspace(false);
-            logPageView({
-                pathname: '/cnc',
-                isRotate: materials?.isRotate
-            });
-        };
-        return showWorkspace && renderPopup({
-            onClose,
-            component: Workspace,
-            key: 'workspace'
-        });
-    }
 
     function handleChange(nextIndex) {
         if (nextIndex === 1) {
@@ -467,8 +436,6 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
                 )
             }
             {renderStlModal()}
-            {renderHomepage()}
-            {renderWorkspace()}
         </div>
     );
 };

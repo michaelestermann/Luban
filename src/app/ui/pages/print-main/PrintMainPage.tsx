@@ -26,11 +26,9 @@ import PrintingConfigurationsWidget, { PresetInitialization } from '../../widget
 import PrintingOutputWidget from '../../widgets/PrintingOutput';
 import Thumbnail from '../../widgets/PrintingOutput/Thumbnail';
 import PrintingVisualizer from '../../widgets/PrintingVisualizer';
-import HomePage from '../HomePage';
 import { CaseConfigGimbal, CaseConfigPenHolder, CaseConfigSM2Gimbal } from '../HomePage/CaseConfig';
 import MachineMaterialSettings from '../MachineMaterialSettings';
 import { PageMode } from '../PageMode';
-import Workspace from '../Workspace';
 import SceneInitialization from './SceneInitialization';
 import StarterGuide from './StarterGuide';
 import { AccessResourceWebState } from '../../../constants/downloadManager';
@@ -58,7 +56,7 @@ function useRenderMainToolBar(pageMode, setPageMode, profileInitialized = false)
 
     const { series, toolHead } = useSelector((state: RootState) => state.machine);
 
-    const { inProgress, simplifyType, simplifyPercent } = useSelector((state: RootState) => state.printing, shallowEqual);
+    const { simplifyType, simplifyPercent } = useSelector((state: RootState) => state.printing, shallowEqual);
     const enableShortcut = useSelector((state: RootState) => state.printing?.enableShortcut, shallowEqual);
 
     // undo & redo
@@ -78,8 +76,6 @@ function useRenderMainToolBar(pageMode, setPageMode, profileInitialized = false)
     // download
     const canAccessWeb = useSelector((state: RootState) => state.appGlobal?.canAccessWeb);
 
-    const [showHomePage, setShowHomePage] = useState(false);
-    const [showWorkspace, setShowWorkspace] = useState(false);
     const [showMachineMaterialSettings, setShowMachineMaterialSettings] = useState(false);
     const seriesRef = useRef(series);
     const toolHeadRef = useRef(toolHead);
@@ -88,34 +84,6 @@ function useRenderMainToolBar(pageMode, setPageMode, profileInitialized = false)
 
 
     const dispatch = useDispatch();
-
-    function renderHomepage() {
-        const onClose = () => {
-            setShowHomePage(false);
-            logPageView({
-                pathname: '/printing'
-            });
-        };
-        return showHomePage && renderPopup({
-            onClose,
-            component: HomePage,
-            key: 'homepage'
-        });
-    }
-
-    function renderWorkspace() {
-        const onClose = () => {
-            setShowWorkspace(false);
-            logPageView({
-                pathname: '/printing'
-            });
-        };
-        return showWorkspace && renderPopup({
-            onClose,
-            component: Workspace,
-            key: 'workspace'
-        });
-    }
 
     function renderMachineMaterialSettings() {
         const onClose = async () => {
@@ -156,27 +124,7 @@ function useRenderMainToolBar(pageMode, setPageMode, profileInitialized = false)
         //
         //
         const leftItems = [
-            {
-                title: i18n._('key-Printing/Page-Home'),
-                disabled: inProgress,
-                type: 'button',
-                name: 'MainToolbarHome',
-                action: () => {
-                    setShowHomePage(true);
-                }
-            },
-            {
-                title: i18n._('key-Printing/Page-Workspace'),
-                type: 'button',
-                name: 'MainToolbarWorkspace',
-                action: () => {
-                    setShowWorkspace(true);
-                }
-            },
-            {
-                type: 'separator',
-                name: 'separator'
-            },
+            // 4.17 tabs: Home and Workspace are tabs of the strip, no longer toolbar buttons
             {
                 title: i18n._('key-Printing/Page-Save'),
                 disabled: !unSaved || !enableShortcut,
@@ -372,7 +320,7 @@ function useRenderMainToolBar(pageMode, setPageMode, profileInitialized = false)
         );
     }
 
-    return [renderHomepage, renderMainToolBar, renderWorkspace, renderMachineMaterialSettings];
+    return [renderMainToolBar, renderMachineMaterialSettings];
 }
 
 function getStarterProject(series, isDual) {
@@ -443,7 +391,7 @@ const Printing: React.FC<PrintMainPageProps> = ({ location }) => {
     const dispatch = useDispatch();
     const history = useHistory();
     const [
-        renderHomepage, renderMainToolBar, renderWorkspace, renderMachineMaterialSettings
+        renderMainToolBar, renderMachineMaterialSettings
     ] = useRenderMainToolBar(pageMode, setPageMode, !!materialDefinitions.length);
     const modelGroup = useSelector((state: RootState) => state.printing.modelGroup);
     const { qualityDefinitions } = useSelector((state: RootState) => state.printing);
@@ -608,8 +556,6 @@ const Printing: React.FC<PrintMainPageProps> = ({ location }) => {
                 onChange={onStarterGuideChange}
                 onExit={onStarterGuideExit}
             />
-            {renderHomepage()}
-            {renderWorkspace()}
             {renderMachineMaterialSettings()}
             <Thumbnail
                 ref={thumbnail}

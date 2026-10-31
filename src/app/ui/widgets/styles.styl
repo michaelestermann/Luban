@@ -128,7 +128,7 @@ $bottom-bar-height = 0
 }
 
 .canvas-wrapper {
-    height: calc(100vh - 66px);
+    height: calc(100vh - var(--tab-strip-height, 0px) - 66px);
 
     .m-3 {
         padding: 1rem;
@@ -137,7 +137,7 @@ $bottom-bar-height = 0
 
 [class~='appbar'] {
     .canvas-wrapper {
-        height: calc(100vh - 90px);
+        height: calc(100vh - var(--tab-strip-height, 0px) - 90px);
     }
 }
 

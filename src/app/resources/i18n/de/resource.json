@@ -2665,5 +2665,17 @@
     "key-CncLaser/RoundCorners-Enter a radius of 0 or more": "Einen Radius von 0 oder mehr eingeben",
     "key-CncLaser/RoundCorners-Cancel": "Abbrechen",
     "key-CncLaser/RoundCorners-Apply": "Anwenden",
-    "key-CncLaser/RoundCorners-Each rectangle gets at most half its shorter side (smallest: {{max}} mm)": "Jedes Rechteck erhält höchstens die Hälfte seiner kürzeren Seite (kleinstes: {{max}} mm)"
+    "key-CncLaser/RoundCorners-Each rectangle gets at most half its shorter side (smallest: {{max}} mm)": "Jedes Rechteck erhält höchstens die Hälfte seiner kürzeren Seite (kleinstes: {{max}} mm)",
+    "key-Tabs/Untitled": "Unbenannt",
+    "key-Tabs/Home, Workspace and projects": "Start, Workspace und Projekte",
+    "key-Tabs/Home": "Start",
+    "key-Tabs/Workspace": "Workspace",
+    "key-Tabs/Workspace (pinned, cannot be closed)": "Workspace (angeheftet, kann nicht geschlossen werden)",
+    "key-Tabs/Connected": "Verbunden",
+    "key-Tabs/Not connected": "Nicht verbunden",
+    "key-Tabs/{{count}} new": "{{count}} neu",
+    "key-Tabs/Unsaved changes": "Nicht gespeicherte Änderungen",
+    "key-Tabs/Close {{name}}": "{{name}} schließen",
+    "key-Tabs/New or open project": "Neues oder bestehendes Projekt öffnen",
+    "key-Tabs/{{name}} is still busy. Switch when it is done.": "{{name}} ist noch beschäftigt. Wechseln Sie, sobald es fertig ist."
 }

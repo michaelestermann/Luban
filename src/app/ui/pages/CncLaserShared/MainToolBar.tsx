@@ -3,7 +3,7 @@ import { message, Tooltip } from 'antd';
 import i18next from 'i18next';
 import { includes } from 'lodash';
 import PropTypes from 'prop-types';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import { HEAD_CNC, HEAD_LASER, PROCESS_MODE_GREYSCALE, PROCESS_MODE_VECTOR } from '../../../constants';
@@ -31,7 +31,7 @@ import LaserSetBackground from '../../widgets/LaserSetBackground';
 import { L20WLaserToolModule, L2WLaserToolModule, L40WLaserToolModule } from '../../../machines/snapmaker-2-toolheads';
 import { Stepper, StepperActions } from './Stepper';
 
-function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setShowMaterialTest, setShowWorkspace,
+function useRenderMainToolBar({ headType, setShowJobType, setShowMaterialTest, onOpenWorkspace,
     onChangeSVGClippingMode,
     // onChangeMaterialTestMode,
     onChangeABPositionMode,
@@ -178,30 +178,8 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
         </Tooltip>
     );
 
+    // 4.17 tabs: Home and Workspace are tabs of the strip, no longer toolbar buttons
     const leftItems = [
-        {
-            title: i18n._('key-CncLaser/MainToolBar-Home'),
-            type: 'button',
-            disabled: isOnABPosition,
-            name: 'MainToolbarHome',
-            action: async () => {
-                await dispatch(editorActions.onRouterWillLeave(headType));
-                setShowHomePage(true);
-            }
-        },
-        {
-            title: i18n._('key-CncLaser/MainToolBar-Workspace'),
-            type: 'button',
-            disabled: isOnABPosition,
-            name: 'MainToolbarWorkspace',
-            action: async () => {
-                await dispatch(editorActions.onRouterWillLeave(headType));
-                setShowWorkspace(true);
-            }
-        },
-        {
-            type: 'separator'
-        },
         {
             title: i18n._('key-CncLaser/MainToolBar-Save'),
             disabled: !unSaved || isOnABPosition,
@@ -655,7 +633,6 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
     // A-B position mode and SVG clipping mode block the workflow steps (as the former
     // Next / Generate / Export buttons did for A-B position mode)
     const stepperBlocked = !!isOnABPosition || isSVGClipping;
-    const onOpenWorkspace = useCallback(() => setShowWorkspace(true), [setShowWorkspace]);
 
     const renderStlModal = () => {
         return (
@@ -693,10 +670,9 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
 }
 useRenderMainToolBar.propTypes = {
     headType: PropTypes.string.isRequired,
-    setShowHomePage: PropTypes.func,
     setShowJobType: PropTypes.func,
     setShowMaterialTest: PropTypes.func,
-    setShowWorkspace: PropTypes.func
+    onOpenWorkspace: PropTypes.func
 };
 
 export default useRenderMainToolBar;
