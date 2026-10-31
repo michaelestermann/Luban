@@ -2541,5 +2541,9 @@
     "key-CncLaser/Geometry-Perimeter": "Perimeter",
     "key-CncLaser/Geometry-Radius": "Radius",
     "key-CncLaser/Geometry-Width": "Width",
-    "key-CncLaser/Geometry-Height": "Height"
+    "key-CncLaser/Geometry-Height": "Height",
+    "key-CncLaser/Measure-Measure": "Measure",
+    "key-CncLaser/Measure-Measure (M)": "Measure (M)",
+    "key-CncLaser/Measure-Click two points · Esc to finish": "Click two points · Esc to finish",
+    "key-CncLaser/Measure-Leave the measure tool (Esc)": "Leave the measure tool (Esc)"
 }

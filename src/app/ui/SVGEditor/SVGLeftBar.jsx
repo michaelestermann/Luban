@@ -8,6 +8,8 @@ import styles from './styles.styl';
 import { library } from './lib/ext-shapes';
 import i18n from '../../lib/i18n';
 import Anchor from '../components/Anchor';
+import RailButton from './rail/RailButton';
+import railStyles from './rail/rail.styl';
 // import { svg } from '../../../server/services/api';
 
 const SVGLeftBar = forwardRef((props, ref) => {
@@ -217,6 +219,19 @@ const SVGLeftBar = forwardRef((props, ref) => {
                             />
                         </div>
                     </div>
+                    <div className={railStyles.separator} />
+                    <RailButton
+                        name="measure"
+                        title={i18n._('key-CncLaser/Measure-Measure (M)')}
+                        on={mode === 'measure' && editable}
+                        disabled={!editable}
+                        onClick={() => actions.setMode(mode === 'measure' ? 'select' : 'measure')}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                            <path d="M3 17L17 3l4 4L7 21z" />
+                            <path d="M7 13l2 2M10 10l2 2M13 7l2 2" />
+                        </svg>
+                    </RailButton>
                 </div>
                 {/* point editing (select + selectEditing): the mode bar above the canvas replaces the old panel */}
                 {

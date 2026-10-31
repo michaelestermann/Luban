@@ -564,6 +564,9 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
             draw.mode = this.mode;
             // this.setMode('panMove');
             this.mode = 'panMove';
+        } else if (this.mode === 'measure') {
+            // the measure tool handles its clicks itself (MeasureOverlay), nothing is selected or moved
+            return;
         } else if (this.svgContentGroup.isElementOperator(mouseTarget)) {
             const grip = event.target;
             const gripType = grip.getAttribute('data-type');
@@ -1401,6 +1404,9 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
     };
 
     public onDblClick = (evt) => {
+        if (this.mode === 'measure') {
+            return;
+        }
         const matrix = this.svgContentGroup.getScreenCTM().inverse();
         const { x, y } = transformPoint({ x: evt.pageX, y: evt.pageY }, matrix);
 

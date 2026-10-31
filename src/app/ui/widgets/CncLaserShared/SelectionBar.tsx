@@ -9,6 +9,7 @@ import i18n from '../../../lib/i18n';
 import { canDecomposeSelection } from '../../../lib/svg-decompose';
 import SvgIcon from '../../components/SvgIcon';
 import PointEditBar from './PointEditBar';
+import MeasureBar from './MeasureBar';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 import styles from './selection-bar.styl';
@@ -63,6 +64,9 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const drawGroup = SVGActions?.svgContentGroup?.drawGroup;
     if (page === PAGE_EDITOR && !modeBlocked && !isOnABPosition && SVGCanvasMode === 'select' && SVGCanvasExt?.elem && drawGroup) {
         return <PointEditBar drawGroup={drawGroup} SVGActions={SVGActions} />;
+    }
+    if (page === PAGE_EDITOR && !modeBlocked && !isOnABPosition && SVGCanvasMode === 'measure') {
+        return <MeasureBar onDone={() => dispatch(editorActions.setCanvasMode(headType, 'select', {}))} />;
     }
     if (page !== PAGE_EDITOR || modeBlocked || isOnABPosition || drawing || selectedModels.length === 0) {
         return null;

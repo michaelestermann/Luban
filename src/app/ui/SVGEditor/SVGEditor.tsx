@@ -11,6 +11,7 @@ import { library } from './lib/ext-shapes';
 import Modal from '../components/Modal/tileModal';
 import SVGShapeLibrary from './SVGShapeLibrary';
 import PointEditOverlay from './path-edit/PointEditOverlay';
+import MeasureOverlay from './measure/MeasureOverlay';
 
 
 export type SVGEditorHandle = {
@@ -263,6 +264,10 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
         return canvas.current ? canvas.current.svgContentGroup.getScreenCTM() : null;
     }, []);
 
+    const getSvgContainer = useCallback(() => {
+        return canvas.current ? canvas.current.svgContainer : null;
+    }, []);
+
     const insertDefaultTextVector = async () => {
         const element = await props.createText('Snapmaker');
         props.onCreateElement(element);
@@ -420,6 +425,15 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             getScreenCTM={getCanvasScreenCTM}
                             isActive={props.isActive}
                             onExit={() => onStopDraw(true)}
+                        />
+                        <MeasureOverlay
+                            headType={props.headType}
+                            mode={props.SVGCanvasMode}
+                            editing={!!props.SVGCanvasExt?.elem}
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
+                            getSvgContainer={getSvgContainer}
+                            setMode={(mode) => leftBarRef.current?.actions.setMode(mode)}
                         />
                     </div>
                     <SVGLeftBar

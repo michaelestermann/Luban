@@ -1,0 +1,50 @@
+// Left tool rail: separator, Measure tool and helper switches (mockup "Concept · where controls live")
+.separator {
+    width: 28px;
+    height: 1px;
+    margin: 4px auto;
+    background: #e3e6ec;
+}
+
+.rail-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #545659;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #eeeff0;
+    }
+
+    &.on,
+    &.on:hover:not(:disabled) {
+        background: #b9ddff;
+        color: #1890ff;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: .4;
+    }
+}
+
+// switch with options: small triangle in the lower right corner
+.corner {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-bottom: 5px solid currentColor;
+    opacity: .6;
+}
