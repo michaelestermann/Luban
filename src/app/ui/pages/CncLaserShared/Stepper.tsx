@@ -141,8 +141,8 @@ interface StepperActionsProps {
     headType: HeadType;
     blocked?: boolean;
     renderImmediately?: boolean;
-    // opens the workspace popup after the G-code is loaded
-    onOpenWorkspace: () => void;
+    // shows the Workspace tab (and the toast) after `count` files were loaded
+    onOpenWorkspace: (count?: number) => void;
 }
 
 /**
@@ -154,9 +154,9 @@ export const StepperActions: React.FC<StepperActionsProps> = ({ headType, blocke
     const { step, canEnter, canLoadToWorkspace, fileCount } = useStepAvailability(headType, blocked);
 
     const onLoadToWorkspace = useCallback(async () => {
-        const loaded = await dispatch(loadGcodeToWorkspace(headType, renderImmediately));
-        if (loaded) {
-            onOpenWorkspace();
+        const count: number = await dispatch(loadGcodeToWorkspace(headType, renderImmediately)) as unknown as number;
+        if (count) {
+            onOpenWorkspace(count);
             window.scrollTo(0, 0);
         }
     }, [dispatch, headType, renderImmediately, onOpenWorkspace]);

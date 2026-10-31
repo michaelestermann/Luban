@@ -18,11 +18,49 @@ export const mergeGcodeFileList = <T extends GcodeFileEntry>(existing: T[], file
  * Loading the files of a multi-tool job: only file 1 is previewed and becomes the active
  * file; the others only go into the list (last first, so file 1 ends on top). Previewing
  * all of them in parallel would leave whichever finished last as the active, runnable file.
+ *
+ * While a job runs (`jobRunning`), every file only goes into the list and none becomes
+ * active: the running job is never replaced.
  */
-export const planWorkspaceLoad = <T>(files: T[]): { listOnly: T[], active: T } => ({
-    listOnly: files.slice(1).reverse(),
-    active: files[0]
-});
+export const planWorkspaceLoad = <T>(files: T[], jobRunning = false): { listOnly: T[], active: T | null } => {
+    if (jobRunning) {
+        return { listOnly: files.slice().reverse(), active: null };
+    }
+    return {
+        listOnly: files.slice(1).reverse(),
+        active: files[0]
+    };
+};
+
+// WorkflowStatus values of @snapmaker/luban-platform while a job is on the machine
+const JOB_RUNNING_STATUSES = ['starting', 'running', 'pausing', 'paused', 'stopping'];
+
+/** True while the machine runs (or pauses, starts, stops) a job. */
+export const isJobRunning = (workflowStatus: string | null | undefined): boolean => {
+    return !!workflowStatus && JOB_RUNNING_STATUSES.includes(workflowStatus);
+};
+
+export type JobSource = { sourceDocId: string; sourceName: string };
+
+/** Copies of the files with the project (tab) they were generated in. */
+export const tagJobSource = <T extends object>(files: T[], source: JobSource): Array<T & JobSource> => {
+    return files.map(file => ({ ...file, sourceDocId: source.sourceDocId, sourceName: source.sourceName }));
+};
+
+/**
+ * Drop the files an earlier load of the same project put into the workspace list, except
+ * `keepUploadNames` (the files of the current generation, or the file of a running job).
+ */
+export const removeSourceFiles = <T extends { uploadName?: string; sourceDocId?: string }>(
+    files: T[],
+    sourceDocId: string | null | undefined,
+    keepUploadNames: string[] = []
+): T[] => {
+    if (!sourceDocId) {
+        return files;
+    }
+    return files.filter(file => file.sourceDocId !== sourceDocId || keepUploadNames.includes(file.uploadName));
+};
 
 /** Drop files of an earlier generation of the same job, so no stale file can be run. */
 export const removeJobFiles = <T extends { jobName?: string }>(files: T[], jobName: string | undefined): T[] => {

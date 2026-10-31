@@ -14,7 +14,7 @@ import styles from './gcode-step.styl';
 interface JobPanelProps {
     headType: 'laser' | 'cnc';
     // opens the workspace popup after the G-code is loaded (Export > Load G-code to Workspace)
-    onOpenWorkspace: () => void;
+    onOpenWorkspace: (count?: number) => void;
 }
 
 /** Connection state of the machine (workspace connection, else the selected machine). */

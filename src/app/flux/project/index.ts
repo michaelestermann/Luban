@@ -514,15 +514,23 @@ export const actions = {
         }).catch(log.error);
     },
 
-    exportFile: (targetFile, renderGcodeFileName = null) => async (dispatch) => {
+    /** Saves a file of the Tmp folder (G-code) where the user picks. Resolves false when cancelled or failed. */
+    exportFile: (targetFile, renderGcodeFileName = null) => async (dispatch): Promise<boolean> => {
         const tmpFile = `/Tmp/${targetFile}`;
-        await UniApi.File.exportAs(targetFile, tmpFile, renderGcodeFileName, (type, filePath = '') => {
-            dispatch(appGlobalActions.updateSavedModal({
-                showSavedModal: true,
-                savedModalType: type,
-                savedModalFilePath: filePath
-            }));
-        });
+        try {
+            await UniApi.File.exportAs(targetFile, tmpFile, renderGcodeFileName, (type, filePath = '') => {
+                dispatch(appGlobalActions.updateSavedModal({
+                    showSavedModal: true,
+                    savedModalType: type,
+                    savedModalFilePath: filePath
+                }));
+            });
+            return true;
+        } catch (e) {
+            // the save dialog was cancelled (exportAs throws 'export file canceled') or the copy failed
+            log.info(`export of ${targetFile} not done: ${e?.message || e}`);
+            return false;
+        }
     },
 
     exportConfigFile: (targetFile, subCategory, exportName) => async (dispatch) => {

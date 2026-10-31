@@ -5,21 +5,20 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import { DISPLAYED_TYPE_TOOLPATH } from '../../../constants';
 import { RootState } from '../../../flux/index.def';
-import { actions as projectActions } from '../../../flux/project';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
 import { Button } from '../../components/Buttons';
 import Dropdown from '../../components/Dropdown';
 import Menu from '../../components/Menu';
 import SvgIcon from '../../components/SvgIcon';
-import { loadGcodeToWorkspace } from './load-gcode-to-workspace';
+import { exportGcodeFileAndLoad, loadGcodeToWorkspace } from './load-gcode-to-workspace';
 import { useGcodeOutputAvailability } from './use-gcode-output';
 
 interface ExportDropdownProps {
     headType: 'laser' | 'cnc';
     renderImmediately?: boolean;
-    // opens the workspace popup after the G-code is loaded
-    onOpenWorkspace: () => void;
+    // shows the Workspace tab (and the toast) after `count` files were loaded
+    onOpenWorkspace: (count?: number) => void;
     className?: string;
 }
 
@@ -36,22 +35,27 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ headType, renderImmedia
     const { canUseGcode, isOnABPosition } = useGcodeOutputAvailability(headType);
 
     const onLoadToWorkspace = useCallback(async () => {
-        const loaded = await dispatch(loadGcodeToWorkspace(headType, renderImmediately));
-        if (!loaded) {
+        const count: number = await dispatch(loadGcodeToWorkspace(headType, renderImmediately)) as unknown as number;
+        if (!count) {
             return;
         }
         // open workspace
-        onOpenWorkspace();
+        onOpenWorkspace(count);
         window.scrollTo(0, 0);
     }, [dispatch, headType, renderImmediately, onOpenWorkspace]);
 
-    const onExport = useCallback(() => {
+    const onExport = useCallback(async () => {
         if (!gcodeFile) {
             return;
         }
         logGcodeExport(headType, 'local', materials?.isRotate);
-        dispatch(projectActions.exportFile(gcodeFile.uploadName, gcodeFile.renderGcodeFileName));
-    }, [dispatch, headType, gcodeFile, materials?.isRotate]);
+        // 4.17: the saved file is also loaded into the Workspace, which is shown
+        const count: number = await dispatch(exportGcodeFileAndLoad(headType, gcodeFile, renderImmediately)) as unknown as number;
+        if (count > 0) {
+            onOpenWorkspace(count);
+            window.scrollTo(0, 0);
+        }
+    }, [dispatch, headType, gcodeFile, materials?.isRotate, renderImmediately, onOpenWorkspace]);
 
     const menu = (
         <Menu>

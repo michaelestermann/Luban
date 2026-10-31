@@ -8,14 +8,13 @@ import { HEAD_LASER, PROCESS_MODE_GREYSCALE, PROCESS_MODE_VECTOR } from '../../.
 import { actions as editorActions } from '../../../flux/editor';
 import { RootState } from '../../../flux/index.def';
 import { actions as laserActions } from '../../../flux/laser';
-import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
 import { machineStore } from '../../../store/local-storage';
 import Dropzone from '../../components/Dropzone';
 import ProjectLayout from '../../layouts/ProjectLayout';
 import { logPageView, renderModal, useUnsavedTitle } from '../../utils';
-import { useActivateTab } from '../../layouts/tab-shell/TabShell';
+import { useOpenWorkspace } from '../../layouts/tab-shell/TabShell';
 import Thumbnail from '../../widgets/CncLaserShared/Thumbnail';
 import StackedModel from '../../widgets/LaserStackedModel';
 import LaserVisualizer from '../../widgets/LaserVisualizer';
@@ -65,8 +64,8 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
 
     // subview
     // 4.17 tabs: Workspace is a tab of the strip
-    const activateTab = useActivateTab();
-    const openWorkspace = useCallback(() => { activateTab(WORKSPACE_TAB); }, [activateTab]);
+    // loaded G-code (count) is shown in the Workspace tab with a toast
+    const openWorkspace = useOpenWorkspace(pageHeadType);
     const [showJobType, setShowJobType] = useState(true);
     const [showMaterialTest, setShowMaterialTest] = useState(false);
 

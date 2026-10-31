@@ -3,7 +3,6 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import { HEAD_CNC } from '../../../constants';
 import { RootState } from '../../../flux/index.def';
-import { actions as projectActions } from '../../../flux/project';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
 import log from '../../../lib/log';
@@ -11,7 +10,7 @@ import { formatDuration, getVisibleToolPathNames } from '../../../toolpaths/gcod
 import { operationColor } from '../../../toolpaths/operations-panel';
 import { toast } from '../../components/Toast';
 import { makeSceneToast } from '../../views/toasts/SceneToast';
-import { loadGcodeFileToWorkspace } from './load-gcode-to-workspace';
+import { exportGcodeFileAndLoad, loadGcodeFileToWorkspace } from './load-gcode-to-workspace';
 import { useGcodeOutputAvailability, useRenderImmediately } from './use-gcode-output';
 import styles from './gcode-step.styl';
 
@@ -28,7 +27,7 @@ interface GcodeFile {
 interface GcodeFilesPanelProps {
     headType: 'laser' | 'cnc';
     // opens the workspace popup after a file is loaded
-    onOpenWorkspace: () => void;
+    onOpenWorkspace: (count?: number) => void;
 }
 
 const ChangeBitIcon: React.FC = () => (
@@ -60,9 +59,9 @@ const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorks
 
     const onLoad = useCallback(async (file: GcodeFile) => {
         try {
-            const loaded = await dispatch(loadGcodeFileToWorkspace(headType, file.uploadName, renderImmediately));
-            if (loaded) {
-                onOpenWorkspace();
+            const count: number = await dispatch(loadGcodeFileToWorkspace(headType, file.uploadName, renderImmediately)) as unknown as number;
+            if (count) {
+                onOpenWorkspace(count);
                 window.scrollTo(0, 0);
             }
         } catch (e) {
@@ -71,10 +70,15 @@ const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorks
         }
     }, [dispatch, headType, renderImmediately, onOpenWorkspace]);
 
-    const onExport = useCallback((file: GcodeFile) => {
+    const onExport = useCallback(async (file: GcodeFile) => {
         logGcodeExport(headType, 'local', materials?.isRotate);
-        dispatch(projectActions.exportFile(file.uploadName, file.renderGcodeFileName));
-    }, [dispatch, headType, materials?.isRotate]);
+        // 4.17: the saved file is also loaded into the Workspace, which is shown
+        const count: number = await dispatch(exportGcodeFileAndLoad(headType, file, renderImmediately)) as unknown as number;
+        if (count > 0) {
+            onOpenWorkspace(count);
+            window.scrollTo(0, 0);
+        }
+    }, [dispatch, headType, materials?.isRotate, renderImmediately, onOpenWorkspace]);
 
     if (files.length === 0) {
         return null;
@@ -123,7 +127,7 @@ const GcodeFilesPanel: React.FC<GcodeFilesPanelProps> = ({ headType, onOpenWorks
                                     className={styles['small-button']}
                                     disabled={disabled}
                                     title={i18n._('key-CncLaser/G-codeAction-Export G-code to File')}
-                                    onClick={() => onExport(file)}
+                                    onClick={() => { onExport(file); }}
                                 >
                                     {i18n._('key-CncLaser/G-codeAction-Export')}
                                 </button>

@@ -40,7 +40,7 @@ interface ProjectRightViewProps {
     collapsed?: boolean;
     onToggleCollapsed?: () => void;
     // opens the workspace popup (step 3: Export > Load G-code to Workspace)
-    onOpenWorkspace?: () => void;
+    onOpenWorkspace?: (count?: number) => void;
 }
 
 /**

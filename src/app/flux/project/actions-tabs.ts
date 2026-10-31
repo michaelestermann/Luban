@@ -1167,6 +1167,42 @@ const restoreSession = (history: HistoryLike) => async (dispatch): Promise<void>
     return job;
 };
 
+/**
+ * After "Load G-code to Workspace" or Export: the Workspace tab is shown with a toast naming what was
+ * loaded and a "Back to {{name}}" button. The "{{count}} new" badge of the Workspace tab counts the files
+ * until the Workspace is shown (when the switch does not happen, the badge stays).
+ */
+const showInWorkspace = (sourceDocId: string | null | undefined, count: number, history: HistoryLike) => async (dispatch, getState): Promise<boolean> => {
+    const tabs = getTabsState(getState());
+    if (count > 0 && tabs.activeTabId !== WORKSPACE_TAB) {
+        dispatch(setTabs((s) => ({ ...s, workspaceNewCount: s.workspaceNewCount + count })));
+    }
+    const shown: boolean = await dispatch(activateTab(WORKSPACE_TAB, history));
+    const meta = sourceDocId ? getTabsState(getState()).documents[sourceDocId] : undefined;
+    if (count > 0 && meta) {
+        const name = displayName(meta);
+        const text = count === 1
+            ? i18n._('key-Tabs/Loaded into Workspace · 1 file from {{name}}', { name, interpolation: { escapeValue: false } })
+            : i18n._('key-Tabs/Loaded into Workspace · {{count}} files from {{name}}', { count, name, interpolation: { escapeValue: false } });
+        const content = makeSceneToast('success', text, {
+            label: i18n._('key-Tabs/Back to {{name}}', { name, interpolation: { escapeValue: false } }),
+            onClick: () => {
+                if (getTabsState(getState()).documents[sourceDocId]) {
+                    dispatch(activateTab(sourceDocId, history));
+                }
+            },
+        });
+        // loading the same project again updates its toast
+        const toastId = `workspace-load-${sourceDocId}`;
+        if (toast.isActive(toastId)) {
+            toast.update(toastId, { render: content });
+        } else {
+            toast(content, { toastId });
+        }
+    }
+    return shown;
+};
+
 export const tabsActions = {
     setTabs,
     registerDocument,
@@ -1187,6 +1223,7 @@ export const tabsActions = {
     adoptCurrentMachine,
     switchMachineToDocument,
     prepareMachineReload,
+    showInWorkspace,
 };
 
 export default tabsActions;

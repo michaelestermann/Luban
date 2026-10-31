@@ -1,5 +1,5 @@
 import { message } from 'antd';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Trans } from 'react-i18next';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useHistory, withRouter } from 'react-router-dom';
@@ -9,7 +9,6 @@ import { actions as cncActions } from '../../../flux/cnc';
 import { actions as editorActions } from '../../../flux/editor';
 import { actions as machineActions } from '../../../flux/machine';
 import { actions as projectActions } from '../../../flux/project';
-import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
 import { getUploadModeByFilename } from '../../../lib/units';
@@ -30,7 +29,7 @@ import Steps from '../../components/Steps';
 import SvgIcon from '../../components/SvgIcon';
 import ProjectLayout from '../../layouts/ProjectLayout';
 import { logPageView, renderModal, useUnsavedTitle } from '../../utils';
-import { useActivateTab } from '../../layouts/tab-shell/TabShell';
+import { useOpenWorkspace } from '../../layouts/tab-shell/TabShell';
 import CNCVisualizer from '../../widgets/CNCVisualizer';
 import Thumbnail from '../../widgets/CncLaserShared/Thumbnail';
 import useRenderMainToolBar from '../CncLaserShared/MainToolBar';
@@ -127,8 +126,8 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
     const widgets = useSelector(state => state?.widget[pageHeadType]?.default?.widgets, shallowEqual);
     const [isDraggingWidget, setIsDraggingWidget] = useState(false);
     // 4.17 tabs: Workspace is a tab of the strip
-    const activateTab = useActivateTab();
-    const openWorkspace = useCallback(() => { activateTab(WORKSPACE_TAB); }, [activateTab]);
+    // loaded G-code (count) is shown in the Workspace tab with a toast
+    const openWorkspace = useOpenWorkspace(pageHeadType);
     const [showJobType, setShowJobType] = useState(true);
     const [enabledIntro, setEnabledIntro] = useState(null);
     const initIndex = 0;

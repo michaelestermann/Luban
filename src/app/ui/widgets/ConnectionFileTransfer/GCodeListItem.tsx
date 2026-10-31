@@ -8,6 +8,7 @@ import { message } from 'antd';
 import { pathWithRandomSuffix } from '../../../../shared/lib/random-utils';
 import { actions as workspaceActions } from '../../../flux/workspace';
 import gcodeActions from '../../../flux/workspace/actions-gcode';
+import i18n from '../../../lib/i18n';
 import { normalizeNameDisplay } from '../../../lib/normalize-range';
 import SvgIcon from '../../components/SvgIcon';
 
@@ -17,7 +18,7 @@ import styles from './styles.styl';
 const suffixLength = 7;
 
 declare interface GcodePreviewItemProps {
-    gcodeFile: object;
+    gcodeFile: { [key: string]: any };
     index: number;
     selected: boolean;
     onSelectFile: (_selectFileName: string, event: MouseEvent, needToUnselect?: boolean) => void;
@@ -173,9 +174,15 @@ const GcodePreviewItem: React.FC<GcodePreviewItemProps> = (props) => {
                         ref={changeNameInput}
                     />
                 </div>
-                <div className={styles['gcode-file-text-info']}>
+                <div className={styles['gcode-file-text-info']} title={gcodeFile.sourceName ? `${gcodeFile.sourceName} · ${date}` : undefined}>
+                    {/* 4.17 tabs: the project the file was loaded from */}
+                    {gcodeFile.sourceName && (
+                        <span className={styles['gcode-file-source']} data-gcode-source={gcodeFile.sourceDocId}>
+                            {i18n._('key-Tabs/from {{name}}', { name: gcodeFile.sourceName, interpolation: { escapeValue: false } })}
+                        </span>
+                    )}
                     <span>{size}</span>
-                    <span>{date}</span>
+                    {!gcodeFile.sourceName && <span>{date}</span>}
                 </div>
             </div>
             <SvgIcon

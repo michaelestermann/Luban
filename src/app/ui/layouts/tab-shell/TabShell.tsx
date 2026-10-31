@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { shallowEqual, useDispatch, useSelector } from 'react-redux';
+import { shallowEqual, useDispatch, useSelector, useStore } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 
 import { tabsActions } from '../../../flux/project/actions-tabs';
@@ -52,6 +52,20 @@ export function useActivateTab(): (tabId: string) => Promise<boolean> {
         async (tabId: string) => dispatch(tabsActions.activateTab(tabId, history)) as unknown as Promise<boolean>,
         [dispatch, history]
     );
+}
+
+/**
+ * Returns a callback that shows the Workspace tab. With a file count (G-code of `headType`'s live project
+ * was loaded into the Workspace) it also shows the toast "Loaded into Workspace · … from {{name}}".
+ */
+export function useOpenWorkspace(headType: string): (count?: number) => Promise<boolean> {
+    const dispatch = useDispatch();
+    const history = useHistory();
+    const store = useStore();
+    return useCallback(async (count?: number) => {
+        const sourceDocId = (store.getState() as { project: { tabs: TabsState } }).project.tabs.activeDocByHead[headType];
+        return dispatch(tabsActions.showInWorkspace(sourceDocId, typeof count === 'number' ? count : 0, history)) as unknown as Promise<boolean>;
+    }, [dispatch, history, store, headType]);
 }
 
 type ProjectHeadState = { unSaved?: boolean; openedFile?: { name: string; path: string } | null };

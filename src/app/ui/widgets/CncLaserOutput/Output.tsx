@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import {
@@ -9,17 +9,16 @@ import {
 } from '../../../constants';
 import { actions as editorActions } from '../../../flux/editor';
 import { RootState } from '../../../flux/index.def';
-import { actions as projectActions } from '../../../flux/project';
-import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
 import modal from '../../../lib/modal';
 import UniApi from '../../../lib/uni-api';
 import { Button } from '../../components/Buttons';
 import { getEditorStep } from '../../pages/CncLaserShared/editor-step';
-import { useActivateTab } from '../../layouts/tab-shell/TabShell';
+import { useOpenWorkspace } from '../../layouts/tab-shell/TabShell';
 import Thumbnail from '../CncLaserShared/Thumbnail';
 import ExportDropdown from './ExportDropdown';
+import { exportGcodeFileAndLoad } from './load-gcode-to-workspace';
 import styles from './styles.styl';
 
 export type LoadGcodeOptions = {
@@ -54,6 +53,8 @@ const Output: React.FC<OutputViewProps> = (props) => {
 
     const dispatch = useDispatch();
     const thumbnail = useRef();
+    // 4.17 tabs: loaded G-code (count) is shown in the Workspace tab with a toast
+    const onOpenWorkspace = useOpenWorkspace(headType);
 
     const actions = {
         switchToEditPage: () => {
@@ -67,12 +68,18 @@ const Output: React.FC<OutputViewProps> = (props) => {
             dispatch(editorActions.setThumbnail(headType, thumbnail?.current?.getThumbnail(series)));
         },
 
-        onExport: () => {
-            if (gcodeFile === null) {
+        onExport: async () => {
+            if (!gcodeFile) {
                 return;
             }
             logGcodeExport(headType, 'local', materials.isRotate);
-            dispatch(projectActions.exportFile(gcodeFile.uploadName, gcodeFile.renderGcodeFileName));
+            // 4.17: the exported file is also loaded into the Workspace, which is shown
+            const renderNow = loadGcodeOptions?.renderImmediately || false;
+            const count: number = await dispatch(exportGcodeFileAndLoad(headType, gcodeFile, renderNow)) as unknown as number;
+            if (count > 0) {
+                onOpenWorkspace(count);
+                window.scrollTo(0, 0);
+            }
         },
         onProcess: () => {
             dispatch(editorActions.createToolPath(headType));
@@ -97,10 +104,6 @@ const Output: React.FC<OutputViewProps> = (props) => {
             setShowExportOptions(false);
         }
     };
-
-    // 4.17 tabs: the loaded G-code is shown in the Workspace tab
-    const activateTab = useActivateTab();
-    const onOpenWorkspace = useCallback(() => { activateTab(WORKSPACE_TAB); }, [activateTab]);
 
     useEffect(() => {
         UniApi.Event.on('appbar-menu:cnc-laser.export-gcode', actions.onExport);

@@ -2736,5 +2736,9 @@
     "key-Tabs/Undo": "Undo",
     "key-Tabs/Dismiss": "Dismiss",
     "key-Tabs/{{name}} was made for {{machine}}. Current machine: {{current}}.": "{{name}} was made for {{machine}}. Current machine: {{current}}.",
-    "key-Tabs/Switch machine to {{machine}}": "Switch machine to {{machine}}"
+    "key-Tabs/Switch machine to {{machine}}": "Switch machine to {{machine}}",
+    "key-Tabs/Loaded into Workspace · 1 file from {{name}}": "Loaded into Workspace · 1 file from {{name}}",
+    "key-Tabs/Loaded into Workspace · {{count}} files from {{name}}": "Loaded into Workspace · {{count}} files from {{name}}",
+    "key-Tabs/Back to {{name}}": "Back to {{name}}",
+    "key-Tabs/from {{name}}": "from {{name}}"
 }

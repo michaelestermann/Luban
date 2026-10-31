@@ -185,6 +185,9 @@ const ConfigurationView: React.FC<{}> = () => {
         return qualityDefinitionModels.find(p => p.definitionId === selectedPresetId) || null;
     }, [selectedPresetId, qualityDefinitionModels]);
 
+    // 4.17 tabs: the page is mounted again on every tab switch; the sliced G-code of the document stays
+    // unless the preset really changes (the first preset seen by this mount is not a change)
+    const shownPresetId = useRef<string | null>(selectedPresetModel?.definitionId ?? null);
     useEffect(() => {
         if (selectedPresetModel) {
             const defaultSettings = dispatch(printingActions.getDefaultDefinition(selectedPresetModel.definitionId));
@@ -193,7 +196,10 @@ const ConfigurationView: React.FC<{}> = () => {
             setSelectedPresetCategory(selectedPresetModel.category);
 
             // refresh the scene on preset model changed
-            displayModel();
+            if (shownPresetId.current !== null && shownPresetId.current !== selectedPresetModel.definitionId) {
+                displayModel();
+            }
+            shownPresetId.current = selectedPresetModel.definitionId;
         }
     }, [selectedPresetModel, dispatch, displayModel]);
 

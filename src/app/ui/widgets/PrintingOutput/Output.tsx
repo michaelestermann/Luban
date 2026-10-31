@@ -8,8 +8,6 @@ import { HEAD_PRINTING } from '../../../constants';
 import type { RootState } from '../../../flux/index.def';
 import { actions as printingActions } from '../../../flux/printing';
 import { actions as projectActions } from '../../../flux/project';
-import { WORKSPACE_TAB } from '../../../flux/project/tabs-model';
-import gcodeActions from '../../../flux/workspace/actions-gcode';
 import { logGcodeExport } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
 import { STEP_STAGE } from '../../../lib/manager/ProgressManager';
@@ -20,7 +18,8 @@ import Dropdown from '../../components/Dropdown';
 import Menu from '../../components/Menu';
 import SvgIcon from '../../components/SvgIcon';
 import { toast } from '../../components/Toast';
-import { useActivateTab } from '../../layouts/tab-shell/TabShell';
+import { useOpenWorkspace } from '../../layouts/tab-shell/TabShell';
+import { sendJobToWorkspace } from '../CncLaserOutput/load-gcode-to-workspace';
 import { SceneToast } from '../../views/toasts/SceneToast';
 import Thumbnail from './Thumbnail';
 
@@ -41,8 +40,21 @@ const Output: React.FC = () => {
 
     const dispatch = useDispatch();
     const thumbnail = useRef(null);
-    // 4.17 tabs: the loaded G-code is shown in the Workspace tab
-    const activateTab = useActivateTab();
+    // 4.17 tabs: the loaded G-code is shown in the Workspace tab (toast with "Back to …")
+    const openWorkspace = useOpenWorkspace(HEAD_PRINTING);
+    const loadToWorkspace = useCallback(async () => {
+        if (!gcodeFile) {
+            return;
+        }
+        if (!gcodeFile.thumbnail) {
+            gcodeFile.thumbnail = thumbnail.current?.getDataURL() || defaultThumbnail;
+        }
+        const count: number = await dispatch(sendJobToWorkspace(HEAD_PRINTING, [gcodeFile])) as unknown as number;
+        if (count > 0) {
+            openWorkspace(count);
+            window.scrollTo(0, 0);
+        }
+    }, [dispatch, gcodeFile, defaultThumbnail, openWorkspace]);
     const actions = {
         onToggleDisplayGcode: () => {
             if (displayedType === 'gcode') {
@@ -61,10 +73,8 @@ const Output: React.FC = () => {
                 return;
             }
             gcodeFile.thumbnail = thumbnail.current.getDataURL() || defaultThumbnail;
-            dispatch(gcodeActions.renderGcodeFile(gcodeFile));
-            activateTab(WORKSPACE_TAB);
+            loadToWorkspace();
             logGcodeExport(HEAD_PRINTING, 'workspace');
-            window.scrollTo(0, 0);
         },
 
     };
@@ -74,7 +84,7 @@ const Output: React.FC = () => {
         dispatch(printingActions.generateGrayModeObject());
     }, [dispatch, series]);
 
-    const onClickExportGcode = useCallback(() => {
+    const onClickExportGcode = useCallback(async () => {
         if (isGcodeOverstepped) {
             modal({
                 title: 'Warning',
@@ -83,13 +93,16 @@ const Output: React.FC = () => {
             return;
         }
 
-        // export
-        const filename = path.basename(gcodeFile?.name);
-        dispatch(projectActions.exportFile(filename, gcodeFile?.renderGcodeFileName));
-
         // log
         logGcodeExport(HEAD_PRINTING, 'local');
-    }, [dispatch, isGcodeOverstepped, gcodeFile]);
+
+        // export; 4.17: the saved file is also loaded into the Workspace, which is shown
+        const filename = path.basename(gcodeFile?.name);
+        const saved: boolean = await dispatch(projectActions.exportFile(filename, gcodeFile?.renderGcodeFileName)) as unknown as boolean;
+        if (saved) {
+            await loadToWorkspace();
+        }
+    }, [dispatch, isGcodeOverstepped, gcodeFile, loadToWorkspace]);
 
     useEffect(() => {
         UniApi.Event.on('appbar-menu:printing.export-gcode', onClickExportGcode);

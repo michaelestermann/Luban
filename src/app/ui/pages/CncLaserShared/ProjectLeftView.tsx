@@ -18,7 +18,7 @@ interface ProjectLeftViewProps {
     // laser SVG clipping or A-B position mode (page state): no membership edits
     modeBlocked?: boolean;
     // opens the workspace popup (step 3: "Load to workspace" on a G-code file)
-    onOpenWorkspace?: () => void;
+    onOpenWorkspace?: (count?: number) => void;
 }
 
 const ObjectsIcon: React.FC = () => (

@@ -466,7 +466,7 @@ export const actions = {
         );
     },
 
-    initSize: () => async (dispatch, getState) => {
+    initSize: (keepPresetIds = false) => async (dispatch, getState) => {
         // also used in actions.saveAndClose of project/index.js
         // state
         const { modelGroup, gcodeLineGroup } = getState().printing;
@@ -492,8 +492,9 @@ export const actions = {
         const configPath = getMachineToolHeadConfigPath(activeMachine, toolHead.printingToolhead);
         await definitionManager.init(CONFIG_HEADTYPE, configPath);
 
-        // Restore saved preset ids for active machine
-        const savedPresetIds = getSavedMachinePresetIds(series);
+        // Restore saved preset ids for active machine (not when the page of an open document is mounted
+        // again: the document keeps its presets, a switch to the machine's would discard its sliced G-code)
+        const savedPresetIds = keepPresetIds ? null : getSavedMachinePresetIds(series);
         if (savedPresetIds) {
             let qualityPresetIdLeft = '';
             let qualityPresetIdRight = '';
@@ -1118,7 +1119,7 @@ export const actions = {
      * Applies the print settings of a document (presets, extruder assignment) to the slice: used when a
      * project is recovered and when the page of an open document is mounted again (4.17 tabs).
      */
-    applyDocumentSettings: (settings) => (dispatch) => {
+    applyDocumentSettings: (settings, remount = false) => (dispatch, getState) => {
         const restState = { ...settings };
         // deal with old project file
         if (restState.defaultQualityId) {
@@ -1140,11 +1141,16 @@ export const actions = {
             ...restState
         }));
 
-        const { helpersExtruderConfig } = restState;
-        dispatch(actions.updateHelpersExtruder(helpersExtruderConfig));
-
-        const { supportExtruderConfig } = restState;
-        dispatch(actions.updateSupportExtruderConfig(supportExtruderConfig));
+        const { helpersExtruderConfig, supportExtruderConfig } = restState;
+        if (remount) {
+            // the page of the document is mounted again: its models and sliced G-code stay as they are
+            const { modelGroup } = getState().printing;
+            helpersExtruderConfig && modelGroup.setHelpersExtruderConfig(helpersExtruderConfig);
+            supportExtruderConfig && modelGroup.setSupportExtruderConfig(supportExtruderConfig);
+        } else {
+            dispatch(actions.updateHelpersExtruder(helpersExtruderConfig));
+            dispatch(actions.updateSupportExtruderConfig(supportExtruderConfig));
+        }
 
         const { defaultMaterialId, defaultMaterialIdRight } = restState;
         dispatch(actions.updateSavedPresetIds(PRINTING_MANAGER_TYPE_MATERIAL, defaultMaterialId, LEFT_EXTRUDER));
@@ -1165,10 +1171,10 @@ export const actions = {
             supportExtruderConfig: before.supportExtruderConfig,
         };
 
-        await dispatch(actions.initPrintConfig());
+        await dispatch(actions.initPrintConfig(remount));
 
         if (remount && getState().printing.modelGroup === before.modelGroup) {
-            dispatch(actions.applyDocumentSettings(documentSettings));
+            dispatch(actions.applyDocumentSettings(documentSettings, true));
         }
         initializedPrintingGroups.add(before.modelGroup);
 
@@ -1184,7 +1190,7 @@ export const actions = {
         dispatch(actions.applyProfileToAllModels());
     },
 
-    initPrintConfig: () => {
+    initPrintConfig: (keepPresetIds = false) => {
         return async (dispatch) => {
             // Ensure only one action is initializing print config
             if (initPromise) {
@@ -1192,7 +1198,7 @@ export const actions = {
             }
 
             // Start init
-            initPromise = dispatch(actions.initSize());
+            initPromise = dispatch(actions.initSize(keepPresetIds));
             initPromise
                 .then(() => {
                     initPromise = null;
