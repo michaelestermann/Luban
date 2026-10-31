@@ -111,3 +111,15 @@ test('anchorReference / referenceAnchor map the picker handles to the references
     t.equal(referenceAnchor('front-center'), null, 'not an object reference');
     t.end();
 });
+
+test('objectReferenceBox: a mirrored object (negative scale gives min > max) still gives its box', (t) => {
+    const origin = { type: OBJECT, reference: 'top-right', referenceMetadata: { modelIDs: ['a'] } };
+    // SvgModel.computeBoundingBox of an object flipped horizontally and vertically
+    const flipped = box(30, 40, 10, 20);
+    const result = objectReferenceBox(origin, () => flipped, () => []);
+    t.deepEqual(result, box(10, 20, 30, 40), 'normalized box');
+    t.deepEqual(referencePoint(result, 'top-right'), { x: 30, y: 40 });
+    t.deepEqual(unionBox([box(50, 0, 40, 10), box(0, 0, 10, 10)]), box(0, 0, 50, 10), 'union with a mirrored box');
+    t.equal(unionBox([box(NaN, 0, 1, 1)]), null, 'invalid boxes still count as none');
+    t.end();
+});

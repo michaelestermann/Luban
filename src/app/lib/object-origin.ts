@@ -32,6 +32,13 @@ function isValidBox(box: BoxLike | null | undefined): boolean {
         && box.min.x <= box.max.x && box.min.y <= box.max.y;
 }
 
+function normalizedBox(box: BoxLike): BoxLike {
+    return {
+        min: { x: Math.min(box.min.x, box.max.x), y: Math.min(box.min.y, box.max.y) },
+        max: { x: Math.max(box.min.x, box.max.x), y: Math.max(box.min.y, box.max.y) },
+    };
+}
+
 export function isObjectReference(reference: string): boolean {
     return Object.prototype.hasOwnProperty.call(FRACTIONS, reference);
 }
@@ -50,7 +57,8 @@ export function referencePoint(box: BoxLike | null, reference: string): Point | 
 
 /** Box around all (non-empty) boxes, null when there is none. */
 export function unionBox(boxes: (BoxLike | null)[]): BoxLike | null {
-    const valid = boxes.filter(isValidBox);
+    // a mirrored object (negative scale) has min > max in its SvgModel.boundingBox
+    const valid = boxes.filter(Boolean).map(normalizedBox).filter(isValidBox);
     if (!valid.length) {
         return null;
     }
