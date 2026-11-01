@@ -49,3 +49,16 @@ export const runWorkerTask = async <T>(observable: Subscribable<T>, { onMessage,
         });
     });
 };
+
+/**
+ * How long a pool worker may take to load and start (ms). The library default is 10 s, but the
+ * worker script is large and can take longer to load while the app is busy; a worker that
+ * misses it never starts, and every job given to it fails.
+ */
+export const WORKER_START_TIMEOUT = 120000;
+
+/** Whether a pool job failed because its worker never started (the pool must be replaced). */
+export const isWorkerStartFailure = (err: unknown): boolean => {
+    const message = err instanceof Error ? err.message : String(err ?? '');
+    return /init message|before initialization/i.test(message);
+};
