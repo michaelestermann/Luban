@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { EDITOR_HEAD_TYPES, EditorHeadType, isEditorHeadType } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
+import { pushModal } from '../../../lib/modal-keyboard';
 import { QuitAnswer, QuitDocument } from '../../../lib/tab-dialogs';
 import { HeadIcon } from './TabStrip';
 import styles from './tab-shell.styl';
@@ -33,18 +34,18 @@ const QuitDialog: React.FC<QuitDialogProps> = ({ docs, onAnswer }) => {
     const [checked, setChecked] = useState<Record<string, boolean>>(() => Object.fromEntries(docs.map((d) => [d.id, true])));
     const primaryRef = useRef<HTMLButtonElement | null>(null);
 
+    // a blocking dialog (lib/modal-keyboard): the primary button has the focus, Enter runs it, Esc = Cancel,
+    // no key reaches the page behind it
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const answerRef = useRef(onAnswer);
+    answerRef.current = onAnswer;
     useEffect(() => {
         primaryRef.current?.focus();
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                e.stopPropagation();
-                onAnswer({ action: 'cancel', ids: [] });
-            }
-        };
-        window.addEventListener('keydown', onKey, true);
-        return () => window.removeEventListener('keydown', onKey, true);
-    }, [onAnswer]);
+        return pushModal({
+            element: () => dialogRef.current,
+            cancel: () => answerRef.current({ action: 'cancel', ids: [] }),
+        });
+    }, []);
 
     const groups = EDITOR_HEAD_TYPES
         .map((head) => ({ head, items: docs.filter((d) => d.headType === head) }))
@@ -67,6 +68,7 @@ const QuitDialog: React.FC<QuitDialogProps> = ({ docs, onAnswer }) => {
     return (
         <div className={styles.backdrop} role="presentation">
             <div
+                ref={dialogRef}
                 role="alertdialog"
                 aria-modal="true"
                 aria-labelledby="tabs-quit-title"
@@ -100,6 +102,7 @@ const QuitDialog: React.FC<QuitDialogProps> = ({ docs, onAnswer }) => {
                     <button
                         type="button"
                         ref={primaryRef}
+                        data-modal-default
                         className={styles.primary}
                         data-answer="save"
                         onClick={() => onAnswer({ action: 'save', ids: docs.filter((d) => checked[d.id]).map((d) => d.id) })}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 
 import i18n from '../../../lib/i18n';
+import { pushModal } from '../../../lib/modal-keyboard';
 import { SaveChangesAnswer, SaveChangesContext } from '../../../lib/tab-dialogs';
 import styles from './tab-shell.styl';
 
@@ -17,22 +18,23 @@ interface SaveChangesDialogProps {
 const SaveChangesDialog: React.FC<SaveChangesDialogProps> = ({ name, context = 'close', onAnswer }) => {
     const saveRef = useRef<HTMLButtonElement | null>(null);
 
+    // a blocking dialog (lib/modal-keyboard): the primary button has the focus, Enter runs it, Esc = Cancel,
+    // no key reaches the page behind it
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const answerRef = useRef(onAnswer);
+    answerRef.current = onAnswer;
     useEffect(() => {
         saveRef.current?.focus();
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                e.stopPropagation();
-                onAnswer('cancel');
-            }
-        };
-        window.addEventListener('keydown', onKey, true);
-        return () => window.removeEventListener('keydown', onKey, true);
-    }, [onAnswer]);
+        return pushModal({
+            element: () => dialogRef.current,
+            cancel: () => answerRef.current('cancel'),
+        });
+    }, []);
 
     return (
         <div className={styles.backdrop} role="presentation">
             <div
+                ref={dialogRef}
                 role="alertdialog"
                 aria-modal="true"
                 aria-labelledby="tabs-save-title"
@@ -56,7 +58,7 @@ const SaveChangesDialog: React.FC<SaveChangesDialogProps> = ({ name, context = '
                     <button type="button" className={styles.secondary} data-answer="cancel" onClick={() => onAnswer('cancel')}>
                         {i18n._('key-Tabs/Cancel')}
                     </button>
-                    <button type="button" ref={saveRef} className={styles.primary} data-answer="save" onClick={() => onAnswer('save')}>
+                    <button type="button" ref={saveRef} data-modal-default className={styles.primary} data-answer="save" onClick={() => onAnswer('save')}>
                         {i18n._('key-Tabs/Save')}
                     </button>
                 </div>

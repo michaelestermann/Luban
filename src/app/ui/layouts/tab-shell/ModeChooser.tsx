@@ -17,6 +17,7 @@ import {
 } from '../../../constants/coordinate';
 import { actions as projectActions } from '../../../flux/project';
 import { tabsActions } from '../../../flux/project/actions-tabs';
+import { pushModal } from '../../../lib/modal-keyboard';
 import {
     NewProjectPage,
     PROJECT_NAME_MAX_LENGTH,
@@ -192,18 +193,20 @@ const ModeChooser: React.FC<ModeChooserProps> = ({ onClose }) => {
         }
     }, []);
 
-    // Esc closes (before the editor shortcuts see it), unless a drop-down list of the form is open
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && !selectMenuOpen()) {
-                e.preventDefault();
-                e.stopPropagation();
-                onClose();
+    // a blocking dialog (lib/modal-keyboard): no key reaches the page behind it; Esc closes unless a drop-down
+    // list of the form is open, Enter from outside the form creates the blank project (see onDialogEnter)
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+    const enterRef = useRef<() => void>(() => undefined);
+    useEffect(() => pushModal({
+        element: () => dialogRef.current,
+        confirm: () => enterRef.current(),
+        cancel: () => {
+            if (!selectMenuOpen()) {
+                onCloseRef.current();
             }
-        };
-        window.addEventListener('keydown', onKey, true);
-        return () => window.removeEventListener('keydown', onKey, true);
-    }, [onClose]);
+        },
+    }), []);
 
     // focus: the name field of a blank project (on entering step 2 and after a click on an item; the arrow
     // keys keep it in the left column), else the dialog
@@ -298,27 +301,28 @@ const ModeChooser: React.FC<ModeChooserProps> = ({ onClose }) => {
     const createRef = useRef(create);
     createRef.current = create;
     const blankPageShown = !!mode && isBlankPage(page);
-    useEffect(() => {
-        if (!blankPageShown) {
-            return undefined;
+    const createSoon = useCallback(() => {
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        setTimeout(() => createRef.current(), 60);
+    }, []);
+    enterRef.current = () => {
+        if (blankPageShown && !selectMenuOpen()) {
+            createSoon();
         }
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key !== 'Enter' || selectMenuOpen()) {
-                return;
-            }
-            const target = e.target as HTMLElement | null;
-            // a button does its own thing; an item of the left column (a blank project) creates too
-            if (!target || !dialogRef.current?.contains(target) || target.closest('.ant-select')
-                || (target.closest('button') && !target.closest('[role="tab"]'))) {
-                return;
-            }
-            e.preventDefault();
-            (document.activeElement as HTMLElement | null)?.blur?.();
-            setTimeout(() => createRef.current(), 60);
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [blankPageShown]);
+    };
+    // Enter on a field or an item of the dialog (keys from elsewhere go through enterRef)
+    const onDialogEnter = (e: React.KeyboardEvent<HTMLElement>) => {
+        if (e.key !== 'Enter' || !blankPageShown || selectMenuOpen()) {
+            return;
+        }
+        const target = e.target as HTMLElement | null;
+        // a button does its own thing; an item of the left column (a blank project) creates too
+        if (!target || target.closest('.ant-select') || (target.closest('button') && !target.closest('[role="tab"]'))) {
+            return;
+        }
+        e.preventDefault();
+        createSoon();
+    };
 
     const openFile = useCallback((file: RecentFileRef) => {
         UniApi.Event.emit('appbar-menu:open-file', file, [file]);
@@ -536,6 +540,8 @@ const ModeChooser: React.FC<ModeChooserProps> = ({ onClose }) => {
     );
 
     const renderStep2 = (head: EditorHeadType) => (
+        // Enter on a field or item of the form creates the project (a dialog, keyboard handled for its content)
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
         <div
             ref={dialogRef}
             role="dialog"
@@ -543,6 +549,7 @@ const ModeChooser: React.FC<ModeChooserProps> = ({ onClose }) => {
             aria-label={i18n._('key-Tabs/New or open project')}
             className={classNames(styles.dialog, styles['chooser-wide'])}
             tabIndex={-1}
+            onKeyDown={onDialogEnter}
             data-chooser-step="2"
             data-mode={head}
             data-page={page}
