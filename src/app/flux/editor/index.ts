@@ -627,6 +627,8 @@ export const actions = {
                                     }
                                     case 'err': {
                                         log.warn(`Rendering tool path... failed: ${value}`);
+                                        // the card shows the failure, not "generating"
+                                        (toolPathGroup._getToolPath(taskResult.taskId) as ToolPath)?.onGenerateToolpathFailed(taskResult);
                                         resolve(false);
                                         break;
                                     }
