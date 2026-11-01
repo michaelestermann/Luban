@@ -31,7 +31,8 @@ const GeometryRow: React.FC<GeometryRowProps> = ({ models }) => {
     useEffect(() => () => {
         mounted.current = false;
     }, []);
-    const onLoaded = () => mounted.current && rerender();
+    // one listener for the lifetime of the row: a file that loads re-renders it once
+    const onLoaded = useRef(() => mounted.current && rerender()).current;
     const items = models.reduce((all, model) => all.concat(modelGeometry(model, onLoaded)), []);
     const geometry = selectionGeometry(items);
     const rows = geometry ? geometryRows(geometry) : [];

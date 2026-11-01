@@ -25,7 +25,8 @@ interface ParsedSvg {
 
 // parsed imported files by url; null = could not be parsed
 const parsedSources = new Map<string, ParsedSvg | null>();
-const pending = new Map<string, Promise<void>>();
+// listeners per file still loading; a Set, so a listener asked again on every render is called once
+const pending = new Map<string, Set<() => void>>();
 // lengths per model and transformation
 const lengthCache = new Map<string, number>();
 
@@ -42,14 +43,22 @@ async function parseSource(url: string): Promise<void> {
     }
 }
 
-// starts loading the source; onLoaded is called once it is parsed
+// starts loading the source; onLoaded is called once it is parsed. Each listener is called once per
+// file, however often it is passed while the file loads: a component that re-renders on every loaded
+// file and asks for all files again would otherwise multiply its listeners with every file (minutes
+// of frozen UI after selecting the parts of a decomposed SVG).
 function loadSource(url: string, onLoaded: () => void) {
-    let p = pending.get(url);
-    if (!p) {
-        p = parseSource(url);
-        pending.set(url, p);
+    let listeners = pending.get(url);
+    if (!listeners) {
+        listeners = new Set();
+        pending.set(url, listeners);
+        parseSource(url).then(() => {
+            const waiting = pending.get(url);
+            pending.delete(url);
+            waiting.forEach((listener) => listener());
+        });
     }
-    p.then(onLoaded);
+    listeners.add(onLoaded);
 }
 
 function elementMatrix(elem: SVGElement): [number, number, number, number, number, number] | null {
