@@ -180,6 +180,52 @@ test('svgDecompose: reframePart sets a tight viewBox and size', (t) => {
     t.end();
 });
 
+// The drill holes of a PCB export: a mm-sized SVG with tiny stroked circles (bohrungen.svg)
+const HOLES_OPEN = '<svg xmlns="http://www.w3.org/2000/svg" width="66.500mm" height="73.600mm" viewBox="0 0 66.5 73.6" fill="none" '
+    + 'style="fill: none; stroke: #000; stroke-width: 0.4px; vector-effect: non-scaling-stroke;" preserveAspectRatio="none">';
+const HOLE = (cx, cy) => `<circle cx="${cx}" cy="${cy}" r="0.100" fill="none" stroke="#000" stroke-width="0.05"/>`;
+
+test('svgDecompose: a part keeps the unit of the source size (tiny mm holes stay drawn like before)', (t) => {
+    const svg = `${HOLES_OPEN}${HOLE(49.6, 33.09)}${HOLE(19.88, 53.7)}</svg>`;
+    const { parts } = splitOneLevel(svg, deps);
+    t.equal(parts.length, 2, 'one part per hole');
+    const root = parse(reframePart(parts[1], { x: 19.78, y: 53.6, width: 0.2, height: 0.2 }, deps));
+    t.equal(root.getAttribute('viewBox'), '19.78 53.6 0.2 0.2', 'viewBox is the hole');
+    // 0.2 user units of a 66.5 mm / 66.5 units source are 0.2 mm, not 0.2 px: the canvas
+    // draws the non-scaling stroke relative to this size, a px size made the holes vanish
+    t.equal(root.getAttribute('width'), '0.2mm', 'width in mm');
+    t.equal(root.getAttribute('height'), '0.2mm', 'height in mm');
+    t.equal(root.getAttribute('preserveAspectRatio'), 'none', 'stretches exactly');
+    t.end();
+});
+
+test('svgDecompose: reframePart scales the size by the source units per user unit', (t) => {
+    const inch = '<svg xmlns="http://www.w3.org/2000/svg" width="2in" height="1in" viewBox="0 0 200 100"><rect x="10" y="5" width="20" height="8"/></svg>';
+    const root = parse(reframePart(inch, { x: 10, y: 5, width: 20, height: 8 }, deps));
+    t.equal(root.getAttribute('width'), '0.2in', 'width');
+    t.equal(root.getAttribute('height'), '0.08in', 'height');
+
+    const px = '<svg xmlns="http://www.w3.org/2000/svg" width="400px" height="200px" viewBox="0 0 100 50"><rect x="10" y="5" width="20" height="8"/></svg>';
+    const pxRoot = parse(reframePart(px, { x: 10, y: 5, width: 20, height: 8 }, deps));
+    t.equal(pxRoot.getAttribute('width'), '80px', 'px width');
+    t.equal(pxRoot.getAttribute('height'), '32px', 'px height');
+    t.end();
+});
+
+test('svgDecompose: reframePart keeps user units when the source size has none to scale by', (t) => {
+    const cases = [
+        ['<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 50"><rect/></svg>', 'percent size'],
+        ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"><rect/></svg>', 'no size'],
+        ['<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="20mm"><rect/></svg>', 'no viewBox']
+    ];
+    for (const [svg, label] of cases) {
+        const root = parse(reframePart(svg, { x: 10, y: 5, width: 20, height: 8 }, deps));
+        t.equal(root.getAttribute('width'), '20', `${label}: width`);
+        t.equal(root.getAttribute('height'), '8', `${label}: height`);
+    }
+    t.end();
+});
+
 test('svgDecompose: readFrame reads viewBox and aspect ratio mode', (t) => {
     t.deepEqual(readFrame(`${SVG_OPEN}</svg>`, deps), { viewBox: [0, 0, 100, 50], preserveAspectRatio: null }, 'viewBox');
     t.deepEqual(

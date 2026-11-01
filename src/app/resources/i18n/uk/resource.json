@@ -564,6 +564,8 @@
     "Please go to the machine, click work switch to run boundary. If the enclosure is installed, the enclosure door needs to be closed.": "Підійдіть до пристрою та натисніть на кнопку, щоб перевірити межі роботи. Якщо встановлено захисний бокс, дверцята мають бути закриті.",
     "Please select a vector and an image at the same time.": "Будь ласка, оберіть вектор і зображення одночасно.",
     "Plunge Speed": "Швидкість подачі",
+    "Retract Speed": "Retract Speed",
+    "Set the speed at which the tool is pulled out of the material when drilling.": "Set the speed at which the tool is pulled out of the material when drilling.",
     "Point Angle": "Кут фрези",
     "Preset": "Шаблон",
     "Press the work switch to pause/resume. Press and hold the button to stop.": "Натисніть на кнопку, щоб призупинити/відновити. Натисніть і утримуйте кнопку, щоб зупинити.",

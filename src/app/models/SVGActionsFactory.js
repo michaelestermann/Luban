@@ -442,19 +442,26 @@ class SVGActionsFactory {
             return model.sourceType === 'image3d';
         });
 
-        // Add each model to selected models, and recalculate selected group's transformation
+        // Add the new models to the selected models, and recalculate the selected group's transformation
+        // once for all of them (per model it re-measured the whole selection and re-rendered each time:
+        // seconds when many objects are selected at once, e.g. the parts of a decomposed SVG)
+        const selected = new Set(this.selectedSvgModels);
+        const added = [];
         for (const model of models) {
-            if (!this.selectedSvgModels.includes(model)) {
-                this.selectedSvgModels.push(model);
-                // todo
-                const posAndSize = this.svgContentGroup.addToSelection([model.elem], isSelectedRotate3D);
-                this.modelGroup.updateSelectedGroupTransformation({
-                    positionX: posAndSize.positionX - this.size.x,
-                    positionY: this.size.y - posAndSize.positionY,
-                    width: posAndSize.width,
-                    height: posAndSize.height
-                });
+            if (!selected.has(model)) {
+                selected.add(model);
+                added.push(model);
             }
+        }
+        if (added.length > 0) {
+            this.selectedSvgModels.push(...added);
+            const posAndSize = this.svgContentGroup.addToSelection(added.map((model) => model.elem), isSelectedRotate3D);
+            this.modelGroup.updateSelectedGroupTransformation({
+                positionX: posAndSize.positionX - this.size.x,
+                positionY: this.size.y - posAndSize.positionY,
+                width: posAndSize.width,
+                height: posAndSize.height
+            });
         }
 
         const t = SVGActionsFactory.calculateElementsTransformation(this.getSelectedElements());

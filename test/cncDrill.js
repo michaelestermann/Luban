@@ -99,7 +99,7 @@ test('Drill moves: pecks to depth', (t) => {
     data.forEach((c, i) => {
         if (c.G === 1) {
             t.equal(c.F, 'plungeSpeed', 'plunge uses plungeSpeed placeholder');
-            t.deepEqual(data[i + 1], { G: 0, Z: 1 }, 'retract to 1 mm after peck');
+            t.deepEqual(data[i + 1], { G: 0, Z: 1, F: 'jogSpeed' }, 'retract to 1 mm after peck');
         }
     });
     t.end();
@@ -304,5 +304,19 @@ test('Drill moves: travel to the first hole happens at the top (stop height), th
 test('Drill moves: no travel below the jog height', (t) => {
     const data = buildDrillMoves([{ x: 1, y: 2 }, { x: 5, y: 6 }, { x: 9, y: 1 }], config({ safetyHeight: 3, stopHeight: 1 }));
     t.ok(travelHeights(data).every(z => z >= 3), 'all XY travel at or above the jog height');
+    t.end();
+});
+
+test('Drill moves: the tool leaves the hole at the retract speed', (t) => {
+    const data = buildDrillMoves(ONE_POINT, config({ retractSpeed: 2400 }));
+    const outs = data.filter((c, i) => i > 0 && data[i - 1].G === 1);
+    t.ok(outs.length === 3 && outs.every(c => c.G === 0 && c.F === 'retractSpeed'), 'every move out of the hole uses the retract speed');
+    t.end();
+});
+
+test('Drill moves: projects without a retract speed leave the hole at the jog speed', (t) => {
+    const data = buildDrillMoves(ONE_POINT, config());
+    const outs = data.filter((c, i) => i > 0 && data[i - 1].G === 1);
+    t.ok(outs.length > 0 && outs.every(c => c.F === 'jogSpeed'), 'jog speed instead of the plunge speed (modal F)');
     t.end();
 });

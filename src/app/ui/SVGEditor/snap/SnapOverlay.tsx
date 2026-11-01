@@ -35,7 +35,9 @@ const SnapOverlay: React.FC<SnapOverlayProps> = ({ isActive, getScreenCTM }) => 
     }, [showing]);
 
     const ctm = isActive && guides ? getScreenCTM() : null;
-    const root = rootRef.current?.getBoundingClientRect();
+    // measured only while guides show: reading it forces a layout, and the editor re-renders often
+    // (seconds of frozen UI when decompose adds many objects)
+    const root = ctm ? rootRef.current?.getBoundingClientRect() : null;
     if (!ctm || !root || !guides) {
         return <div ref={rootRef} className={styles.overlay} />;
     }

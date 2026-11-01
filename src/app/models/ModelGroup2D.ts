@@ -69,6 +69,9 @@ class ModelGroup2D extends EventEmitter {
     private selectedGroup: Group;
     private selectedToolPathModelIDs: string[];
     private onDataChangedCallback: () => void;
+    // > 0 while changes are batched: modelChanged() only notes the change
+    private changesBatched = 0;
+    private changedWhileBatched = false;
     private series: string;
     private candidatePoints: {
         x: number;
@@ -1332,9 +1335,42 @@ class ModelGroup2D extends EventEmitter {
     }
 
     public modelChanged() {
+        if (this.changesBatched > 0) {
+            this.changedWhileBatched = true;
+            return;
+        }
         if (typeof this.onDataChangedCallback === 'function') {
             this.onDataChangedCallback();
         }
+    }
+
+    /**
+     * Run `fn` with the change notifications batched: many models can be
+     * added without one re-render per model. Notifies once afterwards if
+     * anything changed. When `fn` returns a promise, the batch ends when it
+     * settles.
+     */
+    public batchChanges<T>(fn: () => T): T {
+        const end = () => {
+            this.changesBatched--;
+            if (this.changesBatched === 0 && this.changedWhileBatched) {
+                this.changedWhileBatched = false;
+                this.modelChanged();
+            }
+        };
+        this.changesBatched++;
+        let result: T;
+        try {
+            result = fn();
+        } catch (e) {
+            end();
+            throw e;
+        }
+        if (result instanceof Promise) {
+            return result.finally(end) as unknown as T;
+        }
+        end();
+        return result;
     }
 
     /**

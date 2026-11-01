@@ -564,6 +564,8 @@
     "Please go to the machine, click work switch to run boundary. If the enclosure is installed, the enclosure door needs to be closed.": "请在机器上点击工作开关跑边框。如果安装了外罩，外罩门需要关闭。",
     "Please select a vector and an image at the same time.": "请同时选中一个矢量和一个图片。",
     "Plunge Speed": "送进速度",
+    "Retract Speed": "Retract Speed",
+    "Set the speed at which the tool is pulled out of the material when drilling.": "Set the speed at which the tool is pulled out of the material when drilling.",
     "Point Angle": "刀尖角度 (A)",
     "Preset": "预设配置",
     "Press the work switch to pause/resume. Press and hold the button to stop.": "短按工作开关暂停/恢复，长按工作开关停止。",

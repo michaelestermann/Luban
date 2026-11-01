@@ -1,82 +1,18 @@
-import isEmpty from 'lodash/isEmpty';
 import { Observable } from 'rxjs';
 
 import ToolPathGeometryConverter from './GcodeToBufferGeometry/ToolPathGeometryConverter';
+import { renderToolPathFiles, ToolpathRendererData } from './toolpath-render-files';
 import log from '../lib/log';
-
-type ToolpathRendererData = {
-    data: object;
-    filenames: string[];
-    taskId: string;
-    headType: string;
-};
 
 const toolpathRenderer = (taskResult: ToolpathRendererData) => {
     return new Observable((observer) => {
-        if (isEmpty(taskResult.data)) {
-            observer.next({
-                status: 'err',
-                value: 'Data is empty'
-            });
-            observer.complete();
-            return;
-        }
-
-        const { headType } = taskResult;
-
-        try {
-            const taskTotal = taskResult.data.length;
-            let taskCompleted = 0;
-            for (let i = 0; i < taskTotal; i++) {
-                const filename = taskResult.filenames[i];
-
-                log.info(`Generate geometry from tool path, ${filename}`);
-                const converter = new ToolPathGeometryConverter();
-
-                converter.parseAsync(
-                    filename,
-                    (progress: number) => {
-                        observer.next({
-                            status: 'progress',
-                            headType: headType,
-                            value: {
-                                progress: (i + progress) / taskTotal,
-                            }
-                        });
-                    },
-                    (renderResult) => {
-                        observer.next({
-                            status: 'data',
-                            headType: headType,
-                            value: {
-                                taskResult: taskResult,
-                                index: i,
-                                renderResult: renderResult,
-                            }
-                        });
-
-                        taskCompleted++;
-                        if (taskCompleted === taskTotal) {
-                            observer.next({
-                                status: 'succeed',
-                                headType: headType,
-                                value: {
-                                    taskResult: taskResult,
-                                }
-                            });
-                            observer.complete();
-                        }
-                    },
-                );
-            }
-        } catch (err) {
-            observer.next({
-                status: 'err',
-                headType: headType,
-                value: err,
-            });
-            observer.complete();
-        }
+        const convert = async (filename: string, onProgress: (progress: number) => void) => {
+            log.info(`Generate geometry from tool path, ${filename}`);
+            return new ToolPathGeometryConverter().load(filename, onProgress);
+        };
+        renderToolPathFiles(taskResult, convert, (message) => observer.next(message))
+            .catch((err) => observer.next({ status: 'err', headType: taskResult.headType, value: String(err) }))
+            .finally(() => observer.complete());
     });
 };
 

@@ -564,6 +564,8 @@
     "Please go to the machine, click work switch to run boundary. If the enclosure is installed, the enclosure door needs to be closed.": "Gehen Sie zur Maschine und klicken Sie auf den Arbeitsschalter, um die Begrenzung auszuführen. Wenn das Gehäuse installiert ist, muss die Gehäusetür geschlossen werden.",
     "Please select a vector and an image at the same time.": "Wählen Sie gleichzeitig einen Vektor und ein Bild aus.",
     "Plunge Speed": "Eintauchtempo",
+    "Retract Speed": "Rückzugstempo",
+    "Set the speed at which the tool is pulled out of the material when drilling.": "Stellen Sie das Tempo ein, mit dem das Werkzeug beim Bohren aus dem Material herausgezogen wird.",
     "Point Angle": "Punktwinkel",
     "Preset": "Voreinstellung",
     "Press the work switch to pause/resume. Press and hold the button to stop.": "Drücken Sie den Arbeitsschalter zum Anhalten/Fortsetzen. Halten Sie die Taste gedrückt, um zu stoppen.",
