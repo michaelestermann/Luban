@@ -2,6 +2,8 @@ import noop from 'lodash/noop';
 import io from 'socket.io-client';
 import { v4 as uuid } from 'uuid';
 
+import { emitDelay } from './socket-emit-delay';
+
 class SocketController {
     socket = null;
 
@@ -42,9 +44,14 @@ class SocketController {
     }
 
     emit(event, ...args) {
+        const delay = emitDelay(event);
+        if (delay === 0) {
+            this.socket && this.socket.emit(event, ...args);
+            return;
+        }
         setTimeout(() => {
             this.socket && this.socket.emit(event, ...args);
-        }, 200);
+        }, delay);
     }
 
     on(eventName, callback) {

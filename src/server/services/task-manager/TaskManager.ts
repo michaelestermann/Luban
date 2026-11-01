@@ -34,7 +34,7 @@ const TASK_TYPE_RUNNER_MAP = {
     [TASK_TYPE_CLIPPING_SVG]: 'svgClipping',
 };
 
-class TaskManager {
+export class TaskManager {
     private workerManager: IWorkerManager = workerManager;
 
     private tasks: Task[] = [];
@@ -92,7 +92,7 @@ class TaskManager {
             task.finishTime = new Date().getTime();
             task.socket.emit(`taskCompleted:${task.taskType}`, task.getData());
         }
-        this.tasks.splice(this.tasks.indexOf(task), 1);
+        this.removeTask(task);
     }
 
     private onFail(task: Task, res: string) {
@@ -106,7 +106,7 @@ class TaskManager {
 
             task.socket.emit(`taskCompleted:${task.taskType}`, task.getData());
         }
-        this.tasks.splice(this.tasks.indexOf(task), 1);
+        this.removeTask(task);
     }
 
     private async taskHandle(task: Task) {
@@ -155,25 +155,31 @@ class TaskManager {
         */
     }
 
+    private removeTask(task: Task) {
+        const index = this.tasks.indexOf(task);
+        if (index !== -1) {
+            this.tasks.splice(index, 1);
+        }
+    }
+
     public async addTask(task: Task) {
-        let exists = false;
+        // a re-submitted task outdates the running one: only the newest reports
         this.tasks.forEach((t) => {
             if (t.equal(task)) {
                 t.taskStatus = TASK_STATUS_DEPRECATED;
-                exists = true;
             }
         });
-        if (!exists) {
-            this.tasks.push(task);
-        }
+        this.tasks.push(task);
 
         this.taskHandle(task);
     }
 
     public cancelTask(taskId: string) {
-        const res = this.tasks.find((task) => task.taskId === taskId);
+        const res = this.tasks.find((task) => task.taskId === taskId && task.taskStatus !== TASK_STATUS_DEPRECATED);
         if (res) {
             res.terminateFn();
+            // a cancelled run sends nothing more
+            this.removeTask(res);
             log.info(`task: ${taskId} has been cancelled`);
         }
     }

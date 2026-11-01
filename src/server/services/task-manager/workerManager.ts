@@ -56,17 +56,24 @@ Object.entries(WorkerMethods).forEach(([, method]) => {
     // eslint-disable-next-line func-names
     WorkerManager.prototype[method] = function (data: unknown[], onmessage?: (payload: unknown) => void) {
         const pool = this.getPool() as WorkerPool;
-        const handle = pool.exec(method, data, {
-            on: (payload) => {
-                if (onmessage) {
-                    onmessage(payload);
-                } else {
-                    WorkerManager.prototype[method].onmessage(payload);
-                }
+        const deliver = (payload) => {
+            if (onmessage) {
+                onmessage(payload);
+            } else {
+                WorkerManager.prototype[method].onmessage(payload);
+            }
+        };
+        let cancelled = false;
+        const handle = pool.exec(method, data, { on: deliver });
+        // a crashed worker never sends its result: report the task as failed
+        handle.catch((err) => {
+            if (!cancelled) {
+                deliver({ status: 'fail', value: err instanceof Error ? err.message : String(err) });
             }
         });
         return {
             terminate: () => {
+                cancelled = true;
                 handle.cancel();
             }
         };

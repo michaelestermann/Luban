@@ -9,34 +9,23 @@ import { DATA_PREFIX } from '../../constants';
 class ToolPathGeometryConverter {
     private toolPath;
 
-    public async parse(filename: string, onProgress = noop) {
-        const filePath = `${DATA_PREFIX}/${filename}`;
-        return new Promise((resolve, reject) => {
-            try {
-                new THREE.FileLoader().load(filePath, data => {
-                    const toolPath = JSON.parse(data as string);
-                    this.toolPath = toolPath;
-                    const renderResult = this.render(onProgress);
-                    resolve(renderResult);
-                });
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-
-    public async parseAsync(filename: string, onProgress = null, onComplete = null) {
+    /**
+     * Load and render one toolpath file. Rejects when the file cannot be loaded or rendered.
+     */
+    public async load(filename: string, onProgress = noop) {
         const filePath = `${DATA_PREFIX}/${filename}`;
 
-        const data = await new Promise((resolve) => {
-            new THREE.FileLoader().load(filePath, response => resolve(response));
+        const data = await new Promise((resolve, reject) => {
+            new THREE.FileLoader().load(
+                filePath,
+                response => resolve(response),
+                undefined,
+                () => reject(new Error(`Failed to load toolpath file ${filename}`))
+            );
         });
 
-        const toolPath = JSON.parse(data as string);
-        this.toolPath = toolPath;
-        const renderResult = this.render(onProgress);
-
-        onComplete && onComplete(renderResult);
+        this.toolPath = JSON.parse(data as string);
+        return this.render(onProgress);
     }
 
     private render(onProgress = noop) {

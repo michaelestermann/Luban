@@ -102,13 +102,14 @@ const generateToolPath = async (allTasks) => {
     try {
         const ret = await generateLaserToolPathFromEngine(allTasks, onProgress);
 
-        // Let onProgress throttle finish
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // send a pending throttled progress now, before the result (no progress after it)
+        onProgress.flush();
 
         sendMessage({ status: 'complete', value: ret });
 
         return true;
     } catch (err) {
+        onProgress.cancel();
         // Error objects lose their message when posted to the main thread
         return sendMessage({ status: 'fail', value: err instanceof Error ? err.message : err });
     }
