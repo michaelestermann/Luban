@@ -383,6 +383,18 @@ export function droppedFilesToOpen(names: string[], activeTabId: string): number
     return out;
 }
 
+/**
+ * What a key pressed on a focused tab does: Enter / Space activate it. No key closes a tab (Delete and
+ * Backspace belong to the editor: a tab keeps the focus after a click); tabs close by ×, middle click,
+ * Ctrl+F4 and the menu.
+ */
+export function tabKeyAction(key: string): 'activate' | null {
+    if (key === 'Enter' || key === ' ') {
+        return 'activate';
+    }
+    return null;
+}
+
 function toSessionDocument(meta: DocumentMeta): SessionDocument {
     return {
         id: meta.id,

@@ -11,6 +11,7 @@ import {
     documentDisplayName,
     filterDocumentsByQuery,
     scrollOffsetToReveal,
+    tabKeyAction,
 } from '../../../flux/project/tabs-model';
 import i18n from '../../../lib/i18n';
 import styles from './tab-shell.styl';
@@ -117,9 +118,20 @@ export function tabDisplayName(meta: DocumentMeta): string {
 }
 
 function onKeyActivate(e: React.KeyboardEvent, activate: () => void): void {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (tabKeyAction(e.key) === 'activate') {
         e.preventDefault();
         activate();
+    }
+}
+
+/**
+ * A mouse click must not leave the keyboard focus on the tab: editor shortcuts (Delete, arrows, Ctrl+C …)
+ * go to the page afterwards. Keyboard users keep the focus (Tab key, Enter).
+ */
+function blurAfterMouse(e: React.MouseEvent): void {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && active !== document.body && (e.currentTarget as HTMLElement).contains(active)) {
+        active.blur();
     }
 }
 
@@ -286,6 +298,7 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
                 title={i18n._('key-Tabs/Home')}
                 tabIndex={homeActive ? 0 : -1}
                 onClick={() => onActivate(HOME_TAB)}
+                onMouseUp={blurAfterMouse}
                 onKeyDown={(e) => onKeyActivate(e, () => onActivate(HOME_TAB))}
             >
                 <button type="button" className={styles.name} aria-label={i18n._('key-Tabs/Home')}>
@@ -302,6 +315,7 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
                 title={i18n._('key-Tabs/Workspace (pinned, cannot be closed)')}
                 tabIndex={workspaceActive ? 0 : -1}
                 onClick={() => onActivate(WORKSPACE_TAB)}
+                onMouseUp={blurAfterMouse}
                 onKeyDown={(e) => onKeyActivate(e, () => onActivate(WORKSPACE_TAB))}
             >
                 <WorkspaceIcon />
@@ -359,14 +373,8 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
                                         onClose && onClose(meta.id);
                                     }
                                 }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Delete' && onClose) {
-                                        e.preventDefault();
-                                        onClose(meta.id);
-                                        return;
-                                    }
-                                    onKeyActivate(e, () => onActivate(meta.id));
-                                }}
+                                onMouseUp={blurAfterMouse}
+                                onKeyDown={(e) => onKeyActivate(e, () => onActivate(meta.id))}
                             >
                                 <HeadIcon headType={meta.headType} />
                                 <button type="button" className={styles.name}>{name}</button>

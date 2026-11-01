@@ -35,6 +35,7 @@ import {
     filterDocumentsByQuery,
     scrollOffsetToReveal,
     droppedFilesToOpen,
+    tabKeyAction,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -673,5 +674,14 @@ test('droppedFilesToOpen: project files always, G-code only outside the Workspac
     t.deepEqual(droppedFilesToOpen(names, 'home'), [0, 1, 3, 4, 5, 7], 'home: projects and G-code');
     t.deepEqual(droppedFilesToOpen(names, WORKSPACE_TAB), [0, 1, 5], 'workspace: its drop zone takes the G-code');
     t.deepEqual(droppedFilesToOpen(['pic.png'], 'doc-1'), [], 'images stay with the page');
+    t.end();
+});
+
+test('tabKeyAction: Delete / Backspace on a focused tab never close it (final review I-2)', (t) => {
+    t.equal(tabKeyAction('Delete'), null, 'Delete is left to the editor');
+    t.equal(tabKeyAction('Backspace'), null, 'Backspace is left to the editor');
+    t.equal(tabKeyAction('Enter'), 'activate', 'Enter activates');
+    t.equal(tabKeyAction(' '), 'activate', 'Space activates');
+    t.equal(tabKeyAction('a'), null, 'other keys do nothing');
     t.end();
 });
