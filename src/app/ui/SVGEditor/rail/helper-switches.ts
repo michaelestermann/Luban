@@ -1,44 +1,18 @@
 /**
  * State of the helper switches of the tool rail (Dimensions, Snap), kept per user in the
- * editor settings. Default: all off.
+ * editor settings. Default: Snap on, Dimensions off (helper-defaults.ts).
  */
 import { useEffect, useState } from 'react';
 
 import { editorStore } from '../../../store/local-storage';
+import { HelperSwitches, mergeStoredHelpers } from './helper-defaults';
 
-export interface DimensionsSettings {
-    on: boolean;
-    // 'selection': chains of the selection (editable); 'all': chains of every object (read-only)
-    scope: 'selection' | 'all';
-    edges: boolean;
-    between: boolean;
-}
+export type { DimensionsSettings, HelperSwitches, SnapSettings } from './helper-defaults';
+export { DEFAULT_HELPERS } from './helper-defaults';
 
-export interface SnapSettings {
-    on: boolean;
-    grid: boolean;
-    // end points of paths, box corners and edge mid points
-    points: boolean;
-    centers: boolean;
-    edges: boolean;
-    align: boolean;
-    // mm
-    gridSize: number;
-}
-
-export interface HelperSwitches {
-    dimensions: DimensionsSettings;
-    snap: SnapSettings;
-}
-
-export type HelperName = keyof HelperSwitches;
+export type HelperName = 'dimensions' | 'snap';
 
 const STORE_KEY = 'helperSwitches';
-
-export const DEFAULT_HELPERS: HelperSwitches = {
-    dimensions: { on: false, scope: 'selection', edges: true, between: true },
-    snap: { on: false, grid: false, points: true, centers: true, edges: true, align: true, gridSize: 10 },
-};
 
 function load(): HelperSwitches {
     let stored: Partial<HelperSwitches> = {};
@@ -47,10 +21,7 @@ function load(): HelperSwitches {
     } catch (e) {
         stored = {};
     }
-    return {
-        dimensions: { ...DEFAULT_HELPERS.dimensions, ...(stored.dimensions || {}) },
-        snap: { ...DEFAULT_HELPERS.snap, ...(stored.snap || {}) },
-    };
+    return mergeStoredHelpers(stored);
 }
 
 let current: HelperSwitches | null = null;
