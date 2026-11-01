@@ -7,7 +7,10 @@ import {
     readFrame,
     canDecompose,
     canDecomposeSelection,
-    createAllOrNone
+    createAllOrNone,
+    partMargins,
+    hasMargin,
+    isDecomposable
 } from '../src/app/lib/svg-decompose';
 
 const deps = {
@@ -309,5 +312,141 @@ test('svgDecompose: createAllOrNone keeps discarding when a discard throws', asy
     });
     t.equal(parts, null, 'no parts');
     t.deepEqual(discarded, [1, 0], 'all discards attempted');
+    t.end();
+});
+
+// --- single element with a margin -------------------------------------------
+
+test('svgDecompose: partMargins measures each side in mm (viewBox 1:1)', (t) => {
+    const margins = partMargins({
+        original: { width: 100, height: 50, scaleX: 1, scaleY: 1 },
+        viewBox: [0, 0, 100, 50],
+        preserveAspectRatio: null,
+        bbox: { x: 10, y: 10, width: 20, height: 20 }
+    });
+    near(t, margins.left, 10, 'left');
+    near(t, margins.right, 70, 'right');
+    near(t, margins.top, 10, 'top');
+    near(t, margins.bottom, 20, 'bottom');
+    t.equal(hasMargin(margins), true, 'has a margin');
+    t.end();
+});
+
+test('svgDecompose: partMargins follows the viewBox scale and offset', (t) => {
+    // viewBox 10 x 5 user units drawn as 100 x 50 mm: one unit is 10 mm
+    const margins = partMargins({
+        original: { width: 100, height: 50, scaleX: 1, scaleY: 1 },
+        viewBox: [-5, 0, 10, 5],
+        preserveAspectRatio: null,
+        bbox: { x: -4, y: 0, width: 8, height: 5 }
+    });
+    near(t, margins.left, 10, 'left: 1 unit = 10 mm');
+    near(t, margins.right, 10, 'right');
+    near(t, margins.top, 0, 'top');
+    near(t, margins.bottom, 0, 'bottom');
+    t.end();
+});
+
+test('svgDecompose: partMargins applies the model scale (after scale)', (t) => {
+    const at = (scale) => partMargins({
+        original: { width: 100 * scale, height: 50 * scale, scaleX: scale, scaleY: scale },
+        viewBox: [0, 0, 100, 50],
+        preserveAspectRatio: null,
+        bbox: { x: 0, y: 0, width: 99, height: 50 }
+    });
+    near(t, at(1).right, 1, 'scale 1: 1 mm');
+    near(t, at(0.5).right, 0.5, 'scale 0.5: 0.5 mm');
+    t.equal(hasMargin(at(0.5)), true, 'half size still has a margin');
+    t.equal(hasMargin(at(0.05)), false, 'scaled down to 0.05: margin 0.05 mm is no margin');
+    t.end();
+});
+
+test('svgDecompose: partMargins with a flipped model swaps the sides', (t) => {
+    const margins = partMargins({
+        original: { width: 100, height: 50, scaleX: -1, scaleY: -1 },
+        viewBox: [0, 0, 100, 50],
+        preserveAspectRatio: null,
+        bbox: { x: 10, y: 5, width: 20, height: 20 }
+    });
+    near(t, margins.left, 70, 'left shows the right side of the SVG');
+    near(t, margins.right, 10, 'right');
+    near(t, margins.top, 25, 'top shows the bottom');
+    near(t, margins.bottom, 5, 'bottom');
+    t.end();
+});
+
+test('svgDecompose: partMargins with letterboxing (meet) counts the empty band', (t) => {
+    // a square viewBox in a 200 x 100 mm object: drawn 100 x 100, centred, 50 mm band left and right
+    const margins = partMargins({
+        original: { width: 200, height: 100, scaleX: 1, scaleY: 1 },
+        viewBox: [0, 0, 100, 100],
+        preserveAspectRatio: null,
+        bbox: { x: 0, y: 0, width: 100, height: 100 }
+    });
+    near(t, margins.left, 50, 'left band');
+    near(t, margins.right, 50, 'right band');
+    near(t, margins.top, 0, 'top');
+    t.equal(hasMargin(partMargins({
+        original: { width: 200, height: 100, scaleX: 1, scaleY: 1 },
+        viewBox: [0, 0, 100, 100],
+        preserveAspectRatio: 'none',
+        bbox: { x: 0, y: 0, width: 100, height: 100 }
+    })), false, 'stretched (none): no band');
+    t.end();
+});
+
+test('svgDecompose: hasMargin threshold is more than 0.1 mm on any side', (t) => {
+    const m = (v) => ({ left: 0, right: v, top: 0, bottom: 0 });
+    t.equal(hasMargin(m(0)), false, '0 mm');
+    t.equal(hasMargin(m(0.1)), false, 'exactly 0.1 mm is not more');
+    t.equal(hasMargin(m(0.1000001)), true, 'just over 0.1 mm');
+    t.equal(hasMargin({ left: 0, right: 0, top: 0, bottom: 0.11 }), true, 'any side counts (bottom)');
+    t.equal(hasMargin({ left: -1, right: -0.5, top: 0, bottom: 0 }), false, 'content beyond the frame is no margin');
+    t.equal(hasMargin(null), false, 'no margins');
+    const tiny = partMargins({
+        original: { width: 100, height: 50, scaleX: 1, scaleY: 1 },
+        viewBox: [0, 0, 100, 50],
+        preserveAspectRatio: null,
+        bbox: { x: 0, y: 0, width: 99.9, height: 50 }
+    });
+    t.equal(hasMargin(tiny), false, '0.1 mm measured from a bbox: no margin');
+    const small = partMargins({
+        original: { width: 100, height: 50, scaleX: 1, scaleY: 1 },
+        viewBox: [0, 0, 100, 50],
+        preserveAspectRatio: null,
+        bbox: { x: 0.11, y: 0, width: 99.89, height: 50 }
+    });
+    t.equal(hasMargin(small), true, '0.11 mm on the left: margin');
+    t.end();
+});
+
+test('svgDecompose: isDecomposable needs 2 parts or one part with a margin', (t) => {
+    const margin = { left: 5, right: 0, top: 0, bottom: 0 };
+    const none = { left: 0, right: 0, top: 0, bottom: 0 };
+    t.equal(isDecomposable(2, null), true, 'two parts');
+    t.equal(isDecomposable(1, margin), true, 'one part with a margin');
+    t.equal(isDecomposable(1, none), false, 'one part without a margin');
+    t.equal(isDecomposable(1, null), false, 'one part, not measured');
+    t.equal(isDecomposable(0, margin), false, 'nothing drawn');
+    t.end();
+});
+
+test('svgDecompose: canDecompose of a single element follows the margin after the model scale', (t) => {
+    const elem = { nodeName: 'image', getAttribute: (name) => (name === 'href' ? '/data/Tmp/one.svg' : null) };
+    const single = { viewBox: [0, 0, 100, 50], bbox: { x: 0, y: 0, width: 99, height: 50 } };
+    const model = {
+        sourceType: 'svg',
+        elem,
+        transformation: { width: 100, height: 50, scaleX: 1, scaleY: 1 },
+        decomposeInfo: { href: '/data/Tmp/one.svg', canSplit: false, single }
+    };
+    t.equal(canDecompose(model), true, '1 mm margin at scale 1');
+    model.transformation = { width: 5, height: 2.5, scaleX: 0.05, scaleY: 0.05 };
+    t.equal(canDecompose(model), false, 'scaled down: 0.05 mm');
+    model.transformation = { width: 100, height: 50, scaleX: 1, scaleY: 1 };
+    model.decomposeInfo = { href: '/data/Tmp/one.svg', canSplit: false, single: { viewBox: [0, 0, 100, 50], bbox: { x: 0, y: 0, width: 100, height: 50 } } };
+    t.equal(canDecompose(model), false, 'tight single element (e.g. an earlier part)');
+    model.decomposeInfo = { href: '/data/Tmp/one.svg', canSplit: false };
+    t.equal(canDecompose(model), false, 'single element not measured');
     t.end();
 });
