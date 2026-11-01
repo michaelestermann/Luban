@@ -51,10 +51,14 @@ const MotorPowerHoldControl = () => {
         setIsHoldMode(res === MotorPowerMode.STAYPOWER);
     };
 
-    useEffect(async () => {
+    useEffect(() => {
         if (!isConnected) return;
-        const res = await getMotorPowerHoldMode();
-        setIsHoldMode(res === MotorPowerMode.STAYPOWER);
+        const updateHoldMode = async () => {
+            const res = await getMotorPowerHoldMode();
+            setIsHoldMode(res === MotorPowerMode.STAYPOWER);
+        };
+        updateHoldMode();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- query on connect only; getMotorPowerHoldMode just talks to the controller singleton
     }, [isConnected]);
 
     return isConnected && (

@@ -59,6 +59,8 @@ function GcodeLayout() {
             layerRangeDisplayed[0],
             layerRangeDisplayed[1] + temp
         ]);
+        // temp follows layerCount, which is updated together with the range.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- sync from the displayed range only
     }, [layerRangeDisplayed]);
 
 
@@ -157,11 +159,12 @@ function VisualizerPreviewControl() {
         if (displayedType === 'gcode') {
             dispatch(printingActions.setShowOriginalModel(showOriginalModel));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the displayed type only; showOriginalModel changes are handled by the next effect
     }, [displayedType]);
 
     useEffect(() => {
         dispatch(printingActions.setShowOriginalModel(showOriginalModel));
-    }, [showOriginalModel]);
+    }, [showOriginalModel, dispatch]);
 
     useEffect(() => {
         setAllShowTypes(gcodeTypeInitialVisibility);

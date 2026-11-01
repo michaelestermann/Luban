@@ -38,14 +38,14 @@ const CNCPath = ({ widgetActions }) => {
     const dispatch = useDispatch();
     useEffect(() => {
         widgetActions.setTitle(i18n._('key-CncLaser/Properties-Position & size'));
-    }, []);
+    }, [widgetActions]);
     useEffect(() => {
         if (page === PAGE_EDITOR) {
             widgetActions.setDisplay(true);
         } else {
             widgetActions.setDisplay(false);
         }
-    }, [page]);
+    }, [page, widgetActions]);
 
     const actions = {
         modifyText: (element, options) => {

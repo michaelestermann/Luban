@@ -226,6 +226,8 @@ const SetOriginView: React.FC<SetOriginViewProps> = (props) => {
                 onChangeCoordinateMode({ target: { value: mode } });
             });
         }
+        // onChangeCoordinateMode is recreated every render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- query the machine on connect/homing/rotary changes only
     }, [isHomed, isConnected, isRotate]);
     useEffect(() => {
         if (isRotate) {
@@ -280,7 +282,7 @@ const SetOriginView: React.FC<SetOriginViewProps> = (props) => {
                 log.info('Uploaded boundary G-code.');
                 setRunBoundaryReady(true);
             });
-    }, [dispatch, isRotate, gcodeFile, jobOffsetMode, setupCoordinateMethod]);
+    }, [dispatch, gcodeFile, jobOffsetMode, setupCoordinateMethod]);
 
     const onClickGoHome = useCallback(async () => {
         return dispatch(workspaceActions.executeGcode('$H')) as unknown as Promise<void>;

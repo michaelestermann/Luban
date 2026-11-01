@@ -277,14 +277,14 @@ const ToolPathListBox = (props) => {
     // only set when rendered as a widget (the left panel renders the list directly)
     useEffect(() => {
         props.widgetActions?.setTitle(i18n._('key-CncLaser/ToolPathList/Button/-Toolpath List'));
-    }, []);
+    }, [props.widgetActions]);
     useEffect(() => {
         if (page === PAGE_EDITOR) {
             props.widgetActions?.setDisplay(false);
         } else if (page === PAGE_PROCESS) {
             props.widgetActions?.setDisplay(true);
         }
-    }, [page]);
+    }, [page, props.widgetActions]);
 
     const blocked = isOnABPosition || inProgress;
     // drag and drop sorting of the cards (same order as Prioritize / Deprioritize)

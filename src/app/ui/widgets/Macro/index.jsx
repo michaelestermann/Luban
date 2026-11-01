@@ -96,6 +96,7 @@ function MacroWidget({ widgetId, widgetActions }) {
             ]
         );
         fetchMacros();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: set up the widget header and fetch the macros once
     }, []);
 
     useEffect(() => {

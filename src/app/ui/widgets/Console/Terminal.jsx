@@ -111,6 +111,7 @@ const TerminalWrapper = forwardRef(({ inputValue: inputValueProp, terminalHistor
                 term = null;
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: create the xterm instance once; it keeps the first render's handlers
     }, []);
 
     function writeln(data, isHistory = true) {
