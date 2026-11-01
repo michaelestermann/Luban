@@ -1,9 +1,9 @@
 /**
- * How the selection bar shows its actions so that it fits on the canvas: level 0 labelled buttons,
- * level 1 the same buttons with icons only (label in the tooltip), level 2 those actions in an overflow
- * "⋯" menu. A level is used only when the one before does not fit.
+ * How the selection bar shows its actions so that it fits on the canvas: level 0 every action as an
+ * icon button, level 1 the shape actions in an overflow "⋯" menu. A level is used only when the one
+ * before does not fit.
  */
-export const BAR_LEVELS = 3;
+export const BAR_LEVELS = 2;
 
 export interface BarFit {
     // the selection and its actions the measurement belongs to
@@ -22,7 +22,7 @@ export function nextBarFit(fit: BarFit | null, key: string, width: number, avail
         return { key, level: 0, widths: [width] };
     }
     if (fit.key !== key) {
-        // another selection: render it with labels first, then measure
+        // another selection: render it with all buttons first, then measure
         return { key, level: 0, widths: [] };
     }
     const widths = fit.widths.slice(0, fit.level);
