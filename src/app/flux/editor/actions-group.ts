@@ -6,6 +6,7 @@ import type SvgGroup from '../../models/SvgGroup';
 import type SvgModel from '../../models/SvgModel';
 import type SVGActionsFactory from '../../models/SVGActionsFactory';
 import { baseActions } from './actions-base';
+import { recordSelectionChange, snapshotSelection } from './selection-history';
 
 type HeadType = 'laser' | 'cnc';
 
@@ -55,6 +56,7 @@ export const groupActions = {
         if (!modelGroup.canGroup()) return;
 
         const targetModels = modelGroup.selectedModelArray.slice() as SvgModel[];
+        const selectionBefore = snapshotSelection(modelGroup);
         const op = new GroupSvgOperation({ modelGroup, targetModels });
         const compound = new CompoundOperation();
         compound.push(op);
@@ -64,6 +66,7 @@ export const groupActions = {
             syncEditorAfterGroupChange(dispatch, headType, getState, children);
         });
         compound.redo();
+        dispatch(recordSelectionChange(headType, compound, selectionBefore));
         if (operationHistory && typeof operationHistory.push === 'function') {
             operationHistory.push(compound);
         }
@@ -85,6 +88,7 @@ export const groupActions = {
                 && typeof (m as SvgGroup).children !== 'undefined',
         );
         if (!target) return;
+        const selectionBefore = snapshotSelection(modelGroup);
 
         const op = new UngroupSvgOperation({ modelGroup, target });
         const compound = new CompoundOperation();
@@ -93,6 +97,7 @@ export const groupActions = {
             syncEditorAfterGroupChange(dispatch, headType, getState);
         });
         compound.redo();
+        dispatch(recordSelectionChange(headType, compound, selectionBefore));
         if (operationHistory && typeof operationHistory.push === 'function') {
             operationHistory.push(compound);
         }

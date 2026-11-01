@@ -81,6 +81,7 @@ import {
 } from '../../ui/SVGEditor/path-edit/rect-corners';
 import LayerOrderOperation2D from '../operation-history/LayerOrderOperation2D';
 import RoundCornersOperation2D from '../operation-history/RoundCornersOperation2D';
+import { recordSelectionChange, snapshotSelection } from './selection-history';
 import { RoundTarget, initialRoundRadius, roundTargetResult, roundTargets } from '../../ui/SVGEditor/path-edit/round-corners';
 import RenameOperation2D from '../operation-history/RenameOperation2D';
 import OriginOperation2D from '../operation-history/OriginOperation2D';
@@ -1364,6 +1365,7 @@ export const actions = {
 
     duplicateSelectedModel: headType => (dispatch, getState) => {
         const { modelGroup, SVGActions, toolPathGroup } = getState()[headType];
+        const selectionBefore = snapshotSelection(modelGroup);
 
         SVGActions.duplicateSelectedModel();
 
@@ -1378,6 +1380,7 @@ export const actions = {
         }
 
         dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(recordSelectionChange(headType, operations, selectionBefore));
         dispatch(actions.resetProcessState(headType));
         dispatch(baseActions.render(headType));
         // const { originalName, uploadName, config, sourceType, sourceWidth, sourceHeight, mode } = modelGroup.getSelectedModel();
@@ -1454,6 +1457,7 @@ export const actions = {
         const leafExists = (modelID: string) => modelGroup.getModels().some(model => model.modelID === modelID);
         const originWasOnObject = !isOriginBoundToMissingObject(origin, leafExists);
         const operations = new CompoundOperation();
+        const selectionBefore = snapshotSelection(modelGroup);
         // Snapshot parent group before deletion so undo can restore it
         const parentGroup = modelGroup.selectedGroupID
             ? modelGroup.models.find(m => m.modelID === modelGroup.selectedGroupID) ?? null
@@ -1495,6 +1499,7 @@ export const actions = {
         const modelState = modelGroup.removeSelectedModel();
 
         dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(recordSelectionChange(headType, operations, selectionBefore));
         dispatch(
             baseActions.updateState(headType, {
                 ...modelState
@@ -2136,6 +2141,7 @@ export const actions = {
 
     paste: headType => (dispatch, getState) => {
         const { modelGroup, SVGActions, toolPathGroup } = getState()[headType];
+        const selectionBefore = snapshotSelection(modelGroup);
 
         SVGActions.paste();
 
@@ -2150,6 +2156,7 @@ export const actions = {
         }
 
         dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(recordSelectionChange(headType, operations, selectionBefore));
         dispatch(actions.resetProcessState(headType));
         dispatch(baseActions.render(headType));
     },
@@ -3415,11 +3422,13 @@ export const actions = {
             dispatch(baseActions.updateState(headType, { ...modelGroup.getState() }));
             dispatch(baseActions.render(headType));
         };
+        const selectionBefore = snapshotSelection(modelGroup);
         const operation = new RoundCornersOperation2D({ steps, svgActions: SVGActions, onChange });
         operation.redo();
         const operations = new CompoundOperation();
         operations.push(operation);
         dispatch(operationHistoryActions.setOperations(headType, operations));
+        dispatch(recordSelectionChange(headType, operations, selectionBefore));
         dispatch(actions.resetProcessState(headType));
         dispatch(baseActions.render(headType));
     },
@@ -3714,6 +3723,7 @@ export const actions = {
         const original = selected[0];
         const href = getDecomposeHref(original);
         if (!href) return;
+        const selectionBefore = snapshotSelection(modelGroup);
 
         decomposingHeadTypes.add(headType);
         try {
@@ -3816,6 +3826,7 @@ export const actions = {
             SVGActions.clearSelection();
             modelGroup.selectedGroupID = null;
             SVGActions.addSelectedSvgModelsByModels(partModels, materials.isRotate);
+            dispatch(recordSelectionChange(headType, operations, selectionBefore));
 
             dispatch(baseActions.updateState(headType, modelGroup.getState()));
             dispatch(baseActions.resetCalculatedState(headType));
