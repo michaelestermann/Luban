@@ -63,6 +63,7 @@ const Dialog = {
             }
             return dialog.showMessageBox(options);
         } else {
+            // eslint-disable-next-line no-alert -- browser fallback outside Electron, where no native dialog API exists
             return window.confirm(options.message);
         }
     },

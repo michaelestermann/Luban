@@ -12,7 +12,7 @@ const log = logger('api:commands');
 
 const agent = superagentUse(superagent);
 const addPrefix = (prefix) => {
-    return function (request) {
+    return function addPrefixToRequest(request) {
         if (request.url[0] === '/') {
             request.url = prefix + request.url;
         }
@@ -89,7 +89,7 @@ export function getInformationFlowData(req, res) {
 }
 
 const addAuthorization = (token) => {
-    return function (request) {
+    return function addAuthorizationToRequest(request) {
         request.set('Authorization', `Bearer ${token}`);
         return request;
     };

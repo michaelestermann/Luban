@@ -6,16 +6,12 @@ import styles from './index.styl';
 const DropdownButton = (props) => {
     const { btnSize, toggle, style, children, ...rest } = props;
 
-    // Split component props
+    // Split component props. The antd based Dropdown has no ControlledComponent
+    // (and so no foreign propTypes to match against), so every prop goes to the toggle.
     const dropdownProps = {};
     const toggleProps = {};
     rest && Object.keys(rest).forEach(propName => {
-        const propValue = props[propName];
-        if (Dropdown?.ControlledComponent?.propTypes[propName]) {
-            dropdownProps[propName] = propValue;
-        } else {
-            toggleProps[propName] = propValue;
-        }
+        toggleProps[propName] = props[propName];
     });
 
     return (

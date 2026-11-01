@@ -14,7 +14,7 @@ const Stepper = (props) => {
 
     function handleMouseDown(event) {
         const clientX = event.clientX;
-        ref.current.onmousemove = function (e) {
+        ref.current.onmousemove = function onMouseMove(e) {
             const changedValueWithStep = getStepValue((e.clientX - clientX) / 20, step);
             setDisplayValue(displayValue + changedValueWithStep);
         };

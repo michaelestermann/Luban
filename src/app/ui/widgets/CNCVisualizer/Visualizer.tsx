@@ -153,7 +153,6 @@ interface VisualizerProps {
 
 class Visualizer extends React.Component<VisualizerProps> {
     public static propTypes = {
-        ...withRouter.propTypes,
         series: PropTypes.string.isRequired,
         pathname: PropTypes.string,
         page: PropTypes.string.isRequired,
