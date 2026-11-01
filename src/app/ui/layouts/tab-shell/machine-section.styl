@@ -1,0 +1,254 @@
+// Luban 4.17 tabs: machine section (bottom of the editors' left panel) and the machine notices
+
+.label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #5b6170;
+    white-space: nowrap;
+}
+
+.spacer {
+    flex: 1 1 auto;
+}
+
+.icon-button {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #2f3441;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+    padding: 0;
+    position: relative;
+
+    &:hover {
+        background: #eef1f6;
+    }
+}
+
+.small-button {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid #d9dde6;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    color: #2f3441;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+        background: #f3f5f8;
+    }
+}
+
+.small-primary {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff;
+
+    &:hover {
+        background: #1e40af;
+    }
+}
+
+.mini-machine {
+    margin-bottom: 10px;
+    color: #15803d;
+}
+
+.mini-conn {
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    border: 2px solid #f8f9fb;
+    background: #9aa1b0;
+}
+
+.mini-conn.connected {
+    background: #16a34a;
+}
+
+
+.machine {
+    border-top: 1px solid #e3e6ec;
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #fff;
+    flex: 0 0 auto;
+}
+
+.machine-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.machine-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #f0fdf4;
+    color: #15803d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.machine-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.machine-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.machine-toolhead {
+    font-size: 11.5px;
+    color: #5b6170;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.machine-conn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+}
+
+.conn-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background: #9aa1b0;
+    display: block;
+    flex: 0 0 auto;
+}
+
+.conn-dot.connected {
+    background: #16a34a;
+}
+
+// "Machine switched to ..." notice (top, centered)
+
+.notice {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #7c2d12;
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 10px 30px rgba(20, 30, 50, .22);
+}
+
+.notice-action {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+}
+
+.notice-dismiss {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    padding: 2px;
+}
+
+// a project made for another machine: bar above its page
+
+.mismatch-bar {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    background: #fff7ed;
+    border-bottom: 1px solid #fed7aa;
+    color: #9a3412;
+    font-size: 12.5px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.mismatch-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.mismatch-action {
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid #fdba74;
+    border-radius: 6px;
+    background: #fff;
+    color: #9a3412;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
+
+    &:hover {
+        background: #ffedd5;
+    }
+}
+
+// collapsed left panel (rail): the machine icon at the bottom
+.mini-machine {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 0;
+}
+
+// in the editors' left panel the section is the panel footer; in printing a card under the object list
+.machine.card {
+    border: 1px solid #e3e6ec;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(20, 30, 50, .08);
+}

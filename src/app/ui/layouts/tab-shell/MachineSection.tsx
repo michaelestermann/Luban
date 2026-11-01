@@ -1,9 +1,11 @@
 import classNames from 'classnames';
 import React from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 
 import { CONNECTION_STATUS_CONNECTING } from '../../../constants';
 import { MACHINE_TOOL_HEADS } from '../../../constants/machines';
+import { tabsActions } from '../../../flux/project/actions-tabs';
 import { machineDisplayName } from '../../../flux/project/machine-switch';
 import {
     DocumentMeta,
@@ -11,14 +13,15 @@ import {
     EditorHeadType,
     MachineRef,
     TabsState,
+    WORKSPACE_TAB,
     lastEditorHead,
     normalizeMachineSeries,
 } from '../../../flux/project/tabs-model';
 import connectActions from '../../../flux/workspace/actions-connect';
 import i18n from '../../../lib/i18n';
-import styles from './project-panel.styl';
+import styles from './machine-section.styl';
 
-/** Machine name without the brand ("Artisan", "J1/J1s") for the narrow panel rows. */
+/** Machine name without the brand ("Artisan", "J1/J1s") for narrow places (mismatch toast). */
 export function machineShortName(series: string | null | undefined): string {
     return machineDisplayName(series).replace(/^Snapmaker\s+/, '');
 }
@@ -63,18 +66,24 @@ export const MachineIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
 );
 
 interface MachineSectionProps {
-    collapsed: boolean;
-    /** opens the Workspace tab (the connection widget lives there) */
-    onOpenWorkspace: () => void;
+    /**
+     * 'panel': footer of the Laser/CNC left panel; 'rail': icon on its collapsed rail;
+     * 'card': card under the 3D printing object list
+     */
+    variant?: 'panel' | 'rail' | 'card';
 }
 
 /**
- * Machine section at the bottom of the project panel (design D): the one machine, its toolhead for the
- * active mode (on Home / Workspace the last editor mode), the connection state and Connect / Disconnect.
- * "Connect" only opens the Workspace tab; the connection is made there.
+ * The connected machine (design D, moved from the former project panel into the editors' left panel): the
+ * one machine, its toolhead for the active mode (on Home / Workspace the last editor mode), the connection
+ * state and Connect / Disconnect. "Connect" only opens the Workspace tab; the connection is made there.
  */
-const MachineSection: React.FC<MachineSectionProps> = ({ collapsed, onOpenWorkspace }) => {
+const MachineSection: React.FC<MachineSectionProps> = ({ variant = 'panel' }) => {
     const dispatch = useDispatch();
+    const history = useHistory();
+    const onOpenWorkspace = () => {
+        dispatch(tabsActions.activateTab(WORKSPACE_TAB, history));
+    };
     const tabs: TabsState = useSelector((state: { project: { tabs: TabsState } }) => state.project.tabs);
     const { series, toolHead } = useSelector((state: { machine: { series: string; toolHead: Record<string, string> } }) => ({
         series: state.machine.series,
@@ -105,7 +114,7 @@ const MachineSection: React.FC<MachineSectionProps> = ({ collapsed, onOpenWorksp
         server && dispatch(connectActions.disconnect(server as any));
     };
 
-    if (collapsed) {
+    if (variant === 'rail') {
         return (
             <button
                 type="button"
@@ -113,7 +122,7 @@ const MachineSection: React.FC<MachineSectionProps> = ({ collapsed, onOpenWorksp
                 title={`${name} · ${stateText}`}
                 aria-label={`${i18n._('key-Tabs/Machine')}: ${name} · ${stateText}`}
                 onClick={onOpenWorkspace}
-                data-machine-section="collapsed"
+                data-machine-section="rail"
             >
                 <MachineIcon />
                 <span className={classNames(styles['mini-conn'], { [styles.connected]: isConnected })} />
@@ -122,7 +131,11 @@ const MachineSection: React.FC<MachineSectionProps> = ({ collapsed, onOpenWorksp
     }
 
     return (
-        <section className={styles.machine} aria-label={i18n._('key-Tabs/Machine')} data-machine-section="expanded">
+        <section
+            className={classNames(styles.machine, { [styles.card]: variant === 'card' })}
+            aria-label={i18n._('key-Tabs/Machine')}
+            data-machine-section={variant}
+        >
             <span className={styles.label}>{i18n._('key-Tabs/Machine')}</span>
             <div className={styles['machine-row']}>
                 <span className={styles['machine-icon']}><MachineIcon /></span>

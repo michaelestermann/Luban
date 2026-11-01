@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 
 import { HEAD_CNC, HEAD_LASER, PAGE_EDITOR } from '../../../constants';
 import i18n from '../../../lib/i18n';
+import MachineSection from '../../layouts/tab-shell/MachineSection';
 import CncLaserObjectList from '../../widgets/CncLaserList/ObjectList';
 import OperationsPanel from '../../widgets/CncLaserList/OperationsPanel';
 import ToolPathListBox from '../../widgets/CncLaserList/ToolPathList';
@@ -48,6 +49,7 @@ const OperationsIcon: React.FC = () => (
  *   create), then the object list (objects are still selected here to create a toolpath
  *   while the canvas shows the toolpath preview).
  * - Step 3 (G-code): the generated G-code files (CncLaserOutput/GcodeFilesPanel).
+ * - Always at the bottom: the machine and its connection (tab-shell/MachineSection).
  */
 const ProjectLeftView: React.FC<ProjectLeftViewProps> = ({
     headType, collapsed, onToggleCollapsed, modeBlocked = false, onOpenWorkspace = () => undefined
@@ -84,6 +86,8 @@ const ProjectLeftView: React.FC<ProjectLeftViewProps> = ({
             collapseLabel={i18n._('key-CncLaser/Panel-Collapse left panel')}
             expandLabel={i18n._('key-CncLaser/Panel-Expand left panel')}
             railItems={railItems}
+            footer={<MachineSection variant="panel" />}
+            railFooter={<MachineSection variant="rail" />}
         >
             {isDesign && (
                 <>

@@ -94,3 +94,14 @@ test('interpolation placeholders of tab keys are kept in every locale', (t) => {
     }
     t.end();
 });
+
+test('no locale keeps a tab key the sources no longer use', (t) => {
+    const used = new Set(usedKeys);
+    for (const lng of LOCALES) {
+        const unused = Object.keys(resources[lng])
+            .filter((key) => key.startsWith('key-Tabs/'))
+            .filter((key) => !used.has(key.replace(/_plural$/, '')));
+        t.deepEqual(unused, [], `${lng}: no unused key-Tabs keys`);
+    }
+    t.end();
+});

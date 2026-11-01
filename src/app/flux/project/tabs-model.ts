@@ -698,53 +698,6 @@ export function pickDocumentToUnload(s: TabsState, liveIds: string[], usedRatio:
     return best ? best.id : null;
 }
 
-// ---- project panel (design D) ----
-
-/** Narrower windows (CSS px) start with the project panel collapsed when no choice is stored. */
-export const PANEL_COLLAPSE_BELOW_WIDTH = 1280;
-
-/**
- * Whether the project panel starts collapsed: a stored choice wins (the store may give it back as a
- * string), else the panel is collapsed below 1280 px window width.
- */
-export function initialPanelCollapsed(stored: boolean | string | null | undefined, windowWidth: number): boolean {
-    if (stored === true || stored === 'true') {
-        return true;
-    }
-    if (stored === false || stored === 'false') {
-        return false;
-    }
-    return windowWidth < PANEL_COLLAPSE_BELOW_WIDTH;
-}
-
-export interface PanelDocument {
-    meta: DocumentMeta;
-    status: DocumentStatus;
-    active: boolean;
-}
-
-/**
- * The open projects for the project panel, grouped by mode (printing, laser, cnc; tab order inside a
- * mode). The live document of a mode shows `liveStatus[head]` (computed from its slice); a parked or
- * unloaded document shows the status stored when it was parked.
- */
-export function projectPanelGroups(
-    s: TabsState,
-    liveStatus: Partial<Record<EditorHeadType, DocumentStatus>>,
-): Array<{ headType: EditorHeadType; documents: PanelDocument[] }> {
-    return groupDocumentsByMode(s).map((group) => ({
-        headType: group.headType,
-        documents: group.documents.map((meta) => {
-            const live = s.activeDocByHead[meta.headType] === meta.id && !!liveStatus[meta.headType];
-            return {
-                meta,
-                status: live ? liveStatus[meta.headType] : meta.status,
-                active: s.activeTabId === meta.id,
-            };
-        }),
-    }));
-}
-
 /** The mode of the active document, else of the most recently active one (Home, Workspace), else null. */
 export function lastEditorHead(s: TabsState): EditorHeadType | null {
     const active = s.documents[s.activeTabId];
@@ -863,30 +816,3 @@ export function machineSwitchToolHead(
     return out;
 }
 
-/**
- * The recent project files of all modes for the panel's Recent list: newest first (the store keeps the
- * newest entry last), without duplicates, at most `limit`; `isOpen` marks files open in a tab.
- */
-export function recentProjects(
-    recent: Array<RecentFileRef | null | undefined> | null | undefined,
-    s: TabsState,
-    limit = 10,
-): Array<RecentFileRef & { headType: EditorHeadType; isOpen: boolean }> {
-    const out: Array<RecentFileRef & { headType: EditorHeadType; isOpen: boolean }> = [];
-    const seen = new Set<string>();
-    const list = [...(recent || [])].reverse();
-    for (const item of list) {
-        const headType = item && typeof item.name === 'string' ? projectHeadTypeOf(item.name) : null;
-        if (!headType || out.length >= limit) {
-            continue;
-        }
-        const path = typeof item.path === 'string' ? item.path : '';
-        const key = path ? normalizeDocumentPath(path) : `name:${item.name.toLowerCase()}`;
-        if (seen.has(key)) {
-            continue;
-        }
-        seen.add(key);
-        out.push({ name: item.name, path, headType, isOpen: !!findDocumentByPath(s, path) });
-    }
-    return out;
-}

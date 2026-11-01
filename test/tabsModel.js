@@ -24,14 +24,11 @@ import {
     planLegacyMigration,
     restoreEntryPoint,
     unloadedMeta,
-    initialPanelCollapsed,
-    projectPanelGroups,
     lastEditorHead,
     normalizeMachineSeries,
     needsMachineSwitch,
     isDocumentForOtherMachine,
     machineSwitchToolHead,
-    recentProjects,
     filterDocumentsByQuery,
     scrollOffsetToReveal,
     droppedFilesToOpen,
@@ -527,41 +524,6 @@ test('serializeSession stores the unsaved flag as a boolean', (t) => {
     t.end();
 });
 
-test('initialPanelCollapsed: stored value wins; collapsed below 1280', (t) => {
-    t.equal(initialPanelCollapsed(true, 1920), true, 'stored collapsed');
-    t.equal(initialPanelCollapsed(false, 1000), false, 'stored expanded');
-    t.equal(initialPanelCollapsed(undefined, 1440), false, 'wide window: expanded');
-    t.equal(initialPanelCollapsed(undefined, 1280), false, '1280 is not narrower than 1280');
-    t.equal(initialPanelCollapsed(undefined, 1279), true, 'narrow window: collapsed');
-    t.equal(initialPanelCollapsed(null, 1200), true, 'null counts as not stored');
-    t.equal(initialPanelCollapsed('true', 1920), true, 'stored string from the store');
-    t.equal(initialPanelCollapsed('false', 1000), false);
-    t.end();
-});
-
-test('projectPanelGroups: modes in order, live docs take the live status, parked docs their meta', (t) => {
-    let s = withDocs(
-        doc('c1', 'cnc', { status: 'design' }),
-        doc('l1', 'laser', { status: 'gcode-ready' }),
-        doc('c2', 'cnc', { status: 'gcode-ready' }),
-        doc('p1', 'printing', { status: 'design' }),
-    );
-    s = activateTab(activateTab(s, 'c1', 1), 'p1', 2);
-    const groups = projectPanelGroups(s, { cnc: 'gcode-ready', printing: 'sliced', laser: 'design' });
-    t.deepEqual(groups.map((g) => g.headType), ['printing', 'laser', 'cnc'], 'printing, laser, cnc');
-    t.deepEqual(groups[2].documents.map((d) => d.meta.id), ['c1', 'c2'], 'tab order inside a mode');
-    t.equal(groups[2].documents[0].status, 'gcode-ready', 'live cnc doc: live status');
-    t.equal(groups[2].documents[1].status, 'gcode-ready', 'parked cnc doc: meta status');
-    t.equal(groups[0].documents[0].status, 'sliced', 'live printing doc: live status');
-    t.equal(groups[1].documents[0].status, 'gcode-ready', 'laser doc is not live (never activated): meta status');
-    t.equal(groups[0].documents[0].active, true, 'the active tab is marked');
-    t.equal(groups[2].documents[0].active, false);
-    t.deepEqual(projectPanelGroups(createTabsState(), {}), [], 'no docs: no groups');
-    const noLive = projectPanelGroups(s, {});
-    t.equal(noLive[2].documents[0].status, 'design', 'without a live status the meta status is used');
-    t.end();
-});
-
 test('lastEditorHead: the active doc, else the most recently active doc, else null', (t) => {
     let s = withDocs(doc('c1', 'cnc'), doc('l1', 'laser'));
     t.equal(lastEditorHead(s), null, 'nothing activated yet');
@@ -640,25 +602,6 @@ test('machineSwitchToolHead: the project toolhead for its mode, the current one 
         laserToolhead: 'l20', // no list for the mode: kept
         cncToolhead: 'c-hi',
     });
-    t.end();
-});
-
-test('recentProjects: all modes, newest first, no duplicates, open files marked, limited', (t) => {
-    const s = withDocs(doc('a', 'cnc', { openedFile: { name: 'PCB.snapcnc', path: 'D:/p/PCB.snapcnc' } }));
-    const recent = [
-        { name: 'old.snaplzr', path: 'D:/p/old.snaplzr' },
-        { name: 'PCB.snapcnc', path: 'd:\\p\\pcb.snapcnc' },
-        { name: 'part.stl', path: 'D:/p/part.stl' },
-        { name: 'vase.snap3dp', path: 'D:/p/vase.snap3dp' },
-        { name: 'PCB.snapcnc', path: 'D:/p/PCB.snapcnc' },
-        null,
-    ];
-    const list = recentProjects(recent, s);
-    t.deepEqual(list.map((r) => r.name), ['PCB.snapcnc', 'vase.snap3dp', 'old.snaplzr'], 'newest first, deduplicated, projects only');
-    t.deepEqual(list.map((r) => r.headType), ['cnc', 'printing', 'laser']);
-    t.deepEqual(list.map((r) => r.isOpen), [true, false, false]);
-    t.equal(recentProjects(recent, s, 2).length, 2, 'limit');
-    t.deepEqual(recentProjects(null, s), []);
     t.end();
 });
 

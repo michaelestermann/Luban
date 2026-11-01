@@ -22,6 +22,10 @@ interface PanelChromeProps {
     expandLabel: string;
     className?: string;
     bodyClassName?: string;
+    // pinned below the scrolling body (left panel: the machine section)
+    footer?: React.ReactNode;
+    // pinned at the bottom of the collapsed rail
+    railFooter?: React.ReactNode;
     children: React.ReactNode;
 }
 
@@ -59,7 +63,7 @@ const RightPanelIcon: React.FC = () => (
  * menu event).
  */
 const PanelChrome: React.FC<PanelChromeProps> = ({
-    side, title, hint, collapsed, onToggle, railItems = [], collapseLabel, expandLabel, className, bodyClassName, children
+    side, title, hint, collapsed, onToggle, railItems = [], collapseLabel, expandLabel, className, bodyClassName, footer, railFooter, children
 }) => {
     return (
         <div
@@ -86,6 +90,7 @@ const PanelChrome: React.FC<PanelChromeProps> = ({
                             {item.icon}
                         </button>
                     ))}
+                    {railFooter && <div className={styles['rail-footer']}>{railFooter}</div>}
                 </nav>
             )}
             {collapsed && side === 'right' && (
@@ -114,6 +119,7 @@ const PanelChrome: React.FC<PanelChromeProps> = ({
                 <div className={classNames(styles.body, bodyClassName)}>
                     {children}
                 </div>
+                {footer && <div className={styles.footer}>{footer}</div>}
             </section>
         </div>
     );

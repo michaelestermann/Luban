@@ -15,7 +15,7 @@ import {
 } from '../../../lib/machine-notice';
 import { mismatchLabels } from './MachineSection';
 import { tabDisplayName } from './TabStrip';
-import styles from './project-panel.styl';
+import styles from './machine-section.styl';
 
 // React escapes the text; i18next must not escape the machine names ("A350/A350T")
 const RAW = { interpolation: { escapeValue: false } };

@@ -8,6 +8,7 @@ import { logModelViewOperation } from '../../../lib/gaEvent';
 import i18n from '../../../lib/i18n';
 import SvgIcon from '../../components/SvgIcon';
 
+import MachineSection from '../../layouts/tab-shell/MachineSection';
 import ObjectListCardView from '../../views/PrintingObjectList/ObjectListCardView';
 import styles from './styles.styl';
 
@@ -17,6 +18,10 @@ function VisualizerBottomLeft({ actions }) {
         <div className="margin-horizontal-8">
             <div className="margin-bottom-8">
                 <ObjectListCardView />
+            </div>
+            {/* 4.17: the machine and its connection, below the object list (was in the project panel) */}
+            <div className="margin-bottom-8">
+                <MachineSection variant="card" />
             </div>
             {/* Camera control */}
             <div className="height-30">
