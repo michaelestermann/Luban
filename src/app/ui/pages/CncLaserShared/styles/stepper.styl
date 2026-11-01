@@ -42,6 +42,30 @@
     }
 }
 
+// the check of a done step: always takes its space, shown when the step is done
+.check-slot {
+    display: inline-flex;
+    visibility: hidden;
+
+    &.shown {
+        visibility: visible;
+    }
+}
+
+// reserves the width of the bold text, so a step does not grow when it becomes current or done
+.step-label {
+    display: inline-flex;
+    flex-direction: column;
+
+    &::after {
+        content: attr(data-label);
+        height: 0;
+        overflow: hidden;
+        visibility: hidden;
+        font-weight: 600;
+    }
+}
+
 .actions {
     display: flex;
     align-items: center;

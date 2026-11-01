@@ -127,8 +127,11 @@ export const Stepper: React.FC<StepperProps> = ({ headType, blocked = false }) =
                                 }
                             }}
                         >
-                            {isDone && <Check />}
-                            {`${index + 1} ${labels[item]}`}
+                            {/* the check and the bold text keep their space in every state: the steps never move */}
+                            <span className={classNames(styles['check-slot'], { [styles.shown]: isDone })}><Check /></span>
+                            <span className={styles['step-label']} data-label={`${index + 1} ${labels[item]}`}>
+                                {`${index + 1} ${labels[item]}`}
+                            </span>
                         </button>
                     </React.Fragment>
                 );
