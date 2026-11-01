@@ -791,6 +791,24 @@ export function needsMachineSwitch(current: MachineRef, project: ProjectMachineR
     return !!wanted && wanted !== current.toolHead?.[toolHeadKey(headType)];
 }
 
+/**
+ * What opening a project made for another machine does with the machine: `switch` to it (spec), `mismatch`
+ * (keep the machine while one is connected; the tab shows the mismatch bar) or `none` (same machine, or a
+ * machine Luban does not know).
+ */
+export function machineActionOnOpen(
+    current: MachineRef,
+    project: ProjectMachineRef | null | undefined,
+    headType: EditorHeadType,
+    opts: { connected: boolean; known: boolean },
+): 'switch' | 'mismatch' | 'none' {
+    if (!needsMachineSwitch(current, project, headType) || !opts.known) {
+        return 'none';
+    }
+    // while a machine is connected, G-code goes to it: switching would make it for the wrong work area / toolhead
+    return opts.connected ? 'mismatch' : 'switch';
+}
+
 /** `needsMachineSwitch` for an open tab: the machine stored in its meta against the current machine. */
 export function isDocumentForOtherMachine(meta: DocumentMeta | null | undefined, current: MachineRef): boolean {
     if (!meta) {

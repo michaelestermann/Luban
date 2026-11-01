@@ -38,6 +38,7 @@ import {
     tabKeyAction,
     sessionPersistAllowed,
     keepFailedDocument,
+    machineActionOnOpen,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -737,5 +738,16 @@ test('keepFailedDocument: a failed load keeps the tab and its auto-save (final r
     t.equal(next.state.documents.u2.loadFailed, undefined, 'the failure mark is not stored');
     // a later successful load clears the mark
     t.equal(updateDocument(s, 'u2', { loaded: true, source: 'live', loadFailed: false }).documents.u2.loadFailed, false);
+    t.end();
+});
+
+test('machineActionOnOpen: never switch the machine while one is connected (final review I-7)', (t) => {
+    const current = { series: 'A350', toolHead: { cncToolhead: 'standardCNCToolheadForSM2' } };
+    const artisan = { series: 'A400', toolHead: { cncToolhead: 'levelTwoCNCToolheadForSM2' } };
+    t.equal(machineActionOnOpen(current, artisan, 'cnc', { connected: false, known: true }), 'switch', 'not connected: switch (spec)');
+    t.equal(machineActionOnOpen(current, artisan, 'cnc', { connected: true, known: true }), 'mismatch', 'connected: keep the machine, show the mismatch bar');
+    t.equal(machineActionOnOpen(current, artisan, 'cnc', { connected: false, known: false }), 'none', 'unknown machine: nothing');
+    t.equal(machineActionOnOpen(current, { series: 'A350', toolHead: current.toolHead }, 'cnc', { connected: true, known: true }), 'none', 'same machine: nothing');
+    t.equal(machineActionOnOpen(current, null, 'cnc', { connected: true, known: true }), 'none', 'no machine in the project: nothing');
     t.end();
 });

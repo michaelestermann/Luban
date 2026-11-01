@@ -28,7 +28,7 @@ import { actions as printingActions } from '../printing';
 import { actions as workspaceActions } from '../workspace';
 import { actions as projectActions } from './index';
 import { createDocumentObjects, disposeDocumentObjects, initialStateOf, wireDocumentObjects } from './document-objects';
-import { currentMachineRef, knownMachineOf, shouldSwitchMachineFor, switchMachineForProject } from './machine-switch';
+import { currentMachineRef, knownMachineOf, machineDisplayName, switchMachineForProject } from './machine-switch';
 /* eslint-enable import/no-cycle */
 import { documentStore } from './document-store';
 import { PROJECT_META_KEYS, closedDocumentReset, documentStatusOf, isHeadBusy, planActivation, swapDocumentState } from './document-swap';
@@ -48,6 +48,7 @@ import {
     findDocumentByPath,
     isEditorHeadType,
     keepFailedDocument,
+    machineActionOnOpen,
     needsMachineSwitch,
     nextTabAfterClose,
     RestoreOutcome,
@@ -485,10 +486,22 @@ const openProjectInTab = (file: ProjectFileLike, history: HistoryLike) => async 
             documentStore.setLoading(headType, true);
             await dispatch(leaveCurrentPage(history));
             // one machine overall: a project made for another machine switches it (notice with Undo); the
-            // tab remembers the project's machine (case-library templates are for the current machine)
+            // tab remembers the project's machine (case-library templates are for the current machine).
+            // While a machine is connected nothing switches: the tab opens with the mismatch bar
             const machineInit = isTemplate ? {} : projectMachineInit(parsed.envObj?.machineInfo);
-            if (!isTemplate && shouldSwitchMachineFor(getState(), parsed.envObj?.machineInfo, headType)) {
-                dispatch(switchMachineForProject(parsed.envObj.machineInfo, headType));
+            const projectMachine = parsed.envObj?.machineInfo;
+            const machineAction = isTemplate ? 'none' : machineActionOnOpen(currentMachineRef(getState()), projectMachine, headType, {
+                connected: !!getState().workspace?.isConnected,
+                known: !!knownMachineOf(projectMachine?.series),
+            });
+            if (machineAction === 'switch') {
+                dispatch(switchMachineForProject(projectMachine, headType));
+            } else if (machineAction === 'mismatch') {
+                toast(makeSceneToast('info', i18n._('key-Tabs/{{name}} was made for {{machine}}. The machine is not switched while one is connected.', {
+                    name: parsed.fileRef?.name || file.name || '',
+                    machine: machineDisplayName(projectMachine?.series),
+                    interpolation: { escapeValue: false },
+                })));
             }
             const id = dispatch(startDocument(headType, { openedFile: parsed.fileRef, ...machineInit }, history)) as unknown as string;
             if (isEditor2D(headType)) {

@@ -2716,6 +2716,7 @@
     "key-Tabs/{{name}} was not found. It was restored from its autosave.": "{{name}} wurde nicht gefunden. Es wurde aus der automatischen Sicherung wiederhergestellt.",
     "key-Tabs/{{name}} could not be opened. Its autosave is kept; click its tab to try again.": "{{name}} konnte nicht geöffnet werden. Die automatische Sicherung bleibt erhalten; klicken Sie auf den Tab, um es erneut zu versuchen.",
     "key-Tabs/Could not be opened. Click to try again.": "Konnte nicht geöffnet werden. Klicken, um es erneut zu versuchen.",
+    "key-Tabs/{{name}} was made for {{machine}}. The machine is not switched while one is connected.": "{{name}} wurde für {{machine}} erstellt. Die Maschine wird nicht gewechselt, solange eine verbunden ist.",
     "key-Tabs/Projects": "Projekte",
     "key-Tabs/Collapse panel": "Leiste einklappen",
     "key-Tabs/Expand panel": "Leiste ausklappen",
