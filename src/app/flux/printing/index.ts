@@ -911,7 +911,6 @@ export const actions = {
      * @private
      */
     initSocketEvent: () => async (dispatch, getState) => {
-        const { modelGroup } = getState().printing;
         // generate gcode event
         if (!initEventFlag) {
             initEventFlag = true;
@@ -975,7 +974,7 @@ export const actions = {
                     })
                 );
 
-                modelGroup.unselectAllModels();
+                getState().printing.modelGroup.unselectAllModels();
                 dispatch(actions.loadGcode(gcodeFilename));
                 dispatch(actions.setTransformMode(''));
             });
