@@ -3,7 +3,7 @@
 const path = require('path');
 const fs = require('fs');
 const winston = require('winston');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 function getLogger() {
     const { combine, colorize, timestamp, printf } = winston.format;
@@ -52,12 +52,18 @@ function fillIn(translations, lang) {
     fs.writeFile(i18nFile, JSON.stringify(t, null, 4), () => {});
 }
 
-function main() {
+// text of a cell, undefined when it is empty
+function cellText(worksheet, address) {
+    const value = worksheet.getCell(address).text;
+    return value === '' ? undefined : value;
+}
+
+async function main() {
     const inputFile = getInputFile();
 
-    const workbook = XLSX.readFile(inputFile);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(inputFile);
+    const worksheet = workbook.worksheets[0];
 
     const col2lang = {
         B: ['German', 'de'],
@@ -75,7 +81,7 @@ function main() {
     Object.keys(col2lang).forEach((col) => {
         const item = col2lang[col];
 
-        const cellTitle = worksheet[`${col}1`].v;
+        const cellTitle = cellText(worksheet, `${col}1`);
         if (cellTitle !== item[1]) {
             logger.error(':(');
             return;
@@ -85,27 +91,29 @@ function main() {
 
         const translations = {};
         for (let i = 2; ; i++) {
-            const cell = worksheet[`A${i}`];
+            const cell = cellText(worksheet, `A${i}`);
             if (cell === undefined) {
                 break;
             }
-            const key = worksheet[`A${i}`].v.trim();
-            try {
-                const value = worksheet[col + i].v.trim();
-
-                translations[key] = value;
-            } catch (err) {
+            const key = cell.trim();
+            const value = cellText(worksheet, col + i);
+            if (value === undefined) {
                 logger.error(`missing col ${col + i}`);
+            } else {
+                translations[key] = value.trim();
             }
         }
 
         fillIn(translations, item[1]);
     });
-    console.log(worksheet.B1.v);
+    console.log(cellText(worksheet, 'B1'));
 }
 
-main();
-
-logger.info('Done.');
+main()
+    .then(() => logger.info('Done.'))
+    .catch((err) => {
+        logger.error(err.message);
+        process.exitCode = 1;
+    });
 
 // node scripts/i18n-import-excel.js {excel}

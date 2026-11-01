@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const winston = require('winston');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 
 const { combine, colorize, timestamp, printf } = winston.format;
@@ -59,8 +59,14 @@ Object.keys(translateMap).sort().forEach((key) => {
     worksheetData.push([key].concat(LANGUAGES.map((lang) => pack[lang])));
 });
 
-const workbook = XLSX.utils.book_new();
-const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-XLSX.utils.book_append_sheet(workbook, worksheet, 'Translates');
+const workbook = new ExcelJS.Workbook();
+const worksheet = workbook.addWorksheet('Translates');
+worksheet.addRows(worksheetData);
 
-XLSX.writeFile(workbook, `Translates-${+new Date()}.xlsx`);
+const outputFile = `Translates-${+new Date()}.xlsx`;
+workbook.xlsx.writeFile(outputFile)
+    .then(() => logger.info(`Written ${outputFile}`))
+    .catch((err) => {
+        logger.error(err.message);
+        process.exitCode = 1;
+    });
