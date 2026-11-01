@@ -206,6 +206,33 @@ export function readFrame(svgText: string, deps?: DomDeps): Frame | null {
 }
 
 /**
+ * How the canvas <image> of a model fits its SVG: the unscaled image size
+ * (width / |scaleX|, height / |scaleY|), the scale from user units to image
+ * pixels and the offset of the viewBox inside the image (letterboxing of the
+ * default xMidYMid meet).
+ */
+function fitViewBox(original: { width: number; height: number; scaleX?: number; scaleY?: number },
+    viewBox: [number, number, number, number], preserveAspectRatio: string | null) {
+    const { scaleX = 1, scaleY = 1, width, height } = original;
+    const [, , vbWidth, vbHeight] = viewBox;
+    const imageWidth = Math.abs(width / scaleX);
+    const imageHeight = Math.abs(height / scaleY);
+    if ((preserveAspectRatio || '').trim().startsWith('none')) {
+        return { imageWidth, imageHeight, sx: imageWidth / vbWidth, sy: imageHeight / vbHeight, offsetX: 0, offsetY: 0 };
+    }
+    // Default xMidYMid meet
+    const s = Math.min(imageWidth / vbWidth, imageHeight / vbHeight);
+    return {
+        imageWidth,
+        imageHeight,
+        sx: s,
+        sy: s,
+        offsetX: (imageWidth - vbWidth * s) / 2,
+        offsetY: (imageHeight - vbHeight * s) / 2
+    };
+}
+
+/**
  * Transformation of a part so its content stays exactly where it was drawn
  * inside the original object (same rotation, flips and scale).
  *
@@ -220,22 +247,9 @@ export function computePartTransformation({ original, viewBox, preserveAspectRat
     preserveAspectRatio: string | null;
     bbox: BBox;
 }): PartTransformation {
-    const { positionX, positionY, rotationZ = 0, scaleX = 1, scaleY = 1, width, height } = original;
-    const [vbX, vbY, vbWidth, vbHeight] = viewBox;
-    const imageWidth = Math.abs(width / scaleX);
-    const imageHeight = Math.abs(height / scaleY);
-
-    let sx: number, sy: number, offsetX = 0, offsetY = 0;
-    if ((preserveAspectRatio || '').trim().startsWith('none')) {
-        sx = imageWidth / vbWidth;
-        sy = imageHeight / vbHeight;
-    } else {
-        // Default xMidYMid meet
-        sx = Math.min(imageWidth / vbWidth, imageHeight / vbHeight);
-        sy = sx;
-        offsetX = (imageWidth - vbWidth * sx) / 2;
-        offsetY = (imageHeight - vbHeight * sy) / 2;
-    }
+    const { positionX, positionY, rotationZ = 0, scaleX = 1, scaleY = 1 } = original;
+    const [vbX, vbY] = viewBox;
+    const { imageWidth, imageHeight, sx, sy, offsetX, offsetY } = fitViewBox(original, viewBox, preserveAspectRatio);
 
     // Part centre relative to the image centre, in unscaled SVG pixels (y down)
     const dx = -imageWidth / 2 + offsetX + (bbox.x + bbox.width / 2 - vbX) * sx;
@@ -257,6 +271,62 @@ export function computePartTransformation({ original, viewBox, preserveAspectRat
         width: bbox.width * sx * Math.abs(scaleX),
         height: bbox.height * sy * Math.abs(scaleY)
     };
+}
+
+export interface Margins {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+}
+
+/** A single element is decomposable when it is more than this (mm) away from the object frame on a side. */
+export const DECOMPOSE_MARGIN_MM = 0.1;
+
+/**
+ * Empty space (mm, after the model's scale) between a part's bounding box
+ * and the frame of the object on the canvas, per side as seen on the canvas
+ * (a flipped model swaps left/right or top/bottom; rotation turns the frame
+ * with the content, so it changes nothing). Negative when content reaches
+ * beyond the frame.
+ */
+export function partMargins({ original, viewBox, preserveAspectRatio, bbox }: {
+    original: { width: number; height: number; scaleX?: number; scaleY?: number };
+    viewBox: [number, number, number, number];
+    preserveAspectRatio: string | null;
+    bbox: BBox;
+}): Margins {
+    const { scaleX = 1, scaleY = 1 } = original;
+    const [vbX, vbY] = viewBox;
+    const { imageWidth, imageHeight, sx, sy, offsetX, offsetY } = fitViewBox(original, viewBox, preserveAspectRatio);
+    const left = (offsetX + (bbox.x - vbX) * sx) * Math.abs(scaleX);
+    const right = (imageWidth - offsetX - (bbox.x + bbox.width - vbX) * sx) * Math.abs(scaleX);
+    const top = (offsetY + (bbox.y - vbY) * sy) * Math.abs(scaleY);
+    const bottom = (imageHeight - offsetY - (bbox.y + bbox.height - vbY) * sy) * Math.abs(scaleY);
+    return {
+        left: scaleX < 0 ? right : left,
+        right: scaleX < 0 ? left : right,
+        top: scaleY < 0 ? bottom : top,
+        bottom: scaleY < 0 ? top : bottom
+    };
+}
+
+/** Whether any side has more than `threshold` mm of empty space. */
+export function hasMargin(margins: Margins | null | undefined, threshold = DECOMPOSE_MARGIN_MM): boolean {
+    if (!margins) {
+        return false;
+    }
+    // a hair of tolerance so a computed 0.1000000000001 still counts as 0.1
+    const limit = threshold + 1e-9;
+    return margins.left > limit || margins.right > limit || margins.top > limit || margins.bottom > limit;
+}
+
+/**
+ * Whether an SVG with `partCount` parts can be decomposed: two or more parts,
+ * or one part that has a margin to the object frame (it gets a tight frame).
+ */
+export function isDecomposable(partCount: number, margins: Margins | null | undefined): boolean {
+    return partCount >= 2 || (partCount === 1 && hasMargin(margins));
 }
 
 /**
@@ -295,11 +365,24 @@ export function measurePartBBox(partSvg: string): BBox | null {
 
 // --- model level -----------------------------------------------------------
 
+/**
+ * What `loadDecomposeInfo` found in the processed SVG of a model: whether it
+ * has 2+ parts, and for an SVG with a single drawn element its frame and the
+ * element's bounding box (user units), so the margin can follow the model's
+ * current scale.
+ */
+export interface DecomposeInfo {
+    href: string;
+    canSplit: boolean;
+    single?: { viewBox: [number, number, number, number]; bbox: BBox } | null;
+}
+
 interface DecomposableModel {
     sourceType?: string;
     visible?: boolean;
     elem?: { nodeName: string; getAttribute(name: string): string | null } | null;
-    decomposeInfo?: { href: string; canSplit: boolean };
+    transformation?: { width: number; height: number; scaleX?: number; scaleY?: number };
+    decomposeInfo?: DecomposeInfo;
 }
 
 /** href of the processed SVG an imported SVG model shows, or null. */
@@ -314,14 +397,33 @@ export function getDecomposeHref(model: DecomposableModel | null): string | null
     return href;
 }
 
+/** Margins of a single-element SVG model at its current size, or null. */
+function singleElementMargins(model: DecomposableModel): Margins | null {
+    const single = model.decomposeInfo?.single;
+    if (!single || !model.transformation) {
+        return null;
+    }
+    return partMargins({
+        original: model.transformation,
+        viewBox: single.viewBox,
+        // The canvas <image> decides how the SVG is fitted (default xMidYMid meet)
+        preserveAspectRatio: model.elem.getAttribute('preserveAspectRatio'),
+        bbox: single.bbox
+    });
+}
+
 /**
  * Whether this model can be decomposed: an imported SVG whose processed SVG
- * has at least 2 parts. Uses the result cached on the model by
- * `loadDecomposeInfo` (false until it is loaded).
+ * has at least 2 parts, or a single drawn element with a margin of more than
+ * 0.1 mm to the object frame (after the model's scale). Uses the result
+ * cached on the model by `loadDecomposeInfo` (false until it is loaded).
  */
 export function canDecompose(model: DecomposableModel | null): boolean {
     const href = getDecomposeHref(model);
-    return !!href && model.decomposeInfo?.href === href && model.decomposeInfo.canSplit === true;
+    if (!href || model.decomposeInfo?.href !== href) {
+        return false;
+    }
+    return model.decomposeInfo.canSplit === true || isDecomposable(1, singleElementMargins(model));
 }
 
 /** Whether the decompose action is enabled for this selection and editor mode. */
@@ -343,11 +445,26 @@ export async function fetchSvgText(href: string): Promise<string> {
     return res.text();
 }
 
-const pending = new Map<string, Promise<boolean>>();
+/**
+ * Decompose info of an SVG text (browser only: a single element is measured
+ * with `measurePartBBox`).
+ */
+export function readDecomposeInfo(href: string, svgText: string): DecomposeInfo {
+    const { parts, canSplit } = splitOneLevel(svgText);
+    let single: DecomposeInfo['single'] = null;
+    if (parts.length === 1) {
+        const frame = readFrame(svgText);
+        const bbox = measurePartBBox(parts[0]);
+        single = frame && bbox ? { viewBox: frame.viewBox, bbox } : null;
+    }
+    return { href, canSplit, single };
+}
+
+const pending = new Map<string, Promise<DecomposeInfo>>();
 
 /**
- * Fetch the model's processed SVG once and cache whether it can be split on
- * the model (`model.decomposeInfo`). Resolves to the cached result.
+ * Fetch the model's processed SVG once and cache on the model what it holds
+ * (`model.decomposeInfo`). Resolves to `canDecompose(model)`.
  */
 export async function loadDecomposeInfo(model: DecomposableModel | null): Promise<boolean> {
     const href = getDecomposeHref(model);
@@ -355,17 +472,16 @@ export async function loadDecomposeInfo(model: DecomposableModel | null): Promis
         return false;
     }
     if (model.decomposeInfo?.href === href) {
-        return model.decomposeInfo.canSplit;
+        return canDecompose(model);
     }
     if (!pending.has(href)) {
         pending.set(href, fetchSvgText(href)
-            .then((text) => splitOneLevel(text).canSplit)
-            .catch(() => false)
+            .then((text) => readDecomposeInfo(href, text))
+            .catch(() => ({ href, canSplit: false, single: null }))
             .finally(() => pending.delete(href)));
     }
-    const canSplit = await pending.get(href);
-    model.decomposeInfo = { href, canSplit };
-    return canSplit;
+    model.decomposeInfo = await pending.get(href);
+    return canDecompose(model);
 }
 
 /**

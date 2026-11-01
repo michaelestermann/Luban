@@ -43,11 +43,13 @@ import i18n from '../../lib/i18n';
 import log from '../../lib/log';
 import { createObjectOrigin, isOriginBoundToMissingObject, rememberOrigin } from '../../lib/object-origin';
 import {
+    canDecompose,
     computePartTransformation,
     createAllOrNone,
     fetchSvgText,
     getDecomposeHref,
     measurePartBBox,
+    readDecomposeInfo,
     readFrame,
     reframePart,
     splitOneLevel
@@ -3767,7 +3769,8 @@ export const actions = {
     // Decompose the selected imported SVG one level: each direct child of
     // its SVG (single wrapper <g>s skipped) becomes its own object with a
     // tight frame, in the same place, with the original's mode/settings and
-    // tool paths. One undo step reverts it completely.
+    // tool paths. An SVG with a single element and a margin becomes one
+    // object with a tight frame. One undo step reverts it completely.
     decomposeSelectedSVG: (headType) => async (dispatch, getState) => {
         if (decomposingHeadTypes.has(headType)) return;
         const { modelGroup, SVGActions, toolPathGroup, materials } = getState()[headType];
@@ -3783,10 +3786,11 @@ export const actions = {
         decomposingHeadTypes.add(headType);
         try {
             const svgText = await fetchSvgText(href);
-            const { parts, canSplit } = splitOneLevel(svgText);
-            original.decomposeInfo = { href, canSplit };
+            const { parts } = splitOneLevel(svgText);
+            original.decomposeInfo = readDecomposeInfo(href, svgText);
             const frame = readFrame(svgText);
-            if (!canSplit || !frame) return;
+            // two or more parts, or a single element with a margin (it gets a tight frame)
+            if (!canDecompose(original) || !frame) return;
 
             const placed = [];
             for (const part of parts) {
@@ -3804,7 +3808,7 @@ export const actions = {
                     });
                 }
             }
-            if (placed.length < 2) return;
+            if (placed.length < 2 && !(placed.length === 1 && parts.length === 1)) return;
 
             const baseName = (original.originalName || 'svg').replace(/\.svg$/i, '');
             const uploads = await Promise.all(placed.map(async ({ svg }, i) => {
