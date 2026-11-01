@@ -25,6 +25,7 @@ import { logModuleVisit } from '../../lib/gaEvent';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
 import { PROCESS_STAGE } from '../../lib/manager/ProgressManager';
+import { normalizeOrigin } from '../../lib/work-origin';
 import workerManager from '../../lib/manager/workerManager';
 import { bubbleSortByAttribute } from '../../lib/numeric-utils';
 import UniApi from '../../lib/uni-api';
@@ -381,11 +382,8 @@ export const actions = {
 
             const isRotate = materials ? materials.isRotate : false;
 
-            // origin
-            if (origin) {
-                dispatch(editorActions.setOrigin(envHeadType, origin));
-            } else {
-                // Old project does not have origin saved, we asssume that they use "Workpiece" origin type
+            // origin (old projects have none: we assume they use the "Workpiece" origin type)
+            {
                 let reference;
                 if (!isRotate) {
                     switch (coordinateMode.value) {
@@ -417,11 +415,13 @@ export const actions = {
                     }
                 }
 
-                dispatch(editorActions.setOrigin(envHeadType, {
+                const fallbackOrigin = {
                     type: OriginType.Workpiece,
                     reference: reference,
                     referenceMetadata: {},
-                }));
+                };
+                // a stored origin is checked: unknown values fall back, 4.16 origins load unchanged
+                dispatch(editorActions.setOrigin(envHeadType, origin ? normalizeOrigin(origin, fallbackOrigin) : fallbackOrigin));
             }
 
             const oversize = some(keys(coordinateSize), (key) => {

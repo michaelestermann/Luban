@@ -123,9 +123,18 @@ export enum ObjectReference {
 
 export type OriginReference = RectangleWorkpieceReference | CylinderWorkpieceReference | ObjectReference;
 
+export type OriginOffset = { x: number; y: number };
+
 export type OriginReferenceMetadata = {
     // object origin: the objects it is bound to (their bounding box); none = all objects of the operations
+    // (with groupID: the members of the group, fallback after ungroup / undo and for 4.16)
     modelIDs?: string[];
+    // object origin on the frame of a group
+    groupID?: string;
+    // object origin on one of the 9 points of the workpiece frame
+    workpiece?: boolean;
+    // mm, applied after the reference point; never stored as {0,0}
+    offset?: OriginOffset;
 };
 
 

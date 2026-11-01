@@ -42,6 +42,7 @@ import OperationHistory from '../../core/OperationHistory';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
 import { createObjectOrigin, isOriginBoundToMissingObject, rememberOrigin } from '../../lib/object-origin';
+import { workpieceModelBox } from '../../lib/work-origin';
 import {
     canDecompose,
     computePartTransformation,
@@ -2876,6 +2877,9 @@ export const actions = {
                 coordinateSize,
             })
         );
+        (getState()[headType].toolPathGroup as ToolPathGroup)?.setWorkpieceBox(
+            workpieceModelBox(coordinateSize, coordinateMode?.setting?.sizeMultiplyFactor),
+        );
     },
 
     /**
@@ -2982,9 +2986,10 @@ export const actions = {
                 machineStore.set('origin.reference', origin.reference);
             }
 
-            // Update origin of tool path object
-            const toolPathGroup = getState()[headType].toolPathGroup as ToolPathGroup;
-            toolPathGroup.setOrigin(origin);
+            // Update origin of tool path object (the workpiece frame first: an origin on it needs the box)
+            const { toolPathGroup, coordinateSize, coordinateMode } = getState()[headType];
+            (toolPathGroup as ToolPathGroup).setWorkpieceBox(workpieceModelBox(coordinateSize, coordinateMode?.setting?.sizeMultiplyFactor));
+            (toolPathGroup as ToolPathGroup).setOrigin(origin);
         };
     },
 

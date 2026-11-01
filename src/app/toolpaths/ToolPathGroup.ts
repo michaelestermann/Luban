@@ -6,7 +6,8 @@ import { Origin } from '../constants/coordinate';
 import { ViewPathRenderer } from '../lib/renderer/ViewPathRenderer';
 import { generateModelDefaultConfigs } from '../models/ModelInfoUtils';
 import ThreeModel from '../models/ThreeModel';
-import { BoxLike, Point, objectReferenceBox, referencePoint } from '../lib/object-origin';
+import { BoxLike, Point, referencePoint } from '../lib/object-origin';
+import { OriginContext, resolveReferenceBox } from '../lib/work-origin';
 import ToolPath from './ToolPath';
 import { moveItem } from './reorder';
 import { SUCCESS, createToolPathNameByType, getModelsByToolPathType, getToolPathType } from './utils';
@@ -35,6 +36,8 @@ class ToolPathGroup {
     public thumbnail = '';
 
     private origin: Origin;
+
+    private workpieceBox: BoxLike | null = null;
 
     public constructor(modelGroup, headType) {
         this.modelGroup = modelGroup;
@@ -452,9 +455,16 @@ class ToolPathGroup {
      * visible tool paths. Null for a workpiece origin or when the bound objects are gone.
      */
     public getObjectReferenceBox(origin: Origin = this.origin): BoxLike | null {
-        const leafs = (typeof this.modelGroup?.getModels === 'function' ? this.modelGroup.getModels() : []) as {
-            modelID: string; computeBoundingBox?: () => void; boundingBox?: BoxLike;
-        }[];
+        return resolveReferenceBox(origin, this.getOriginContext());
+    }
+
+    /** What the origin resolver needs: model boxes, group members, the boxes of the visible tool paths, the workpiece. */
+    public getOriginContext(): OriginContext {
+        const modelGroup = this.modelGroup as unknown as {
+            getModels?: () => { modelID: string; computeBoundingBox?: () => void; boundingBox?: BoxLike }[];
+            getModel?: (id: string) => { children?: { modelID: string }[] } | null;
+        };
+        const leafs = typeof modelGroup?.getModels === 'function' ? modelGroup.getModels() : [];
         const getBox = (modelID: string): BoxLike | null => {
             const model = leafs.find(leaf => leaf.modelID === modelID);
             if (!model || !model.computeBoundingBox) {
@@ -463,10 +473,20 @@ class ToolPathGroup {
             model.computeBoundingBox();
             return model.boundingBox;
         };
+        const getGroupMemberIds = (groupID: string): string[] | null => {
+            const group = typeof modelGroup?.getModel === 'function' ? modelGroup.getModel(groupID) : null;
+            return group && Array.isArray(group.children) ? group.children.map(child => child.modelID) : null;
+        };
         const allBoxes = (): BoxLike[] => this.toolPaths
             .filter(toolpath => toolpath.visible)
             .map(toolPath => toolPath.getBoundingBox());
-        return objectReferenceBox(origin, getBox, allBoxes);
+        return { getBox, getGroupMemberIds, allBoxes, workpieceBox: this.workpieceBox };
+    }
+
+    /** The workpiece in model coordinates (origin on a workpiece frame point). */
+    public setWorkpieceBox(box: BoxLike | null): void {
+        this.workpieceBox = box;
+        this.computeReferenceBox();
     }
 
     /** The point (model coordinates) of an object origin, null when the workpiece origin applies. */

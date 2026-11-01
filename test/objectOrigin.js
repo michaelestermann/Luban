@@ -136,3 +136,11 @@ test('stockBoundary: the workpiece in G-code coordinates for the simulation stoc
     );
     t.end();
 });
+
+test('rememberOrigin: group and workpiece-frame origins belong to the project', (t) => {
+    const { createWorkpieceFrameOrigin, createGroupOrigin, createFreeOrigin } = require('../src/app/lib/work-origin');
+    t.equal(rememberOrigin('laser', createWorkpieceFrameOrigin('center')), false);
+    t.equal(rememberOrigin('laser', createGroupOrigin('center', 'g', ['a'])), false);
+    t.equal(rememberOrigin('laser', createFreeOrigin('bottom-left', { x: 5, y: 0 })), true);
+    t.end();
+});

@@ -159,7 +159,8 @@ export function rememberOrigin(headType: string, origin: Origin): boolean {
     if (origin.type !== OriginType.Object) {
         return true;
     }
-    if (headType !== 'laser' || boundModelIds(origin).length) {
+    const metadata = origin.referenceMetadata || {};
+    if (headType !== 'laser' || boundModelIds(origin).length || metadata.groupID || metadata.workpiece) {
         return false;
     }
     return LASER_JOB_SETUP_REFERENCES.includes(origin.reference);
