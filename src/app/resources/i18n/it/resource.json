@@ -564,6 +564,8 @@
     "Please go to the machine, click work switch to run boundary. If the enclosure is installed, the enclosure door needs to be closed.": "Please go to the machine, click work switch to run boundary. If the enclosure is installed, the enclosure door needs to be closed.",
     "Please select a vector and an image at the same time.": "Please select a vector and an image at the same time.",
     "Plunge Speed": "Velocità di tuffo",
+    "Retract Speed": "Retract Speed",
+    "Set the speed at which the tool is pulled out of the material when drilling.": "Set the speed at which the tool is pulled out of the material when drilling.",
     "Point Angle": "Point Angle",
     "Preset": "Preimpostato",
     "Press the work switch to pause/resume. Press and hold the button to stop.": "Press the work switch to pause/resume. Press and hold the button to stop.",

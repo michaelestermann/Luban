@@ -69,6 +69,10 @@ class CncParameters extends PureComponent {
         const gcodeDefinition = CNC_DEFAULT_GCODE_PARAMETERS_DEFINITION;
         Object.keys(gcodeDefinition).forEach((key) => {
             gcodeDefinition[key].default_value = gcodeConfig[key];
+            // drilling: no retract speed set yet (older projects) means the jog speed
+            if (key === 'retractSpeed' && !(gcodeConfig.retractSpeed > 0)) {
+                gcodeDefinition[key].default_value = gcodeConfig.jogSpeed;
+            }
             // isGcodeConfig is true means to use updateGcodeConfig, false means to use updateToolConfig
             gcodeDefinition[key].isGcodeConfig = true;
         });
@@ -102,7 +106,7 @@ class CncParameters extends PureComponent {
         ] : ['workSpeed', 'plungeSpeed', 'stepDown', 'stepOver', 'toolExtensionEnabled'];
         if (isDrill) {
             // Drilling only plunges: no work speed or step over
-            toolDefinitionToolKeys = ['plungeSpeed', 'stepDown'];
+            toolDefinitionToolKeys = ['plungeSpeed', 'retractSpeed', 'stepDown'];
         }
         const toolDefinitionTool = {};
         toolDefinitionToolKeys.forEach((key) => {
