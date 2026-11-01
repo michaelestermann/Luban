@@ -12,6 +12,11 @@
         height: calc(100vh - var(--tab-strip-height, 0px) - 74px);
     }
 
+    // no top bar: the table takes the whole height below the tab strip
+    .workspace-table.without-main-bar {
+        height: calc(100vh - var(--tab-strip-height, 0px));
+    }
+
     .main-bar {
         width: 100%;
         padding: 4px 8px;
@@ -38,6 +43,10 @@
     .workspace {
         .workspace-table {
             height: calc(100vh - var(--tab-strip-height, 0px) - 90px);
+        }
+
+        .workspace-table.without-main-bar {
+            height: calc(100vh - var(--tab-strip-height, 0px) - 16px);
         }
     }
 }

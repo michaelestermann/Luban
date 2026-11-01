@@ -1,12 +1,10 @@
 import { WorkflowStatus } from '@snapmaker/luban-platform';
 import classNames from 'classnames';
-import i18next from 'i18next';
 import _ from 'lodash';
 import includes from 'lodash/includes';
 import PropTypes from 'prop-types';
 import React, { useEffect, useRef, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
-import { useHistory } from 'react-router-dom';
 
 import { CNC_GCODE_SUFFIX, LASER_GCODE_SUFFIX, PRINTING_GCODE_SUFFIX } from '../../constants';
 import { DUAL_EXTRUDER_TOOLHEAD_FOR_ARTISAN, DUAL_EXTRUDER_TOOLHEAD_FOR_SM2 } from '../../constants/machines';
@@ -19,7 +17,6 @@ import modal from '../../lib/modal';
 import { Button } from '../components/Buttons';
 import Dropzone from '../components/Dropzone';
 import Modal from '../components/Modal';
-import MainToolBar from '../layouts/MainToolBar';
 import WorkspaceLayout from '../layouts/WorkspaceLayout';
 import styles from '../layouts/styles/workspace.styl';
 import { logPageView, renderWidgetList } from '../utils';
@@ -103,15 +100,13 @@ function getUnsupportedWidgets(machineIdentifier, toolHead) {
     return [];
 }
 
+// 4.17: the Workspace is a tab; the tab strip replaces the former top bar with its Back button
 interface WorkspaceProps {
-    isPopup?: boolean;
-    onClose?: () => void;
     style?: object;
     className?: string;
 }
 
-const Workspace: React.FC<WorkspaceProps> = ({ isPopup, onClose, style, className }) => {
-    const history = useHistory();
+const Workspace: React.FC<WorkspaceProps> = ({ style, className }) => {
     const dispatch = useDispatch();
 
     const primaryWidgets = useSelector((state: RootState) => state.widget.workspace.left.widgets);
@@ -125,16 +120,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ isPopup, onClose, style, classNam
 
     const [isDraggingWidget, setIsDraggingWidget] = useState(false);
     const [connected, setConnected] = useState(controller.connected);
-    const [leftItems, setLeftItems] = useState([
-        {
-            title: i18n._('key-Workspace/Page-Back'),
-            type: 'button',
-            name: 'MainToolbarBack',
-            action: () => {
-                history.push('/');
-            }
-        }
-    ]);
 
     const defaultContainer = useRef();
     const childRef = (ref) => {
@@ -163,17 +148,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ isPopup, onClose, style, classNam
     const actions = {
         updateTabContainer: (container, value) => {
             dispatch(widgetActions.updateTabContainer('workspace', container, value));
-        },
-        addReturnButton: () => {
-            if (!onClose) {
-                return;
-            }
-            const returnButton = {
-                title: 'key-Workspace/Page-Back',
-                name: 'MainToolbarBack',
-                action: onClose
-            };
-            setLeftItems([returnButton]);
         },
         onDropAccepted: (file) => {
             dispatch(workspaceActions.uploadGcodeFile(file));
@@ -233,10 +207,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ isPopup, onClose, style, classNam
 
     useEffect(() => {
         addControllerEvents();
-
-        if (isPopup && onClose) {
-            actions.addReturnButton();
-        }
         logPageView({
             pathname: '/workspace'
         });
@@ -278,15 +248,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ isPopup, onClose, style, classNam
     }
 
 
-    const renderMainToolBar = () => {
-        return (
-            <MainToolBar
-                leftItems={leftItems}
-                lang={i18next.language}
-            />
-        );
-    };
-
     const unsupported = getUnsupportedWidgets(connectedMachineIdentifier, toolHead);
 
     const leftWidgetNames = primaryWidgets.filter((widgetName) => {
@@ -299,7 +260,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ isPopup, onClose, style, classNam
     return (
         <div style={style} className={classNames(className)}>
             <WorkspaceLayout
-                renderMainToolBar={renderMainToolBar}
                 renderLeftView={() => renderWidgetList('workspace', 'left', leftWidgetNames, allWidgets, listActions, {})}
                 renderRightView={() => renderWidgetList('workspace', 'right', rightWidgetNames, allWidgets, listActions, {}, controlActions)}
                 updateTabContainer={actions.updateTabContainer}
@@ -327,8 +287,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ isPopup, onClose, style, classNam
 };
 
 Workspace.propTypes = {
-    onClose: PropTypes.func,
-    isPopup: PropTypes.bool,
     style: PropTypes.object,
     className: PropTypes.string
 };

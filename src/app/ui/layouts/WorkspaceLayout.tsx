@@ -12,7 +12,8 @@ import styles from './styles/workspace.styl';
 interface WorkspaceLayoutProps {
     renderLeftView: () => React.ReactNode;
     renderRightView: () => React.ReactNode;
-    renderMainToolBar: () => React.ReactNode;
+    // optional top bar (Ray workspace); the Workspace tab has none (4.17: the tab strip replaces it)
+    renderMainToolBar?: () => React.ReactNode;
     children: Array<React.ReactNode>;
 }
 
@@ -40,17 +41,23 @@ const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({ renderLeftView, rende
 
     return (
         <div className={styles.workspace}>
+            {renderMainToolBar && (
+                <div
+                    className={classNames(
+                        styles['main-bar'],
+                        'clearfix'
+                    )}
+                >
+                    {renderMainToolBar()}
+                </div>
+            )}
             <div
                 className={classNames(
-                    styles['main-bar'],
-                    'clearfix'
+                    styles['workspace-table'],
+                    includes(longLang, i18next.language) && styles['workspace-table-for-long-lang'],
+                    !renderMainToolBar && styles['without-main-bar']
                 )}
             >
-                {renderMainToolBar && (
-                    renderMainToolBar()
-                )}
-            </div>
-            <div className={classNames(styles['workspace-table'], includes(longLang, i18next.language) && styles['workspace-table-for-long-lang'])}>
                 <div
                     ref={primaryContainer}
                     className={classNames(

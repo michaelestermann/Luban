@@ -5,7 +5,6 @@ import _ from 'lodash';
 import includes from 'lodash/includes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory } from 'react-router-dom';
 
 import {
     CNC_GCODE_SUFFIX,
@@ -103,7 +102,6 @@ interface RayLaserWorkspaceProps {
 }
 
 const RayLaserWorkspace: React.FC<RayLaserWorkspaceProps> = ({ isPopup, onClose, style, className }) => {
-    const history = useHistory();
     const dispatch = useDispatch();
 
     const defaultWidgets = useSelector((state: RootState) => state.widget.workspace.default.widgets);
@@ -118,19 +116,8 @@ const RayLaserWorkspace: React.FC<RayLaserWorkspaceProps> = ({ isPopup, onClose,
     const [showMachineControlModal, setShowMachineControlModal] = useState(false);
     const [showMachineLogModal, setShowMachineLogModal] = useState(false);
 
+    // 4.17: no Back button (the tab strip navigates); the bar keeps the machine actions
     const [leftItems, setLeftItems] = useState([
-        {
-            title: i18n._('key-Workspace/Page-Back'),
-            type: 'button',
-            name: 'MainToolbarBack',
-            action: () => {
-                history.push('/');
-            }
-        },
-        {
-            type: 'separator',
-            name: 'separator',
-        },
         {
             title: i18n._('Settings'),
             type: 'button',
@@ -211,9 +198,7 @@ const RayLaserWorkspace: React.FC<RayLaserWorkspaceProps> = ({ isPopup, onClose,
                 action: onClose,
             };
 
-            const newLeftItems = [...leftItems];
-
-            newLeftItems[0] = returnButton;
+            const newLeftItems = [returnButton, { type: 'separator', name: 'separator' }, ...leftItems] as typeof leftItems;
 
             setLeftItems(newLeftItems);
         },
