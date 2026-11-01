@@ -155,7 +155,7 @@ function PresetContent(
     const filters = getFilters(managerType); // Calculate once only when managerType changed
     const filterValues = [selectParamsType, selectQualityDetailType];
 
-    function parameterConverter(key) {
+    const parameterConverter = (key) => {
         const settingItem = definitionForManager.settings[key];
 
         // check visible
@@ -190,7 +190,7 @@ function PresetContent(
         // }
 
         return displayConfig;
-    }
+    };
 
     return (
         <div className={classNames(styles['config-value-box-wrapper'], 'margin-vertical-16 margin-horizontal-16 background-color-white border-radius-16')}>

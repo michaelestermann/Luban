@@ -34,13 +34,13 @@ const CSDownloadManagerOverlay = (props) => {
     function onClose() {
         props.onClose && props.onClose();
     }
-    async function onClear() {
+    const onClear = async () => {
         // remove db data
         db.downloadRecords.clear();
         const arr = [];
         setRecords(arr);
         recordsRef.current = arr;
-    }
+    };
     // click the `selector` outside will call `callback` function
     function outsideClick(selector, callback) {
         let needClose = true;
@@ -81,10 +81,10 @@ const CSDownloadManagerOverlay = (props) => {
     function onOpenFile(path) {
         uniApi.DownloadManager.openFloder(path);
     }
-    function onOpenFloder(e) {
+    const onOpenFloder = (e) => {
         e.preventDefault();
         uniApi.DownloadManager.openFloder(downloadManangerSavedPath);
-    }
+    };
     function onRemove(record) {
         // remove local file
         uniApi.DownloadManager.removeFile(record);

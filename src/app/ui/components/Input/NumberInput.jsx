@@ -21,11 +21,11 @@ const NumberInput = (props) => {
     } = props;
     const [displayValue, setDisplayValue] = useState(!decimalPlaces ? value : maxDecimal(value, decimalPlaces));
     const ref = useRef();
-    function onInsideChange(event) {
+    const onInsideChange = (event) => {
         if (displayValue !== event.target.value) {
             setDisplayValue(event.target.value);
         }
-    }
+    };
 
     function getAbsentValue() {
         if (defaultValue !== undefined) {

@@ -25,14 +25,14 @@ function ToolSelector({
     const toolDefinitionOptions = [];
     const toolDefinitionOptionsObj = {};
 
-    function onShowCncToolManager() {
+    const onShowCncToolManager = () => {
         setShowManager(true);
-    }
+    };
 
     function renderModalView() {
-        function onclose() {
+        const onclose = () => {
             setShowManager(false);
-        }
+        };
         let saveToolPathFunc;
         if (shouldSaveToolpath) {
             saveToolPathFunc = saveToolPath;
@@ -49,7 +49,7 @@ function ToolSelector({
         );
     }
 
-    async function onChangeActiveToolListValue(option) {
+    const onChangeActiveToolListValue = async (option) => {
         if (option.definitionId === 'new') {
             await onShowCncToolManager();
             setCurrentValueAsProfile();
@@ -58,7 +58,7 @@ function ToolSelector({
             const newDefinition = toolDefinitions.find(d => d.definitionId === definitionId);
             setCurrentToolDefinition(newDefinition);
         }
-    }
+    };
 
     toolDefinitions.forEach(tool => {
         const category = tool.category;

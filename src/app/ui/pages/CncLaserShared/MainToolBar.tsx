@@ -142,12 +142,12 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
     }, [activeMachine, machineToolHead, headType]);
 
     const [showStlModal, setShowStlModal] = useState(true);
-    function handleHideStlModal() {
+    const handleHideStlModal = () => {
         setShowStlModal(false);
-    }
-    function handleShowStlModal() {
+    };
+    const handleShowStlModal = () => {
         setShowStlModal(true);
-    }
+    };
 
     // compact toolbar row: dropdown items as icon + arrow, the title is the tooltip
     const renderCompactDropdown = (iconName: string, title: string, overlay: React.ReactElement) => (

@@ -24,9 +24,9 @@ import styles from './styles.styl';
 function useShowToggleBtn() {
     const [showToggleBtn, setShowToggleBtn] = useState(true);
 
-    function onToggleToggleBtn() {
+    const onToggleToggleBtn = () => {
         setShowToggleBtn(!showToggleBtn);
-    }
+    };
 
     return {
         renderToggleBtn: () => {
@@ -140,12 +140,12 @@ function VisualizerPreviewControl() {
         setShowOriginalModel(show);
     }
 
-    function toggleRenderLineType(option) {
+    const toggleRenderLineType = (option) => {
         dispatch(printingActions.updateState({
             renderLineType: option.value
         }));
         dispatch(printingActions.setGcodeColorByRenderLineType());
-    }
+    };
 
     useEffect(() => {
         setShowPreviewPanel(displayedType === 'gcode');

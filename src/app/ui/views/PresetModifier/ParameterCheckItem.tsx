@@ -14,11 +14,11 @@ const ParameterCheckItem: React.FC<Props> = (props) => {
         onChange = null,
     } = props;
 
-    function _onChange(e) {
+    const _onChange = (e) => {
         if (onChange) {
             onChange(e.target.checked);
         }
-    }
+    };
 
     return (
         <div className="sm-flex height-32 margin-vertical-4">

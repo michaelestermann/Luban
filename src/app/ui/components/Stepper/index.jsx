@@ -12,21 +12,21 @@ const Stepper = (props) => {
         return step * Math.round(originValue / eachStep);
     }
 
-    function handleMouseDown(event) {
+    const handleMouseDown = (event) => {
         const clientX = event.clientX;
         ref.current.onmousemove = function onMouseMove(e) {
             const changedValueWithStep = getStepValue((e.clientX - clientX) / 20, step);
             setDisplayValue(displayValue + changedValueWithStep);
         };
-    }
-    function handleMouseOut() {
+    };
+    const handleMouseOut = () => {
         ref.current.onmousemove = null;
-    }
-    function onInsideChange(insideChange) {
+    };
+    const onInsideChange = (insideChange) => {
         if (displayValue !== insideChange) {
             setDisplayValue(insideChange);
         }
-    }
+    };
     function onAfterChangeWrapper(changedValue) {
         const numericValue = parseFloat(changedValue);
         if (onChange && value !== numericValue) {

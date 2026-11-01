@@ -103,9 +103,9 @@ const ChangePrintModeOverlay = (props) => {
             dispatch(printingActions.updatePrintMode(targetPrintMode));
         }
     }
-    function onClose() {
+    const onClose = () => {
         props.onClose && props.onClose();
-    }
+    };
 
     return (
         <div className="position-absolute width-438 margin-left-72 border-default-grey-1 border-radius-8 background-color-white">
