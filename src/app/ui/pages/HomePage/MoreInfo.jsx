@@ -98,7 +98,8 @@ const MoreInfo = () => {
                                                 <div className={styles['swiper-title']}>{swiper.title}</div>
                                                 <div className={styles['swiper-desc']}>{swiper.desc}</div>
                                             </div>
-                                            {/* <a className={styles['swiper-a']} href={swiper.btn.href} target="_blank" rel="noopener noreferrer">{`${swiper.btn.text}`} </a> */}
+                                            {/* <a className={styles['swiper-a']} href={swiper.btn.href} target="_blank" rel="noopener noreferrer">
+                                                {`${swiper.btn.text}`} </a> */}
                                         </div>
                                         <div className={styles['swiper-img']}>
                                             <img className="width-percent-100" src={swiper.imgSrc} alt={swiper.title} />

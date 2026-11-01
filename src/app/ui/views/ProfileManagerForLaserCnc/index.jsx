@@ -535,7 +535,8 @@ function ProfileManager({
                                                                     return item.fields.every((key) => {
                                                                         return (
                                                                             !selectedSettingDefaultValue[key]
-                                                                            || definitionForManager.settings[key].default_value === selectedSettingDefaultValue[key].default_value
+                                                                            || definitionForManager.settings[key].default_value
+                                                                                === selectedSettingDefaultValue[key].default_value
                                                                         );
                                                                     });
                                                                 });
@@ -644,7 +645,9 @@ function ProfileManager({
                                             size={24}
                                             className="padding-vertical-2 padding-horizontal-2"
                                             title={i18n._('key-Printing/ProfileManager-Delete')}
-                                            onClick={() => actions.onRemoveManagerDefinition(definitionState.definitionForManager, definitionState.isCategorySelected)}
+                                            onClick={() => actions.onRemoveManagerDefinition(
+                                                definitionState.definitionForManager, definitionState.isCategorySelected
+                                            )}
                                             disabled={isOfficialDefinition(definitionState.definitionForManager)}
                                         />
                                     </div>

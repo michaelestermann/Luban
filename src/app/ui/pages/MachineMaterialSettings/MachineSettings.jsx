@@ -402,7 +402,10 @@ const MachineSettings = forwardRef(({
             </div>
             <div className="width-296 background-grey-3 border-radius-24 padding-vertical-32 padding-horizontal-24">
                 {
-                    (selectedMachineSeries === SnapmakerOriginalMachine.identifier || selectedMachineSeries === SnapmakerOriginalExtendedMachine.identifier) && (
+                    (
+                        selectedMachineSeries === SnapmakerOriginalMachine.identifier
+                        || selectedMachineSeries === SnapmakerOriginalExtendedMachine.identifier
+                    ) && (
                         <div>
                             <div className="heading-3 margin-bottom-16">{i18n._('key-settings/Z-axis Module')}</div>
                             <div className="sm-flex justify-space-between">

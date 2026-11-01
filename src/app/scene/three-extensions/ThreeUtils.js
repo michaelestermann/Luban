@@ -247,8 +247,13 @@ const ThreeUtils = {
 
             obj.updateMatrixWorld();
             if (obj.geometry) {
-                const isChildrenMatrixChanged = obj.children.some((child, j) => !(cache.childrenMatrix[j] && child.matrixWorld.equals(cache.childrenMatrix[j])));
-                if (force || lastBbox.isEmpty() || !lastMatrix.equals(obj.matrixWorld) || isChildrenMatrixChanged || obj.children.length !== cache.childrenMatrix.length) {
+                const isChildrenMatrixChanged = obj.children.some(
+                    (child, j) => !(cache.childrenMatrix[j] && child.matrixWorld.equals(cache.childrenMatrix[j]))
+                );
+                if (
+                    force || lastBbox.isEmpty() || !lastMatrix.equals(obj.matrixWorld)
+                    || isChildrenMatrixChanged || obj.children.length !== cache.childrenMatrix.length
+                ) {
                     cache.childrenMatrix = obj.children.map(child => child.matrixWorld.clone());
                     lastBbox.copy(initialBox);
                     compute(obj, lastBbox);
