@@ -120,6 +120,9 @@
     "sockjs": {
       "uuid": "$uuid"
     },
+    "exceljs": {
+      "uuid": "$uuid"
+    },
     "node-gyp": {
       "tar": "$tar"
     },
