@@ -2742,5 +2742,22 @@
     "key-Tabs/{{name}} are still busy.": "{{name}} are still busy.",
     "key-Tabs/A calculation is still running. Wait until it is done, or stop it and close the tab. Stopped results are not kept.": "A calculation is still running. Wait until it is done, or stop it and close the tab. Stopped results are not kept.",
     "key-Tabs/A calculation is still running. Wait until it is done, or stop it and quit. Stopped results are not kept.": "A calculation is still running. Wait until it is done, or stop it and quit. Stopped results are not kept.",
-    "key-Tabs/This is taking unusually long.": "This is taking unusually long."
+    "key-Tabs/This is taking unusually long.": "This is taking unusually long.",
+    "key-CncLaser/OriginPoint-top left": "top left",
+    "key-CncLaser/OriginPoint-top centre": "top centre",
+    "key-CncLaser/OriginPoint-top right": "top right",
+    "key-CncLaser/OriginPoint-middle left": "middle left",
+    "key-CncLaser/OriginPoint-centre": "centre",
+    "key-CncLaser/OriginPoint-middle right": "middle right",
+    "key-CncLaser/OriginPoint-bottom left": "bottom left",
+    "key-CncLaser/OriginPoint-bottom centre": "bottom centre",
+    "key-CncLaser/OriginPoint-bottom right": "bottom right",
+    "key-CncLaser/Origin-Origin set on {{label}}": "Origin set on {{label}}",
+    "key-CncLaser/Origin-Offset {{offset}} removed": "Offset {{offset}} removed",
+    "key-CncLaser/Origin-Undo": "Undo",
+    "key-CncLaser/Origin-Selection": "Selection",
+    "key-CncLaser/Origin-Group “{{name}}”": "Group “{{name}}”",
+    "key-CncLaser/Origin-Workpiece": "Workpiece",
+    "key-CncLaser/Origin-Free": "Free",
+    "key-CncLaser/Origin-All objects": "All objects"
 }

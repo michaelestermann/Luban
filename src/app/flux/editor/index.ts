@@ -41,7 +41,7 @@ import CompoundOperation from '../../core/CompoundOperation';
 import OperationHistory from '../../core/OperationHistory';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
-import { createObjectOrigin, isOriginBoundToMissingObject, rememberOrigin } from '../../lib/object-origin';
+import { isOriginBoundToMissingObject, rememberOrigin } from '../../lib/object-origin';
 import { workpieceModelBox } from '../../lib/work-origin';
 import {
     canDecompose,
@@ -89,7 +89,6 @@ import RoundCornersOperation2D from '../operation-history/RoundCornersOperation2
 import { recordSelectionChange, snapshotSelection } from './selection-history';
 import { RoundTarget, initialRoundRadius, roundTargetResult, roundTargets } from '../../ui/SVGEditor/path-edit/round-corners';
 import RenameOperation2D from '../operation-history/RenameOperation2D';
-import OriginOperation2D from '../operation-history/OriginOperation2D';
 import { cleanObjectName, getEntityName } from '../../models/object-name';
 import MoveOperation2D from '../operation-history/MoveOperation2D';
 import RotateOperation2D from '../operation-history/RotateOperation2D';
@@ -100,6 +99,7 @@ import { baseActions } from './actions-base';
 /* eslint-disable-next-line import/no-cycle */
 import { processActions } from './actions-process';
 import { groupActions } from './actions-group';
+import { bindEditorActions, originActions } from './actions-origin';
 import { canEditShapes, combineActions } from './actions-combine';
 import { arrayActions } from './actions-array';
 import { resolveObjectClick } from '../../models/group-selection';
@@ -412,6 +412,8 @@ export const actions = {
     ...processActions,
 
     ...groupActions,
+
+    ...originActions,
 
     ...combineActions,
     ...arrayActions,
@@ -2994,33 +2996,6 @@ export const actions = {
     },
 
     /**
-     * "Set origin here": the work origin goes to a point (corner, edge middle, centre) of the
-     * selected objects and stays bound to them. One undo step.
-     */
-    setOriginOnSelection: (headType: HeadType, reference: ObjectReference) => {
-        return (dispatch, getState) => {
-            const { modelGroup, origin } = getState()[headType];
-            const ids = (modelGroup.getSelectedModelArray() as SvgModel[])
-                .filter(model => model.visible !== false)
-                .map(model => model.modelID);
-            if (!ids.length) {
-                return false;
-            }
-            const apply = (next: Origin) => {
-                dispatch(actions.setOrigin(headType, next));
-                dispatch(actions.resetProcessState(headType));
-                dispatch(baseActions.render(headType));
-            };
-            const operation = new OriginOperation2D({ before: origin, after: createObjectOrigin(reference, ids), apply });
-            operation.redo();
-            const operations = new CompoundOperation();
-            operations.push(operation);
-            dispatch(operationHistoryActions.setOperations(headType, operations));
-            return true;
-        };
-    },
-
-    /**
      * Set job offset mode.
      *
      * Using crosshair to set origin, or use laser spot to set origin.
@@ -3902,6 +3877,14 @@ export const actions = {
         }
     }
 };
+
+// the origin thunks (actions-origin) call these editor actions
+bindEditorActions({
+    setOrigin: (headType, origin) => actions.setOrigin(headType, origin),
+    resetProcessState: (headType) => actions.resetProcessState(headType),
+    undo: (headType) => actions.undo(headType),
+    setOperations: (headType, operations) => operationHistoryActions.setOperations(headType, operations),
+});
 
 export default function reducer(state = DEFAULT_STATE, action) {
     switch (action.type) {

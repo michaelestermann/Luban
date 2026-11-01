@@ -69,6 +69,10 @@ const INITIAL_STATE = {
     coordinateSize: { x: 0, y: 0 },
     workpiece: initialWorkpiece,
     origin: initialOrigin,
+    // work origin (actions-origin): pick mode, dialog, preview (hover / drag / dialog, never history)
+    originPick: null,
+    originDialog: null,
+    originPreview: null,
     lockingBlockPosition: 'A',
 
     page: PAGE_EDITOR,

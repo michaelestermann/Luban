@@ -2755,5 +2755,22 @@
     "key-Tabs/{{name}} are still busy.": "{{name}} sind noch beschäftigt.",
     "key-Tabs/A calculation is still running. Wait until it is done, or stop it and close the tab. Stopped results are not kept.": "Eine Berechnung läuft noch. Warten Sie, bis sie fertig ist, oder stoppen Sie sie und schließen Sie den Tab. Gestoppte Ergebnisse werden nicht behalten.",
     "key-Tabs/A calculation is still running. Wait until it is done, or stop it and quit. Stopped results are not kept.": "Eine Berechnung läuft noch. Warten Sie, bis sie fertig ist, oder stoppen Sie sie und beenden Sie Luban. Gestoppte Ergebnisse werden nicht behalten.",
-    "key-Tabs/This is taking unusually long.": "Das dauert ungewöhnlich lange."
+    "key-Tabs/This is taking unusually long.": "Das dauert ungewöhnlich lange.",
+    "key-CncLaser/OriginPoint-top left": "oben links",
+    "key-CncLaser/OriginPoint-top centre": "oben Mitte",
+    "key-CncLaser/OriginPoint-top right": "oben rechts",
+    "key-CncLaser/OriginPoint-middle left": "Mitte links",
+    "key-CncLaser/OriginPoint-centre": "Mitte",
+    "key-CncLaser/OriginPoint-middle right": "Mitte rechts",
+    "key-CncLaser/OriginPoint-bottom left": "unten links",
+    "key-CncLaser/OriginPoint-bottom centre": "unten Mitte",
+    "key-CncLaser/OriginPoint-bottom right": "unten rechts",
+    "key-CncLaser/Origin-Origin set on {{label}}": "Ursprung auf {{label}} gesetzt",
+    "key-CncLaser/Origin-Offset {{offset}} removed": "Versatz {{offset}} entfernt",
+    "key-CncLaser/Origin-Undo": "Rückgängig",
+    "key-CncLaser/Origin-Selection": "Auswahl",
+    "key-CncLaser/Origin-Group “{{name}}”": "Gruppe „{{name}}“",
+    "key-CncLaser/Origin-Workpiece": "Werkstück",
+    "key-CncLaser/Origin-Free": "Frei",
+    "key-CncLaser/Origin-All objects": "Alle Objekte"
 }
