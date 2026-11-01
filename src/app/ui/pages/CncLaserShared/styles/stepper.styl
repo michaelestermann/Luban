@@ -42,28 +42,27 @@
     }
 }
 
-// the check of a done step: always takes its space, shown when the step is done
-.check-slot {
-    display: inline-flex;
-    visibility: hidden;
-
-    &.shown {
-        visibility: visible;
-    }
+// a step is as wide as its widest form (check + bold text); its content is centred in that space
+.step-cell {
+    display: inline-grid;
 }
 
-// reserves the width of the bold text, so a step does not grow when it becomes current or done
-.step-label {
+.step-ghost,
+.step-content {
+    grid-row: 1;
+    grid-column: 1;
     display: inline-flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
 
-    &::after {
-        content: attr(data-label);
-        height: 0;
-        overflow: hidden;
-        visibility: hidden;
-        font-weight: 600;
-    }
+.step-ghost {
+    visibility: hidden;
+    font-weight: 600;
+}
+
+.step-content {
+    justify-self: center;
 }
 
 .actions {

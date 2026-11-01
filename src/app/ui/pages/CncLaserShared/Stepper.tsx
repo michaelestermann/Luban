@@ -127,10 +127,10 @@ export const Stepper: React.FC<StepperProps> = ({ headType, blocked = false }) =
                                 }
                             }}
                         >
-                            {/* the check and the bold text keep their space in every state: the steps never move */}
-                            <span className={classNames(styles['check-slot'], { [styles.shown]: isDone })}><Check /></span>
-                            <span className={styles['step-label']} data-label={`${index + 1} ${labels[item]}`}>
-                                {`${index + 1} ${labels[item]}`}
+                            {/* an invisible copy of the widest form (check + bold text) sizes the step: the steps never move */}
+                            <span className={styles['step-cell']}>
+                                <span className={styles['step-ghost']} aria-hidden="true"><Check />{`${index + 1} ${labels[item]}`}</span>
+                                <span className={styles['step-content']}>{isDone && <Check />}{`${index + 1} ${labels[item]}`}</span>
                             </span>
                         </button>
                     </React.Fragment>
