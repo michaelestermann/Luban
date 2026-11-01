@@ -15,6 +15,7 @@ import PointEditOverlay from './path-edit/PointEditOverlay';
 import MeasureOverlay from './measure/MeasureOverlay';
 import DimensionsOverlay from './measure/DimensionsOverlay';
 import SnapOverlay from './snap/SnapOverlay';
+import SmallObjectMarkers from './small-objects/SmallObjectMarkers';
 import ShapeActionKeys from './combine/ShapeActionKeys';
 import RoundCorners from './combine/RoundCorners';
 import OffsetPreview from './combine/OffsetPreview';
@@ -440,6 +441,11 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             setMode={changeCanvasMode}
                             editorActions={props.editorActions}
                             modelGroup={props.modelGroup}
+                        />
+                        <SmallObjectMarkers
+                            headType={props.headType}
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
                         />
                         <PointEditOverlay
                             drawGroup={drawGroup}

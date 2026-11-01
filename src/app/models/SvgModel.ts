@@ -15,6 +15,7 @@ import { MINIMUM_WIDTH_AND_HEIGHT, SOURCE_TYPE, SVG_MOVE_MINI_DISTANCE } from '.
 import BaseModel, { ModelTransformation, ModelInfo, TSize, SvgModelElement, TMode } from './BaseModel';
 import ModelGroup2D from './ModelGroup2D';
 import { cleanSourceClone } from './svg-source';
+import { svgImageFit } from '../lib/small-objects';
 
 type TElementAttributes = {
     x: number;
@@ -919,6 +920,17 @@ class SvgModel extends BaseModel {
                 elem.setAttribute('y', `${y - originalHeight / 2}`);
                 elem.setAttribute('width', `${originalWidth}`);
                 elem.setAttribute('height', `${originalHeight}`);
+                if (this.sourceType === SOURCE_TYPE.SVG || this.sourceType === SOURCE_TYPE.DXF) {
+                    // a tiny SVG (a 0.2 mm drill hole) is not drawn with the default fit, only stretched
+                    const fit = svgImageFit(originalWidth, originalHeight);
+                    if (fit) {
+                        elem.setAttribute('preserveAspectRatio', fit);
+                        elem.setAttribute('data-small-fit', 'true');
+                    } else if (elem.getAttribute('data-small-fit')) {
+                        elem.removeAttribute('preserveAspectRatio');
+                        elem.removeAttribute('data-small-fit');
+                    }
+                }
                 if (!elem.getAttribute('href')) {
                     elem.setAttribute('href', checkIsImageSuffix(href) ? href : './resources/images/loading.gif');
                 }
