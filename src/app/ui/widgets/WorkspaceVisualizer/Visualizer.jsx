@@ -568,7 +568,8 @@ class Visualizer extends React.PureComponent {
      *  - Re-render G-code objects
      *  - Upload G-code to controller
      */
-    componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    UNSAFE_componentWillReceiveProps(nextProps) {
         if (!isEqual(nextProps.activeMachine, this.props.activeMachine) || !isEqual(nextProps.preview, this.props.preview)) {
             const activeMachine = nextProps.activeMachine;
             if (nextProps.preview) {

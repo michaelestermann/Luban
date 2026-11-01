@@ -481,7 +481,8 @@ class Visualizer extends React.Component<VisualizerProps> {
         UniApi.Event.on('appbar-menu:cnc.import', this.actions.importFile);
     }
 
-    public componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    public UNSAFE_componentWillReceiveProps(nextProps) {
         const { renderingTimestamp, isOverSize } = nextProps;
 
         if (!isEqual(nextProps.size, this.props.size)) {
