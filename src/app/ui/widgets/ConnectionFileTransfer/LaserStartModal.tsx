@@ -59,7 +59,7 @@ const LaserStartModal: React.FC<LaserStartModalProps> = ({
         ], toolHeadIdentifier);
 
         setSupportSemiMode(supportHead || !(notSupportSM2SerialLaserHead && isSM2 && connectionType === ConnectionType.Serial));
-    });
+    }, [activeMachine.identifier, toolHeadIdentifier, connectionType]);
 
     useEffect(() => {
         if (isRotate) {
@@ -123,6 +123,7 @@ const LaserStartModal: React.FC<LaserStartModalProps> = ({
     };
     useEffect(() => {
         onChangeMaterialThickness(materialThickness);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: clamp the stored material thickness once
     }, []);
 
 
@@ -134,7 +135,7 @@ const LaserStartModal: React.FC<LaserStartModalProps> = ({
             L40WLaserToolModule.identifier,
         ], toolHeadIdentifier);
         setManualModeDesc(useLaserSpotHead ? 'key-Workspace/LaserStartJob-20w_40w_2w_manual_mode_description' : 'key-Workspace/LaserStartJob-manual_mode_description');
-    }, []);
+    }, [toolHeadIdentifier]);
 
 
     // i18n._('')
