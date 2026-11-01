@@ -21,7 +21,6 @@ export default class AddMaterialTestGenerate extends Operation {
         const svgActions = this.state.svgActions;
         const toolPathGroup = this.state.toolPathGroup;
         models.forEach((model) => {
-            console.log('');
             const id = model.modelID;
             this.state.toolPaths.forEach((item) => {
                 if (!toolPathGroup.toolPaths.includes(item)) {

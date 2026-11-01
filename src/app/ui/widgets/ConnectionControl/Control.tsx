@@ -78,7 +78,6 @@ const Control: React.FC<ConnectionControlProps> = ({ widgetId, isNotInWorkspace,
 
     const server: MachineAgent = useSelector((state: RootState) => state.workspace.server);
     const {
-        homingModal,
         isMoving,
         workflowStatus,
         workPosition,
@@ -337,51 +336,52 @@ const Control: React.FC<ConnectionControlProps> = ({ widgetId, isNotInWorkspace,
         return () => {
             removeControllerEvents();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- re-subscribe whenever prevState changes so the close handler sees the current state
     }, [prevState]);
 
 
     const canClick = useMemo(() => {
         return isConnected && includes([WorkflowStatus.Unknown, WorkflowStatus.Idle, WorkflowStatus.Stopped], workflowStatus) && !isMoving;
-    }, [isConnected, workflowStatus, isMoving, homingModal]);
+    }, [isConnected, workflowStatus, isMoving]);
 
 
+    // The effects below use functional updates so that several of them firing in the same
+    // commit (e.g. new work position and origin offset) do not overwrite each other's changes.
     useEffect(() => {
-        const { keypadJogging, selectedAxis } = state;
-
         // Disable keypad jogging and shuttle wheel when the workflow is not in the idle state.
         // This prevents accidental movement while sending G-code commands.
-        setState({
-            ...state,
-            keypadJogging: (workflowStatus === WorkflowStatus.Idle) ? keypadJogging : false,
-            selectedAxis: (workflowStatus === WorkflowStatus.Idle) ? selectedAxis : '',
+        setState(prev => ({
+            ...prev,
+            keypadJogging: (workflowStatus === WorkflowStatus.Idle) ? prev.keypadJogging : false,
+            selectedAxis: (workflowStatus === WorkflowStatus.Idle) ? prev.selectedAxis : '',
             canClick: canClick,
-        });
+        }));
     }, [isConnected, workflowStatus, isMoving, canClick]);
 
     useEffect(() => {
-        setState({
-            ...state,
+        setState(prev => ({
+            ...prev,
             workPosition: {
-                ...state.workPosition,
+                ...prev.workPosition,
                 ...workPosition
             }
-        });
+        }));
     }, [workPosition]);
 
     useEffect(() => {
-        setState({
-            ...state,
+        setState(prev => ({
+            ...prev,
             originOffset: {
-                ...state.originOffset,
+                ...prev.originOffset,
                 ...originOffset
             }
-        });
+        }));
     }, [originOffset]);
 
     useEffect(() => {
         if (isNil(boundingBox)) {
-            setState({
-                ...state,
+            setState(prev => ({
+                ...prev,
                 bbox: {
                     min: {
                         x: 0,
@@ -394,12 +394,12 @@ const Control: React.FC<ConnectionControlProps> = ({ widgetId, isNotInWorkspace,
                         z: 0
                     }
                 }
-            });
+            }));
         } else {
-            setState({
-                ...state,
+            setState(prev => ({
+                ...prev,
                 bbox: boundingBox
-            });
+            }));
         }
     }, [boundingBox]);
 
@@ -431,6 +431,7 @@ const Control: React.FC<ConnectionControlProps> = ({ widgetId, isNotInWorkspace,
                 }
             }));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- persist on state changes only; prevState is a new object on every render
     }, [state]);
 
     return (

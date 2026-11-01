@@ -75,6 +75,9 @@ interface ControlPanelProps {
 /**
  * Control Panel.
  */
+const RayWorkArea = { X: 600, Y: 400 };
+const RayWorkAreaOffset = { X: 0, Y: 0 };
+
 const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     const { workPosition, disabled = true, actions, isNotInWorkspace, enableShortcut, canABPosition } = props;
     const enableBAxis = workPosition.isFourAxis;
@@ -82,8 +85,6 @@ const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     const { headType, toolHead } = useSelector((state: RootState) => state.workspace);
     const server: MachineAgent = useSelector((state: RootState) => state.workspace.server);
     const { activeMachine, originOffset } = useSelector((state: RootState) => state.workspace);
-    const RayWorkArea = { X: 600, Y: 400 };
-    const RayWorkAreaOffset = { X: 0, Y: 0 };
 
     const step = actions.getJogDistance();
     const stepAngle = actions.getJogAngle();
@@ -91,7 +92,7 @@ const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     const jogSpeed = props.state.jogSpeed;
     const jogSpeedOptions = props.state.jogSpeedOptions;
 
-    let bbox = props.state.bbox;
+    const bbox = props.state.bbox;
 
     const [isConnectedRay, setIsConnectedRay] = useState(false);
     const [keepLaserOn, setKeepLaserOn] = useState(false);
@@ -111,7 +112,7 @@ const ControlPanel: React.FC<ControlPanelProps> = (props) => {
         } else {
             return dispatch(workspaceActions.executeGcodeAutoHome(true));
         }
-    }, [dispatch, workspaceActions, isConnectedRay]);
+    }, [dispatch, isConnectedRay]);
 
     useEffect(() => {
         if (!activeMachine) return;
@@ -152,9 +153,9 @@ const ControlPanel: React.FC<ControlPanelProps> = (props) => {
         // server.coordinateMove(moveOrders, gcode, jogSpeed, headType);
         server.executeGcode(gcode);
     }, [
-        server, headType,
-        workPosition, jogSpeed, step, stepAngle,
-        keepLaserOn,
+        server,
+        workPosition, originOffset, jogSpeed, step, stepAngle,
+        keepLaserOn, isConnectedRay,
     ]);
 
     const absoluteMove = useCallback((moveOptions: MoveOptions) => {
@@ -181,26 +182,25 @@ const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     }, [
         server, headType,
         // variable
-        jogSpeed, keepLaserOn,
+        jogSpeed, keepLaserOn, isConnectedRay,
     ]);
 
+    const runRayBoundary = props.runBoundary;
     const runBoundary = useCallback(() => {
         // ray runBoundary need to create file boundary.nc
-        if (isConnectedRay && typeof props.runBoundary !== 'undefined') {
-            props.runBoundary();
+        if (isConnectedRay && typeof runRayBoundary !== 'undefined') {
+            runRayBoundary();
             return;
         }
 
-        if (!bbox) {
-            bbox = {
-                max: {
-                    x: 0, y: 0, z: 0, b: 0
-                },
-                min: {
-                    x: 0, y: 0, z: 0, b: 0
-                }
-            };
-        }
+        const boundary = bbox || {
+            max: {
+                x: 0, y: 0, z: 0, b: 0
+            },
+            min: {
+                x: 0, y: 0, z: 0, b: 0
+            }
+        };
 
 
         const gcode = [];
@@ -210,19 +210,19 @@ const ControlPanel: React.FC<ControlPanelProps> = (props) => {
 
         const gCommand = keepLaserOn ? 'G1' : 'G0';
 
-        const [minX, minY, maxX, maxY] = [bbox.min.x, bbox.min.y, bbox.max.x, bbox.max.y];
+        const [minX, minY, maxX, maxY] = [boundary.min.x, boundary.min.y, boundary.max.x, boundary.max.y];
 
         if (workPosition.isFourAxis) {
-            // const angleDiff = Math.abs(bbox.max.b - bbox.min.b);
-            const minB = bbox.min.b || 0;
-            const maxB = bbox.max.b || 0;
+            // const angleDiff = Math.abs(boundary.max.b - boundary.min.b);
+            const minB = boundary.min.b || 0;
+            const maxB = boundary.max.b || 0;
             gcode.push(
                 'G90', // absolute position
-                `${gCommand} B${minB} Y${bbox.min.y} F${jogSpeed}`, // run boundary
-                `${gCommand} B${minB} Y${bbox.max.y}`,
-                `${gCommand} B${maxB} Y${bbox.max.y}`,
-                `${gCommand} B${maxB} Y${bbox.min.y}`,
-                `${gCommand} B${minB} Y${bbox.min.y}`,
+                `${gCommand} B${minB} Y${boundary.min.y} F${jogSpeed}`, // run boundary
+                `${gCommand} B${minB} Y${boundary.max.y}`,
+                `${gCommand} B${maxB} Y${boundary.max.y}`,
+                `${gCommand} B${maxB} Y${boundary.min.y}`,
+                `${gCommand} B${minB} Y${boundary.min.y}`,
                 `${gCommand} B${workPosition.b} Y${workPosition.y}` // go back to origin
             );
         } else {
@@ -252,7 +252,7 @@ const ControlPanel: React.FC<ControlPanelProps> = (props) => {
         // G-code
         bbox,
         // variable
-        jogSpeed, keepLaserOn,
+        jogSpeed, keepLaserOn, isConnectedRay, runRayBoundary,
     ]);
 
     const renderMotionButtonGroup = () => {

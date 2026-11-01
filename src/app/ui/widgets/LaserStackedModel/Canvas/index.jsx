@@ -37,11 +37,12 @@ const Controls = forwardRef((props, ref) => {
             setDirectionalLightPosition([position.x, position.y, position.z]);
             invalidate();
         };
-        controls.current && controls.current.addEventListener('change', handler);
+        const currentControls = controls.current;
+        currentControls && currentControls.addEventListener('change', handler);
         return () => {
-            controls.current && controls.current.removeEventListener('change', handler);
+            currentControls && currentControls.removeEventListener('change', handler);
         };
-    }, []);
+    }, [camera, invalidate]);
 
     useEffect(() => {
         const containerWidth = 696;
@@ -53,7 +54,7 @@ const Controls = forwardRef((props, ref) => {
         gl.toneMapping = NoToneMapping;
         gl.outputEncoding = LinearEncoding;
         // setSize(containerWidth, containerHeight);
-    }, [setSize]);
+    }, [setSize, camera, gl]);
 
     return (
         <>

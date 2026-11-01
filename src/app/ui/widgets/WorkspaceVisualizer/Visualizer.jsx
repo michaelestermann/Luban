@@ -293,7 +293,10 @@ class Visualizer extends React.PureComponent {
 
             if (workflowStatus === WorkflowStatus.Idle) {
                 // Fix me?: 2w laser head set origin offset(crosshair offset) before start print
-                const isSnapmaker2 = includes([SnapmakerA350Machine.identifier, SnapmakerA250Machine.identifier, SnapmakerA150Machine.identifier], activeMachine.identifier);
+                const isSnapmaker2 = includes(
+                    [SnapmakerA350Machine.identifier, SnapmakerA250Machine.identifier, SnapmakerA150Machine.identifier],
+                    activeMachine.identifier
+                );
                 if (includes([L2WLaserToolModule.identifier], toolHead) && connectionType === ConnectionType.Serial && isSnapmaker2) {
                     const { x, y } = workPosition;
                     server.setWorkOrigin(x - (parseFloat(crosshairOffset.x) || 21.5), y - (parseFloat(crosshairOffset.y) || -11));
@@ -565,7 +568,8 @@ class Visualizer extends React.PureComponent {
      *  - Re-render G-code objects
      *  - Upload G-code to controller
      */
-    componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    UNSAFE_componentWillReceiveProps(nextProps) {
         if (!isEqual(nextProps.activeMachine, this.props.activeMachine) || !isEqual(nextProps.preview, this.props.preview)) {
             const activeMachine = nextProps.activeMachine;
             if (nextProps.preview) {
@@ -579,7 +583,10 @@ class Visualizer extends React.PureComponent {
                     y: activeMachine.metadata.size.y * 2
                 });
             }
-            this.canvas.current && this.canvas.current.setCamera(new THREE.Vector3(0, 0, Math.min(activeMachine.metadata.size.z * 2, 300)), new THREE.Vector3());
+            this.canvas.current && this.canvas.current.setCamera(
+                new THREE.Vector3(0, 0, Math.min(activeMachine.metadata.size.z * 2, 300)),
+                new THREE.Vector3()
+            );
         }
 
         if (this.props.workflowStatus !== WorkflowStatus.Idle && nextProps.workflowStatus === WorkflowStatus.Idle) {

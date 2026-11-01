@@ -84,6 +84,7 @@ const LaserMainPage: React.FC<LaserMainPageProps> = ({ location }) => {
             pathname: '/laser',
         });
         dispatch(laserActions.clearAB());
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: init the laser page and log the page view once
     }, []);
 
     useEffect(() => {

@@ -3,6 +3,7 @@ import Modal from '../components/Modal';
 import { Button } from '../components/Buttons';
 
 import i18n from '../../lib/i18n';
+import log from '../../lib/log';
 
 export default function renderModal(options) {
     const { actions, onClose, zIndex } = options;
@@ -11,7 +12,7 @@ export default function renderModal(options) {
     const { shouldRenderFooter = true } = options;
 
     if (!onClose) {
-        console.error('Modal need close action');
+        log.error('Modal need close action');
     }
 
     size || (size = 'small');

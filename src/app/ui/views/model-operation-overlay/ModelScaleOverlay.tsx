@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import { isUndefined, throttle } from 'lodash';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import { HEAD_PRINTING } from '../../../constants';
@@ -55,7 +55,7 @@ const ModelScaleOverlay: React.FC<ModelScaleOverlayProps> = React.memo((props) =
     const [uniformScalingState, setUniformScalingState] = useState(true);
     const [modelSize, setModelSize] = useState({ scaledX: 1, scaledY: 1, scaledZ: 1 });
 
-    const updateScale = useCallback(throttle((event) => {
+    const updateScale = useMemo(() => throttle((event) => {
         const { detail } = event;
         // When multiple models are selected, delayed updating is required
         setTimeout(() => {
@@ -75,7 +75,7 @@ const ModelScaleOverlay: React.FC<ModelScaleOverlayProps> = React.memo((props) =
         return () => {
             window.removeEventListener('update-scale', updateScale);
         };
-    }, []);
+    }, [updateScale]);
 
     useEffect(() => {
         if (isPrimeTowerSelected) {

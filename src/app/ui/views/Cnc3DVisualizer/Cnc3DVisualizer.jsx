@@ -96,7 +96,11 @@ const setMeshTransform = (mesh, sourceScale, transformation, isRotate, direction
     mesh.applyMatrix4(new Matrix4().copy(mesh.matrix).invert());
     mesh.applyMatrix4(isRotate ? placementMatrixes[placement] : directionMatrixes[direction]);
 
-    mesh.applyMatrix4(new Matrix4().makeScale(transformation.scaleX * sourceScale, Math.abs(transformation.scaleY * sourceScale), transformation.scaleY * sourceScale));
+    mesh.applyMatrix4(new Matrix4().makeScale(
+        transformation.scaleX * sourceScale,
+        Math.abs(transformation.scaleY * sourceScale),
+        transformation.scaleY * sourceScale
+    ));
 };
 
 
@@ -185,7 +189,9 @@ class Cnc3DVisualizer extends Component {
 
     getSnapshotBeforeUpdate(prevProps) {
         if (this.props.hasModel) {
-            const { selectedModel, mesh, materials, sourceScale, transformation, direction, placement, machineSize, coordinateSize, coordinateMode } = this.props;
+            const {
+                selectedModel, mesh, materials, sourceScale, transformation, direction, placement, machineSize, coordinateSize, coordinateMode
+            } = this.props;
             if (mesh !== prevProps.mesh || materials.isRotate !== prevProps.materials.isRotate
                 || materials.diameter !== prevProps.materials.diameter
                 || materials.length !== prevProps.materials.length
@@ -207,7 +213,10 @@ class Cnc3DVisualizer extends Component {
                     const logicPosition = convertSVGPointToLogicalPoint(transformation, machineSize);
                     let isOverStepped = false;
                     const actualHeight = transformation.height * transformation.scaleY / 2;
-                    if ((logicPosition.y - actualHeight) < 0 - SVG_MOVE_MINI_DISTANCE || (logicPosition.y + actualHeight) > coordinateSize.y + SVG_MOVE_MINI_DISTANCE) {
+                    if (
+                        (logicPosition.y - actualHeight) < 0 - SVG_MOVE_MINI_DISTANCE
+                        || (logicPosition.y + actualHeight) > coordinateSize.y + SVG_MOVE_MINI_DISTANCE
+                    ) {
                         isOverStepped = true;
                     }
 

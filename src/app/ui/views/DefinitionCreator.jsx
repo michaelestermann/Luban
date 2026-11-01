@@ -89,14 +89,15 @@ const DefinitionCreator = forwardRef(({
     });
     useEffect(() => {
         const option = _materialOptions[0];
-        if (!copyCategoryName && option) {
-            copyCategoryName = option.label;
+        let categoryName = copyCategoryName;
+        if (!categoryName && option) {
+            categoryName = option.label;
         }
         setState((pre) => {
             return {
                 ...pre,
                 itemName: copyItemName || displayDescribe.itemName,
-                categoryName: copyCategoryName || displayDescribe.categoryName,
+                categoryName: categoryName || displayDescribe.categoryName,
             };
         });
     }, [_materialOptions, managerType, copyItemName, copyCategoryName, displayDescribe.categoryName, displayDescribe.itemName]);

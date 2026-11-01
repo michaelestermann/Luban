@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import get from 'lodash/get';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import FacebookLoading from 'react-facebook-loading';
@@ -95,7 +95,7 @@ function General({ state: generalState, actions }) {
     const updatePromptDamageModel = (bool) => dispatch(machineActions.updatePromptDamageModel(bool));
     const updateEnable3dpLivePreview = (bool) => dispatch(machineActions.updateEnable3dpLivePreview(bool));
 
-    const handlers = {
+    const handlers = useMemo(() => ({
         changeLanguage: (option) => {
             actions.changeLanguage(option?.value);
         },
@@ -105,7 +105,7 @@ function General({ state: generalState, actions }) {
         save: () => {
             actions.save();
         }
-    };
+    }), [actions]);
 
     const handleCheckForUpdate = () => {
         if (isDownloading) {

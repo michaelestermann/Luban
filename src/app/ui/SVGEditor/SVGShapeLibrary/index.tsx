@@ -13,6 +13,15 @@ import MainToolBar from '../../layouts/MainToolBar';
 import i18n from '../../../lib/i18n';
 import { IMG_RESOURCE_BASE_URL } from '../../../constants/downloadManager';
 
+type SvgShapeApiResponse = {
+    body?: {
+        code?: number;
+        msg?: string;
+        total?: number;
+        data?: unknown;
+    };
+};
+
 const SVGShapeLibrary = (props) => {
     const rightSideBlock = useRef();
     const [blockH, setBlockH] = useState(648);
@@ -32,7 +41,7 @@ const SVGShapeLibrary = (props) => {
     const [checkAll, setCheckAll] = useState(false);
 
     const getLabelList = async (query?: {labelIds?: number[], pageSize?: string}) => {
-        const res = (await api.getSvgShapeLabelList(query)) as any;
+        const res = (await api.getSvgShapeLabelList(query)) as SvgShapeApiResponse;
         if (!res.body || !res.body.data || !Array.isArray(res.body.data)) {
             return [];
         }
@@ -44,7 +53,7 @@ const SVGShapeLibrary = (props) => {
     const getSvgList = async (query?: {labelIds?: number[], pageSize?: number, page?:number, start?: number, size?: number}, isRefresh: boolean = false) => {
         setIsLoading(true);
         if (query && Array.isArray(query.labelIds) && query.labelIds.includes(0)) query = null;
-        const res = (await api.getSvgShapeList(query)) as any;
+        const res = (await api.getSvgShapeList(query)) as SvgShapeApiResponse;
         if (!res.body || !res.body.data || !Array.isArray(res.body.data)) {
             setIsLoading(false);
             if (res.body && res.body.code !== 200) {
@@ -165,6 +174,8 @@ const SVGShapeLibrary = (props) => {
             window.document.body.style.overflow = '';
             window.removeEventListener('resize', handleResize);
         };
+        // Fetch labels/shapes once; the first handleResize instance is kept so the same listener is removed again.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
     }, []);
 
 

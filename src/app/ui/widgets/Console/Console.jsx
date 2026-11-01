@@ -289,6 +289,7 @@ function Console({ widgetId, widgetActions, minimized, isDefault, clearRenderSta
             removeControllerEvents();
             unsubscribe();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: set up the terminal and subscriptions once, tear them down on unmount
     }, []);
 
     useEffect(() => {
@@ -309,6 +310,7 @@ function Console({ widgetId, widgetActions, minimized, isDefault, clearRenderSta
                 }
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: greet once per new connection, compared against prevProps
     }, [isConnected, port, server]);
 
     useEffect(() => {
@@ -322,13 +324,14 @@ function Console({ widgetId, widgetActions, minimized, isDefault, clearRenderSta
                 widgetActions.setDisplay(true);
             }
         }
-    }, [workflowStatus, connectionType, isConnected]);
+    }, [workflowStatus, connectionType, isConnected, shouldHideConsole, widgetActions]);
 
     useEffect(() => {
         if (prevProps && prevProps.clearRenderStamp !== clearRenderStamp) {
             prevProps.clearRenderStamp = clearRenderStamp;
             actions.clearAll();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: compared against prevProps
     }, [clearRenderStamp]);
 
     useEffect(() => {
@@ -336,6 +339,7 @@ function Console({ widgetId, widgetActions, minimized, isDefault, clearRenderSta
             prevProps.consoleLogs = consoleLogs;
             actions.printConsoleLogs(consoleLogs);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: compared against prevProps
     }, [consoleLogs]);
 
     useEffect(() => {
@@ -343,6 +347,7 @@ function Console({ widgetId, widgetActions, minimized, isDefault, clearRenderSta
             prevProps.minimized = minimized;
             resizeTerminal();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: compared against prevProps
     }, [minimized]);
 
     useEffect(() => {
@@ -358,6 +363,7 @@ function Console({ widgetId, widgetActions, minimized, isDefault, clearRenderSta
                 terminal.write(data.join(''));
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: compared against prevProps
     }, [isDefault]);
 
     const inputValue = terminalHistory.getLength() > 0 ? terminalHistory.get(0) : '';

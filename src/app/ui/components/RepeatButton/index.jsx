@@ -10,6 +10,10 @@ class RepeatButton extends PureComponent {
         children: PropTypes.node
     };
 
+    timeout = null;
+
+    interval = null;
+
     actions = {
         handleHoldDown: () => {
             const delay = Number(this.props.delay) || 500;
@@ -36,11 +40,6 @@ class RepeatButton extends PureComponent {
             }
         }
     };
-
-    componentWillMount() {
-        this.timeout = null;
-        this.interval = null;
-    }
 
     componentWillUnmount() {
         this.actions.handleRelease();

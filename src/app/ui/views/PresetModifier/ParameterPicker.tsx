@@ -64,12 +64,20 @@ interface CustomKeys {
     [key: string]: string[];
 }
 
+type ParameterSettings = {
+    [key: string]: {
+        label?: string;
+        childKey?: string[];
+        [field: string]: unknown;
+    };
+};
+
 type Props = {
-    optionConfigGroup: any;
+    optionConfigGroup: CustomKeys;
     customConfigs: CustomKeys;
     parameterKeys: string[];
-    settings: any;
-    onChangeCustomConfig: any;
+    settings: ParameterSettings;
+    onChangeCustomConfig: (key: string, checked: boolean, category: string) => void;
 };
 
 

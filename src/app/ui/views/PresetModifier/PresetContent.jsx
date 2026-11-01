@@ -133,7 +133,7 @@ const PresetContent = (
             const level = getQualityPresetLevelForRightExtruder();
             setOptionConfigGroup(level);
         }
-    }, [selectedStackId, selectedPresetId]);
+    }, [selectedStackId, selectedPresetId, qualityPresetModels, printingProfileLevel]);
 
     // Filters
     const [selectParamsType, setSelectParamsType] = useState(printingStore.get('preset-filter:grade', 'basic'));
@@ -163,10 +163,10 @@ const PresetContent = (
         }
 
         dispatch(machineActions.updatePrintingCustomConfigsWithCategory(newCustomConfig[category], category));
-    }, [customConfigs]);
+    }, [customConfigs, dispatch]);
 
 
-    function onChangePresetValue(key, value) {
+    const onChangePresetValue = (key, value) => {
         dispatch(
             printingActions.updateCurrentDefinition({
                 direction: selectedStackId,
@@ -175,12 +175,12 @@ const PresetContent = (
                 managerDisplayType: PRINTING_MANAGER_TYPE_QUALITY,
             })
         );
-    }
+    };
 
     const filters = getFilters(); // Calculate once only when managerType changed
     const filterValues = [selectParamsType, selectQualityDetailType];
 
-    function parameterConverter(key) {
+    const parameterConverter = (key) => {
         const settingItem = presetModel.settings[key];
 
         // check visible
@@ -215,7 +215,7 @@ const PresetContent = (
         }
 
         return displayConfig;
-    }
+    };
 
     return (
         <div className={classNames(styles['config-value-box-wrapper'], 'margin-vertical-16 margin-horizontal-16 background-color-white border-radius-16')}>

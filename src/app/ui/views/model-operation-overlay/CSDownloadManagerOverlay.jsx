@@ -15,6 +15,7 @@ import SvgIcon from '../../components/SvgIcon';
 import { db } from '../../../lib/indexDB/db';
 import { KB, MB, ModelFileExt, ProjectFileExt, RecordState } from '../../../constants/downloadManager';
 import uniApi from '../../../lib/uni-api';
+import log from '../../../lib/log';
 
 
 /**
@@ -33,13 +34,13 @@ const CSDownloadManagerOverlay = (props) => {
     function onClose() {
         props.onClose && props.onClose();
     }
-    async function onClear() {
+    const onClear = async () => {
         // remove db data
         db.downloadRecords.clear();
         const arr = [];
         setRecords(arr);
         recordsRef.current = arr;
-    }
+    };
     // click the `selector` outside will call `callback` function
     function outsideClick(selector, callback) {
         let needClose = true;
@@ -80,10 +81,10 @@ const CSDownloadManagerOverlay = (props) => {
     function onOpenFile(path) {
         uniApi.DownloadManager.openFloder(path);
     }
-    function onOpenFloder(e) {
+    const onOpenFloder = (e) => {
         e.preventDefault();
         uniApi.DownloadManager.openFloder(downloadManangerSavedPath);
-    }
+    };
     function onRemove(record) {
         // remove local file
         uniApi.DownloadManager.removeFile(record);
@@ -97,7 +98,7 @@ const CSDownloadManagerOverlay = (props) => {
         // remove file msg in local db
         db.downloadRecords.get({ startTime: record.startTime, savePath: record.savePath })
             .then(r => db.downloadRecords.delete(r.id))
-            .catch(err => console.error(err));
+            .catch(err => log.error(err));
     }
     function sizeFormat(bytes) {
         const unit = 'MB';
@@ -309,6 +310,8 @@ const CSDownloadManagerOverlay = (props) => {
             uniApi.DownloadManager.off('download-item-updated', updateDownloadItem);
             uniApi.DownloadManager.off('download-item-done', updateDownloadItem);
         };
+        // The handlers share state through recordsRef.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: load the records and subscribe the download events once
     }, []);
 
     return (

@@ -465,7 +465,7 @@ class AppLayout extends React.PureComponent {
             );
         },
         openProject: async (file) => {
-            console.log('open project, file =', file);
+            log.debug('open project, file =', file);
             if (!file) {
                 // this.fileInput.current.value = null;
                 // this.fileInput.current.click();

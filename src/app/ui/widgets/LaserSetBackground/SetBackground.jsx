@@ -104,7 +104,8 @@ class SetBackground extends PureComponent {
         }
     };
 
-    componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    UNSAFE_componentWillReceiveProps(nextProps) {
         if (!isEqual(nextProps.size, this.props.size)) {
             const size = nextProps.size;
             const maxSideLength = Math.min(size.x, size.y);

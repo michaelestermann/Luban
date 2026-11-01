@@ -5,6 +5,7 @@ import {
     ACTION_UPDATE_GCODE_CONFIG,
     ACTION_UPDATE_STATE,
 } from '../actionType';
+import log from '../../lib/log';
 
 /**
  * 1 pt = 1/72 inch
@@ -39,7 +40,7 @@ export const computeTransformationSizeForTextVector = (text, fontSize, lineHeigh
 
 const checkHeadType = (headType) => {
     if (!['laser', 'cnc'].includes(headType)) {
-        console.error('headType is error', headType);
+        log.error('headType is error', headType);
     }
 };
 

@@ -20,7 +20,7 @@ const EnclosureDisplay: React.FC<EnclosureWidgetProps> = ({ widgetActions }) => 
 
     useEffect(() => {
         widgetActions.setTitle(i18n._('key-Workspace/Enclosure-Enclosure'));
-    }, []);
+    }, [widgetActions]);
 
     useEffect(() => {
         if (isConnected && enclosureOnline) {

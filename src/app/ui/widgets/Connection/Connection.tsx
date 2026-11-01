@@ -65,7 +65,7 @@ const Connection: React.FC = () => {
         // set octo port from local
         const storeOctoPort = machineStore.get('octo-port');
         if (storeOctoPort) dispatch(connectActions.onResetPort(storeOctoPort));
-    }, []);
+    }, [dispatch]);
 
     return (
         <div>

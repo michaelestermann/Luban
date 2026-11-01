@@ -132,7 +132,6 @@ export function useGetDefinitions(allDefinitions, activeDefinitionID, getDefault
                 if (!definitionForManager) {
                     definitionForManager = allDefinitions[0];
                     log.debug('Preset does not exist. Select first preset instead:', definitionForManager.definitionId);
-                    console.log('Preset does not exist. Select first preset instead:', definitionForManager.definitionId);
                 }
                 selectedSettingDefaultValue = getDefaultDefinition(definitionForManager?.definitionId);
             }
@@ -144,6 +143,8 @@ export function useGetDefinitions(allDefinitions, activeDefinitionID, getDefault
                 selectedSettingDefaultValue
             };
         });
+        // getDefaultDefinition is recreated by the parent on every render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only when the definitions or the active id change
     }, [allDefinitions, activeDefinitionID]);
 
     return [definitionState, setDefinitionState];
@@ -510,6 +511,11 @@ function ProfileManager(
         }
     };
 
+    // Shorthands for the deeply nested JSX below
+    const isCurrentDefinitionOfficial = !!definitionState?.definitionForManager && isOfficialDefinition(definitionState.definitionForManager);
+    const removeCurrentDefinition = () => actions.onRemoveManagerDefinition(definitionState.definitionForManager, definitionState.isCategorySelected);
+    const exportCurrentDefinition = () => outsideActions.exportConfigFile(definitionState.definitionForManager);
+
     return (
         <React.Fragment>
             {definitionState?.definitionForManager && (
@@ -581,7 +587,7 @@ function ProfileManager(
                                                                     )
                                                                     : <span className="text-overflow-ellipsis">{cate.category}</span>}
                                                             </div>
-                                                            {!isOfficialDefinition(definitionState.definitionForManager) && managerType !== PRINTING_MANAGER_TYPE_MATERIAL && (
+                                                            {!isCurrentDefinitionOfficial && managerType !== PRINTING_MANAGER_TYPE_MATERIAL && (
                                                                 <div className={classNames(styles['manager-action'])}>
                                                                     <Dropdown
                                                                         placement="bottomRight"
@@ -596,7 +602,7 @@ function ProfileManager(
                                                                                     </Anchor>
                                                                                 </Menu.Item>
                                                                                 <Menu.Item>
-                                                                                    <Anchor onClick={() => actions.onRemoveManagerDefinition(definitionState.definitionForManager, definitionState.isCategorySelected)}>
+                                                                                    <Anchor onClick={removeCurrentDefinition}>
                                                                                         <div>{i18n._('key-Printing/ProfileManager-Delete')}</div>
                                                                                     </Anchor>
                                                                                 </Menu.Item>
@@ -625,10 +631,13 @@ function ProfileManager(
                                                                         !definitionState.isCategorySelected
                                                                         && currentOption.value === definitionForManager.definitionId
                                                                     );
+                                                                    const resetCurrentOption = () => actions.resetDefinition(currentOption.value);
                                                                     let isAllValueDefault = true;
                                                                     if (isSelected && currentOption.isDefault && definitionState?.selectedSettingDefaultValue) {
                                                                         const selectedSettingDefaultValue = definitionState?.selectedSettingDefaultValue;
-                                                                        isAllValueDefault = actions.checkIsAllDefault(optionConfigGroup, definitionForManager, selectedSettingDefaultValue);
+                                                                        isAllValueDefault = actions.checkIsAllDefault(
+                                                                            optionConfigGroup, definitionForManager, selectedSettingDefaultValue
+                                                                        );
                                                                     }
                                                                     if (isUndefined(currentOption.label) || currentOption.isHidden) {
                                                                         return null;
@@ -673,7 +682,7 @@ function ProfileManager(
                                                                                                     placement="bottomRight"
                                                                                                     overlay={(
                                                                                                         <Menu>
-                                                                                                            {!isOfficialDefinition(definitionState.definitionForManager) && (
+                                                                                                            {!isCurrentDefinitionOfficial && (
                                                                                                                 <Menu.Item>
                                                                                                                     <Anchor onClick={() => {
                                                                                                                         actions.setRenamingStatus(true);
@@ -694,20 +703,20 @@ function ProfileManager(
                                                                                                             {!isAllValueDefault && (
                                                                                                                 <Menu.Item>
                                                                                                                     <Anchor
-                                                                                                                        onClick={() => actions.resetDefinition(currentOption.value)}
+                                                                                                                        onClick={resetCurrentOption}
                                                                                                                     >
                                                                                                                         <div className="width-120 text-overflow-ellipsis">{i18n._('key-Printing/LeftBar-Reset')}</div>
                                                                                                                     </Anchor>
                                                                                                                 </Menu.Item>
                                                                                                             )}
                                                                                                             <Menu.Item>
-                                                                                                                <Anchor onClick={() => outsideActions.exportConfigFile(definitionState.definitionForManager)}>
+                                                                                                                <Anchor onClick={exportCurrentDefinition}>
                                                                                                                     <div className="width-120 text-overflow-ellipsis">{i18n._('key-Printing/ProfileManager-Export')}</div>
                                                                                                                 </Anchor>
                                                                                                             </Menu.Item>
-                                                                                                            {!isOfficialDefinition(definitionState.definitionForManager) && (
+                                                                                                            {!isCurrentDefinitionOfficial && (
                                                                                                                 <Menu.Item>
-                                                                                                                    <Anchor onClick={() => actions.onRemoveManagerDefinition(definitionState.definitionForManager, definitionState.isCategorySelected)}>
+                                                                                                                    <Anchor onClick={removeCurrentDefinition}>
                                                                                                                         <div>{i18n._('key-Printing/ProfileManager-Delete')}</div>
                                                                                                                     </Anchor>
                                                                                                                 </Menu.Item>

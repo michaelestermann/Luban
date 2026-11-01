@@ -194,7 +194,8 @@ class Canvas extends React.PureComponent<CanvasProps> {
     }
 
     // just for laser and cnc, dont set scale prop for 3dp
-    public componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    public UNSAFE_componentWillReceiveProps(nextProps) {
         if (nextProps.inProgress !== this.props.inProgress) {
             this.controls.setInProgress(nextProps.inProgress);
         }

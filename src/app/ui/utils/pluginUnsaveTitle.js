@@ -7,7 +7,7 @@ export function useUnsavedTitle(headType) {
     const dispatch = useDispatch();
     useEffect(() => {
         dispatch(projectActions.setOpenedFileWithUnSaved(headType, unSaved));
-    }, [unSaved]);
+    }, [unSaved, headType, dispatch]);
 }
 
 export default {

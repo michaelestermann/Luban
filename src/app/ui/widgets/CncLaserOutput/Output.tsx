@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import {
@@ -56,6 +56,20 @@ const Output: React.FC<OutputViewProps> = (props) => {
     // 4.17 tabs: loaded G-code (count) is shown in the Workspace tab with a toast
     const onOpenWorkspace = useOpenWorkspace(headType);
 
+    const onExport = useCallback(async () => {
+        if (!gcodeFile) {
+            return;
+        }
+        logGcodeExport(headType, 'local', materials.isRotate);
+        // 4.17: the exported file is also loaded into the Workspace, which is shown
+        const renderNow = loadGcodeOptions?.renderImmediately || false;
+        const count: number = await dispatch(exportGcodeFileAndLoad(headType, gcodeFile, renderNow)) as unknown as number;
+        if (count > 0) {
+            onOpenWorkspace(count);
+            window.scrollTo(0, 0);
+        }
+    }, [dispatch, gcodeFile, headType, materials, loadGcodeOptions, onOpenWorkspace]);
+
     const actions = {
         switchToEditPage: () => {
             if (displayedType === DISPLAYED_TYPE_TOOLPATH) {
@@ -68,19 +82,7 @@ const Output: React.FC<OutputViewProps> = (props) => {
             dispatch(editorActions.setThumbnail(headType, thumbnail?.current?.getThumbnail(series)));
         },
 
-        onExport: async () => {
-            if (!gcodeFile) {
-                return;
-            }
-            logGcodeExport(headType, 'local', materials.isRotate);
-            // 4.17: the exported file is also loaded into the Workspace, which is shown
-            const renderNow = loadGcodeOptions?.renderImmediately || false;
-            const count: number = await dispatch(exportGcodeFileAndLoad(headType, gcodeFile, renderNow)) as unknown as number;
-            if (count > 0) {
-                onOpenWorkspace(count);
-                window.scrollTo(0, 0);
-            }
-        },
+        onExport,
         onProcess: () => {
             dispatch(editorActions.createToolPath(headType));
         },
@@ -106,11 +108,11 @@ const Output: React.FC<OutputViewProps> = (props) => {
     };
 
     useEffect(() => {
-        UniApi.Event.on('appbar-menu:cnc-laser.export-gcode', actions.onExport);
+        UniApi.Event.on('appbar-menu:cnc-laser.export-gcode', onExport);
         return () => {
-            UniApi.Event.off('appbar-menu:cnc-laser.export-gcode', actions.onExport);
+            UniApi.Event.off('appbar-menu:cnc-laser.export-gcode', onExport);
         };
-    }, [gcodeFile]);
+    }, [onExport]);
 
     useEffect(() => {
         if (previewFailed) {
@@ -130,6 +132,7 @@ const Output: React.FC<OutputViewProps> = (props) => {
         generatedCounter.current = shouldGenerateGcodeCounter;
         actions.onGenerateThumbnail();
         dispatch(editorActions.commitGenerateGcode(headType));
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: generate G-code when the counter is bumped
     }, [shouldGenerateGcodeCounter]);
 
 

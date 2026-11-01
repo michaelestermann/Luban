@@ -34,7 +34,7 @@ const LaserParameters = ({ widgetActions }) => {
 
     useEffect(() => {
         widgetActions.setTitle(i18n._('key-CncLaser/Properties-Position & size'));
-    }, []);
+    }, [widgetActions]);
 
     useEffect(() => {
         if (page === PAGE_EDITOR) {
@@ -42,7 +42,7 @@ const LaserParameters = ({ widgetActions }) => {
         } else {
             widgetActions.setDisplay(false);
         }
-    }, [page]);
+    }, [page, widgetActions]);
 
     return (
         <React.Fragment>

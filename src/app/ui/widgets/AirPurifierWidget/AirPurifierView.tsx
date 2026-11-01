@@ -63,15 +63,13 @@ const AirPurifierView: React.FC<AirPurifierViewProps> = (props) => {
     }, [setDisplay, isConnected, airPurifier, series]);
 
     useEffect(() => {
-        if (airPurifierSwitch !== isFilterEnable) {
-            setIsFilterEnable(airPurifierSwitch);
-        }
+        // Setting an equal value is a no-op, so no need to compare with isFilterEnable
+        setIsFilterEnable(airPurifierSwitch);
     }, [airPurifierSwitch]);
 
     useEffect(() => {
-        if (airPurifierFanSpeed !== workSpeed) {
-            setWorkSpeed(airPurifierFanSpeed);
-        }
+        // Setting an equal value is a no-op, so no need to compare with workSpeed
+        setWorkSpeed(airPurifierFanSpeed);
     }, [airPurifierFanSpeed]);
 
     useEffect(() => {

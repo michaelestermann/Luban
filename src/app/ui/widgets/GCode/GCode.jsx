@@ -91,19 +91,18 @@ function GCode({ widgetActions }) {
 
     const [state, setState] = useState(() => getInitialState());
 
+    // The handlers are subscribed once on mount, so they must not read `state` from their render
     const controllerEvents = {
         'connection:close': () => {
             const initialState = getInitialState();
-            setState({ ...state, ...initialState });
+            setState(prev => ({ ...prev, ...initialState }));
         },
         'workflow:state': (options) => {
             const { workflowState, dataSource } = options;
             if (dataSource !== PROTOCOL_TEXT) {
                 return;
             }
-            if (state.workflowState !== workflowState) {
-                setState({ ...state, workflowState });
-            }
+            setState(prev => (prev.workflowState !== workflowState ? { ...prev, workflowState } : prev));
         }
     };
 
@@ -127,6 +126,7 @@ function GCode({ widgetActions }) {
         return () => {
             removeControllerEvents();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: subscribe once, unsubscribe the same handlers on unmount
     }, []);
 
     useEffect(() => {
@@ -135,12 +135,12 @@ function GCode({ widgetActions }) {
         } else {
             widgetActions.setDisplay(true);
         }
-    }, [workflowStatus, isConnected]);
+    }, [workflowStatus, isConnected, widgetActions]);
 
     useEffect(() => {
         if (boundingBox === null) {
-            setState({
-                ...state,
+            setState(prev => ({
+                ...prev,
                 bbox: {
                     min: {
                         x: 0,
@@ -161,7 +161,7 @@ function GCode({ widgetActions }) {
                         b: 0
                     }
                 }
-            });
+            }));
         } else {
             const bbox = boundingBox;
             const dX = bbox.max.x - bbox.min.x;
@@ -169,8 +169,8 @@ function GCode({ widgetActions }) {
             const dZ = bbox.max.z - bbox.min.z;
             const dB = bbox.max.b - bbox.min.b;
 
-            setState({
-                ...state,
+            setState(prev => ({
+                ...prev,
                 bbox: {
                     min: {
                         x: bbox.min.x,
@@ -191,7 +191,7 @@ function GCode({ widgetActions }) {
                         b: dB
                     }
                 }
-            });
+            }));
         }
     }, [boundingBox]);
 

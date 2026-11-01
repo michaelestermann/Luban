@@ -87,14 +87,14 @@ export const printingStore = getLocalStore('printing');
 export const editorStore = getLocalStore('editor');
 export const downloadManagerStore = getLocalStore('downloadManager');
 // set a default saving path of download manager
-(async function () {
+(async function initDownloadManagerSavedPath() {
     if (isElectron()) {
         const fs = window.require('fs'); // Use window.require to require fs module in Electron
         const os = window.require('os');
         const homeDir = os.homedir();
         const initSavePath = path.join(homeDir, 'Downloads');
         if (!fs.existsSync(initSavePath) || !fs.statSync(initSavePath).isDirectory()) {
-            await fs.mkdir(initSavePath, { recursive: true }, err => console.error(err));
+            await fs.mkdir(initSavePath, { recursive: true }, err => log.error(err));
         }
         !downloadManagerStore.get('downloadManangerSavedPath') && downloadManagerStore.set('downloadManangerSavedPath', initSavePath);
     }

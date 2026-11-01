@@ -176,6 +176,8 @@ const SerialConnection: React.FC = () => {
                 loadingTimer = null;
             }
         };
+        // onPortReady only reads selectedAgent for a debug message
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: subscribe once, unsubscribe on unmount
     }, []);
 
     useEffect(() => {
@@ -322,6 +324,7 @@ const SerialConnection: React.FC = () => {
         enclosureOnline,
         heatedBedTemperature,
         emergencyStopOnline,
+        moduleList,
     ]);
 
     const canRefresh = !loadingPorts && !isOpen;

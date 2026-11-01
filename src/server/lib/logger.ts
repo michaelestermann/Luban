@@ -24,6 +24,7 @@ const getLogDir = () => {
     try {
         fs.ensureDirSync(logDir);
     } catch (e) {
+        // eslint-disable-next-line no-console -- the logger is not available yet while resolving its own log directory
         console.log(e);
     }
     return logDir;
@@ -40,6 +41,7 @@ const cleanLogFile = (filename) => {
             fs.writeFileSync(logPath, '');
         }
     } catch (e) {
+        // eslint-disable-next-line no-console -- the logger is not available yet while cleaning its own log file
         console.log(e);
     }
 };

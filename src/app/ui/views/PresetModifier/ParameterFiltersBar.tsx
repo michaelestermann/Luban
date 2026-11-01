@@ -62,13 +62,13 @@ const ParameterFiltersBar: React.FC<Props> = (props) => {
         }
     }, [filters, filterValues]);
 
-    function onChangeOptionValue(option) {
+    const onChangeOptionValue = (option) => {
         onChangeFilterValues && onChangeFilterValues(0, option.value);
-    }
+    };
 
-    function onChangeSubOptionValue(option) {
+    const onChangeSubOptionValue = (option) => {
         onChangeFilterValues && onChangeFilterValues(1, option.value);
-    }
+    };
 
     return (
         <div className="sm-flex">

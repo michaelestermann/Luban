@@ -143,7 +143,8 @@ const Instructions = ({ onClose }) => {
                         />
                         <p>
                             <Trans i18nKey="key-Laser/CamaeraCaptureDescription_7_1">
-                                Note: If you use the USB disk to engrave, please make sure you set the work origin in the software instead of on the touchscreen.
+                                Note: If you use the USB disk to engrave, please make sure you set the work origin in the software
+                                instead of on the touchscreen.
                             </Trans>
                         </p>
                         <li>

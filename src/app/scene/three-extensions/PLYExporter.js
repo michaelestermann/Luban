@@ -104,7 +104,7 @@ class PLYExporter {
             // point cloud meshes will not have an index array and may not have a
             // number of vertices that is divisble by 3 (and therefore representable
             // as triangles)
-            console.error(
+            log.error(
                 /* eslint-disable-next-line no-useless-concat */
                 'PLYExporter: Failed to generate a valid PLY file with triangle indices because the ' + 'number of indices is not divisible by 3.'
             );

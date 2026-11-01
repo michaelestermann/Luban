@@ -150,7 +150,7 @@ export const actions = {
                 ...(reverse(cloneDeep(recentFiles)).map(item => {
                     item.label = item.path || item.name; // item.name;
                     item.enabled = true;
-                    item.click = function () {
+                    item.click = function openRecentFile() {
                         UniApi.Event.emit('appbar-menu:open-file', { path: item.path, name: item.name }, []);
                     };
                     return item;

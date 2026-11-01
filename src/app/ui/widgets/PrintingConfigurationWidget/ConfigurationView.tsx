@@ -338,9 +338,9 @@ const ConfigurationView: React.FC<{}> = () => {
          * Change quality preset settings.
          *
          * @param {string} key
-         * @param {any} value
+         * @param {string | number | boolean} value
          */
-        onChangePresetSettings: async (key: string, value: any) => {
+        onChangePresetSettings: async (key: string, value: string | number | boolean) => {
             log.info('change settings', key, value);
             if (isNil(value)) {
                 // if 'value' does't exit, then reset this value

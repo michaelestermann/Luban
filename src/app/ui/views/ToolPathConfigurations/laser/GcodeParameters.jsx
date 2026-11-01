@@ -7,6 +7,7 @@ import SvgIcon from '../../../components/SvgIcon';
 import ToolParameters from '../cnc/ToolParameters';
 import { toHump } from '../../../../../shared/lib/utils';
 import PresentSelector from './PresentSelector';
+import log from '../../../../lib/log';
 
 class GcodeParameters extends PureComponent {
     static propTypes = {
@@ -179,7 +180,7 @@ class GcodeParameters extends PureComponent {
             }
         });
 
-        console.log('true', pathType, movementMode, pathType === 'fill' && movementMode === 'greyscale-line');
+        log.debug('true', pathType, movementMode, pathType === 'fill' && movementMode === 'greyscale-line');
 
         return (
             <React.Fragment>

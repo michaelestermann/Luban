@@ -34,7 +34,8 @@ class PrintPreview extends Component {
         this.animate();
     }
 
-    componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    UNSAFE_componentWillReceiveProps(nextProps) {
         const { sideLength } = nextProps;
         sideLength && this.squareLine.scale.set(sideLength, sideLength, 1);
     }

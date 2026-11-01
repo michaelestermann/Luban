@@ -47,7 +47,7 @@ const VisualizerTopRight = ({ headType }) => {
         if (canGenerateGcode === false) {
             dispatch(editorActions.showSimulationInPreview(headType, false));
         }
-    }, [canGenerateGcode]);
+    }, [canGenerateGcode, dispatch, headType]);
 
     // CNC only (Laser has no simulation): Toolpath / Simulation as a segmented control at the
     // top centre of the canvas. Each segment is an independent toggle, as the former checkboxes.

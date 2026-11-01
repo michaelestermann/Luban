@@ -81,7 +81,7 @@ function PrintingManager() {
         }
 
         dispatch(machineActions.updatePrintingCustomConfigsWithCategory(newCustomConfig[category], category));
-    }, [customConfigs]);
+    }, [customConfigs, dispatch]);
 
     useEffect(() => {
         if (managerDisplayType === PRINTING_MANAGER_TYPE_MATERIAL) {

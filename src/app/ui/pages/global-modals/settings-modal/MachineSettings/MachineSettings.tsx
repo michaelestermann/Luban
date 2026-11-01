@@ -106,6 +106,8 @@ const MachineSettings: React.FC = () => {
                 setCncToolHeadSelected(cncOptions[0].value);
             }
         }
+        // The current selections are only validated against the new options, not watched.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild the options when the series changes
     }, [state.series, isMultiDualExtrusion]);
 
     // machine modules options

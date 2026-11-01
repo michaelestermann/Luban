@@ -126,6 +126,8 @@ function useRenderMainToolBar({ headType, setShowJobType, setShowMaterialTest, o
                 onChangeLogicalY(currentAdjustedTargetModel.y || 0);
             }, 0);
         }
+        // Apply the pending adjustment once the captured model was added, not when the adjustment is requested.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- run on model list changes only
     }, [models]);
 
     // cnc
@@ -142,12 +144,12 @@ function useRenderMainToolBar({ headType, setShowJobType, setShowMaterialTest, o
     }, [activeMachine, machineToolHead, headType]);
 
     const [showStlModal, setShowStlModal] = useState(true);
-    function handleHideStlModal() {
+    const handleHideStlModal = () => {
         setShowStlModal(false);
-    }
-    function handleShowStlModal() {
+    };
+    const handleShowStlModal = () => {
         setShowStlModal(true);
-    }
+    };
 
     // compact toolbar row: dropdown items as icon + arrow, the title is the tooltip
     const renderCompactDropdown = (iconName: string, title: string, overlay: React.ReactElement) => (

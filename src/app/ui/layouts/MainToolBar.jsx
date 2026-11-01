@@ -8,6 +8,7 @@ import { Badge } from '../components/Badge';
 import SvgIcon from '../components/SvgIcon';
 import MenuItem from './MenuItem';
 import styles from './styles/maintoolbar.styl';
+import log from '../../lib/log';
 
 
 class MainToolBar extends React.PureComponent {
@@ -109,7 +110,7 @@ class MainToolBar extends React.PureComponent {
             try {
                 callback && callback(event);
             } catch (e) {
-                console.error(e);
+                log.error(e);
             }
         }
     };

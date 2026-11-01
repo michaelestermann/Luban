@@ -2,6 +2,7 @@ import isEmpty from 'lodash/isEmpty';
 import { Observable } from 'rxjs';
 
 import ToolPathGeometryConverter from './GcodeToBufferGeometry/ToolPathGeometryConverter';
+import log from '../lib/log';
 
 type ToolpathRendererData = {
     data: object;
@@ -29,7 +30,7 @@ const toolpathRenderer = (taskResult: ToolpathRendererData) => {
             for (let i = 0; i < taskTotal; i++) {
                 const filename = taskResult.filenames[i];
 
-                console.log(`Generate geometry from tool path, ${filename}`);
+                log.info(`Generate geometry from tool path, ${filename}`);
                 const converter = new ToolPathGeometryConverter();
 
                 converter.parseAsync(

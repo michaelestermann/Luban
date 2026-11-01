@@ -37,7 +37,7 @@ const QuickStart = (props) => {
         const { caseList, caseListFourAxis } = getCaseList(series, toolHead);
         setCaseConfig(caseList);
         setCaseConfigFourAxis(caseListFourAxis);
-    }, []);
+    }, [series, toolHead]);
 
     useEffect(() => {
         const { caseList, caseListFourAxis } = getCaseList(series, toolHead);

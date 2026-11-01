@@ -68,6 +68,8 @@ const MachineMaterialSettings = ({ isPopup, onClose, onCallBack }) => {
             setLoading(false);
         })();
         */
+        // This effect writes selectedToolMap itself.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute the tool heads only when the series changes
     }, [selectedMachineSeries]);
 
     // tool head changed
@@ -83,6 +85,8 @@ const MachineMaterialSettings = ({ isPopup, onClose, onCallBack }) => {
         })();
         */
         setLoading(false);
+        // onCallBack is a new function on every parent render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- notify the parent on selection changes only
     }, [selectedMachineSeries, selectedToolMap]);
 
     const ref = useRef(null);

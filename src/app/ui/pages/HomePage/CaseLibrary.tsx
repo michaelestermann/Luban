@@ -165,6 +165,8 @@ const CaseLibrary = (props) => {
         return () => {
             isComponentMounted.current = false;
         };
+        // Later machine/connection changes are handled by the effect below.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: test web access and load the case list once
     }, []);
 
     // test Internet status
@@ -188,6 +190,8 @@ const CaseLibrary = (props) => {
         loadData()
             .then((isShow) => { isComponentMounted.current && setShowCaseResource(canAccessWeb === AccessResourceWebState.PASS && isShow); })
             .finally(() => { isComponentMounted.current && setIsLoading(false); });
+        // loadData is recreated every render and only reads series, toolHead and canAccessInternet, which are listed.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- loadData inputs are listed
     }, [series, toolHead, canAccessInternet, canAccessWeb]);
 
     return (

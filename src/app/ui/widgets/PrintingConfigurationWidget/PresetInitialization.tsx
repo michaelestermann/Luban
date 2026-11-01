@@ -61,14 +61,21 @@ const PresetInitialization: React.FC = () => {
 
 
     // Check if quality preset is valid, otherwise choose another quality preset
+    const leftActivePresetId = activePresetIds[LEFT_EXTRUDER];
+    const leftMaterialType = materialPreset?.materialType;
+    const leftNozzleSize = extruderLDefinition?.settings.machine_nozzle_size.default_value;
+    const rightActivePresetId = activePresetIds[RIGHT_EXTRUDER];
+    const rightMaterialType = materialPresetRight?.materialType;
+    const rightNozzleSize = extruderRDefinition?.settings.machine_nozzle_size.default_value;
+
     useEffect(() => {
         if (qualityDefinitionModels.length > 0) {
             const presetFilters = {
-                materialType: materialPreset?.materialType,
-                nozzleSize: extruderLDefinition?.settings.machine_nozzle_size.default_value,
+                materialType: leftMaterialType,
+                nozzleSize: leftNozzleSize,
             };
 
-            let presetModel = qualityDefinitionModels.find(p => p.definitionId === activePresetIds[LEFT_EXTRUDER]);
+            let presetModel = qualityDefinitionModels.find(p => p.definitionId === leftActivePresetId);
             if (presetModel && !isQualityPresetVisible(presetModel, presetFilters)) {
                 presetModel = null;
             }
@@ -87,20 +94,20 @@ const PresetInitialization: React.FC = () => {
         }
     }, [
         qualityDefinitionModels,
-        activePresetIds[LEFT_EXTRUDER],
-        materialPreset?.materialType,
+        leftActivePresetId,
+        leftMaterialType,
         setQualityPreset,
-        extruderLDefinition?.settings.machine_nozzle_size.default_value,
+        leftNozzleSize,
     ]);
 
     useEffect(() => {
         if (qualityDefinitionModels.length > 0) {
             const presetFilters = {
-                materialType: materialPresetRight?.materialType,
-                nozzleSize: extruderRDefinition?.settings.machine_nozzle_size.default_value,
+                materialType: rightMaterialType,
+                nozzleSize: rightNozzleSize,
             };
 
-            let presetModel = qualityDefinitionModels.find(p => p.definitionId === activePresetIds[RIGHT_EXTRUDER]);
+            let presetModel = qualityDefinitionModels.find(p => p.definitionId === rightActivePresetId);
             if (presetModel && !isQualityPresetVisible(presetModel, presetFilters)) {
                 presetModel = null;
             }
@@ -118,10 +125,10 @@ const PresetInitialization: React.FC = () => {
         }
     }, [
         qualityDefinitionModels,
-        activePresetIds[RIGHT_EXTRUDER],
-        materialPresetRight?.materialType,
+        rightActivePresetId,
+        rightMaterialType,
         setQualityPreset,
-        extruderRDefinition?.settings.machine_nozzle_size.default_value,
+        rightNozzleSize,
     ]);
 
     return (<div className="display-none" />);

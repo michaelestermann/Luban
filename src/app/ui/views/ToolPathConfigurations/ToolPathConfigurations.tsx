@@ -130,6 +130,7 @@ const ToolPathConfigurations: React.FC<ToolPathConfigurationsProps> = ({ toolpat
         if (!_.isNull(toolpath)) {
             updateActiveToolDefinition(toolpath);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- updateActiveToolDefinition sets the currentToolDefinition it reads; adding it would loop
     }, [toolpath]);
 
     const actions = {

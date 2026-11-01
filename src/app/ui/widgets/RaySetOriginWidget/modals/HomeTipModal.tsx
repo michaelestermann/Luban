@@ -16,7 +16,7 @@ const HomeTipModal: React.FC<HomeTipModalProps> = (props) => {
     const onClickOk = useCallback(() => {
         onOk && onOk();
         // onClose && onClose();
-    }, [onClose, onOk]);
+    }, [onOk]);
 
     return (
         <Modal size="sm" closable={false}>

@@ -268,6 +268,8 @@ const RayLaserWorkspace: React.FC<RayLaserWorkspaceProps> = ({ isPopup, onClose,
         return () => {
             removeControllerEvents();
         };
+        // The controller event handlers only call state setters, so the first render's handlers stay valid.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: subscribe once, unsubscribe on unmount
     }, []);
 
     function renderModalView(_connected) {

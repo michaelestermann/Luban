@@ -193,7 +193,7 @@ const PrintToolControl: React.FC = () => {
 
         bedTempDisplay: true,
         bedTempEditable: true,
-    }), [isDual]);
+    }), [isDual, j1Disabled]);
 
     const renderActiveNozzle = useCallback(() => {
         if (!uiConfig.activeNozzle) {

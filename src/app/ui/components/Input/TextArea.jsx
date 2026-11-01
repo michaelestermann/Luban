@@ -1,5 +1,5 @@
 import { debounce } from 'lodash';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { Input } from 'antd';
@@ -16,7 +16,7 @@ const TextAreaInput = React.memo(({
         onChange && onChange(newValue);
     }, [onChange]);
 
-    const debouncedChangeHandler = useCallback(debounce(changeHandler, 400, { trailing: true }), [changeHandler]);
+    const debouncedChangeHandler = useMemo(() => debounce(changeHandler, 400, { trailing: true }), [changeHandler]);
 
     // Synchronize input to display value
     const onInsideChange = useCallback((event) => {

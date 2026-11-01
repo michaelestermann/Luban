@@ -22,7 +22,7 @@ const MachineSetting = (props) => {
         props.widgetActions.setTitle(i18n._('key-App/Settings/Settings-Machine Settings'));
         dispatch(machineActions.getEnclosureState());
         dispatch(machineActions.getZAxisModuleState());
-    }, []);
+    }, [dispatch, props.widgetActions]);
     useEffect(() => {
         if (
             isConnected
@@ -35,7 +35,7 @@ const MachineSetting = (props) => {
         } else {
             props.widgetActions.setDisplay(false);
         }
-    }, [isConnected, connectionType, headType, series, workflowState]);
+    }, [isConnected, connectionType, headType, series, workflowState, props.widgetActions]);
     const onSave = () => {
         dispatch(machineActions.setZAxisModuleState(zAxisModule));
         dispatch(machineActions.setEnclosureState(enclosureDoorDetection));
