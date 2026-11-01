@@ -59,6 +59,14 @@ const Output: React.FC<OutputViewProps> = (props) => {
     const dispatch = useDispatch();
     const thumbnail = useRef();
 
+    const onExport = useCallback(() => {
+        if (gcodeFile === null) {
+            return;
+        }
+        logGcodeExport(headType, 'local', materials.isRotate);
+        dispatch(projectActions.exportFile(gcodeFile.uploadName, gcodeFile.renderGcodeFileName));
+    }, [dispatch, gcodeFile, headType, materials]);
+
     const actions = {
         switchToEditPage: () => {
             if (displayedType === DISPLAYED_TYPE_TOOLPATH) {
@@ -71,13 +79,7 @@ const Output: React.FC<OutputViewProps> = (props) => {
             dispatch(editorActions.setThumbnail(headType, thumbnail?.current?.getThumbnail(series)));
         },
 
-        onExport: () => {
-            if (gcodeFile === null) {
-                return;
-            }
-            logGcodeExport(headType, 'local', materials.isRotate);
-            dispatch(projectActions.exportFile(gcodeFile.uploadName, gcodeFile.renderGcodeFileName));
-        },
+        onExport,
         onProcess: () => {
             dispatch(editorActions.createToolPath(headType));
         },
@@ -105,11 +107,11 @@ const Output: React.FC<OutputViewProps> = (props) => {
     const onOpenWorkspace = useCallback(() => setShowWorkspace(true), []);
 
     useEffect(() => {
-        UniApi.Event.on('appbar-menu:cnc-laser.export-gcode', actions.onExport);
+        UniApi.Event.on('appbar-menu:cnc-laser.export-gcode', onExport);
         return () => {
-            UniApi.Event.off('appbar-menu:cnc-laser.export-gcode', actions.onExport);
+            UniApi.Event.off('appbar-menu:cnc-laser.export-gcode', onExport);
         };
-    }, [gcodeFile]);
+    }, [onExport]);
 
     useEffect(() => {
         if (previewFailed) {
@@ -122,6 +124,7 @@ const Output: React.FC<OutputViewProps> = (props) => {
     useEffect(() => {
         actions.onGenerateThumbnail();
         dispatch(editorActions.commitGenerateGcode(headType));
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: generate G-code when the counter is bumped
     }, [shouldGenerateGcodeCounter]);
 
 

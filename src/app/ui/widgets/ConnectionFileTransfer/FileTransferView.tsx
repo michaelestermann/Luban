@@ -146,6 +146,14 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
         }));
     }, [dispatch, selectFileName, gcodeFiles]);
 
+    const onExport = useCallback(() => {
+        if (!selectFileName) {
+            return;
+        }
+        const selectGcodeFile = _.find(gcodeFiles, { uploadName: selectFileName });
+        dispatch(projectActions.exportFile(selectFileName, selectGcodeFile.renderGcodeFileName));
+    }, [dispatch, selectFileName, gcodeFiles]);
+
     const actions = {
         onChangeFile: async (event) => {
             const file = event.target.files[0];
@@ -164,13 +172,7 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
                 fileInput.current.click();
             }
         },
-        onExport: () => {
-            if (!selectFileName) {
-                return;
-            }
-            const selectGcodeFile = _.find(gcodeFiles, { uploadName: selectFileName });
-            dispatch(projectActions.exportFile(selectFileName, selectGcodeFile.renderGcodeFileName));
-        },
+        onExport,
         onChangeShouldPreview: () => {
             setLoadToWorkspaceOnLoad(!loadToWorkspaceOnLoad);
         },
@@ -314,11 +316,11 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
 
 
     useEffect(() => {
-        UniApi.Event.on('appbar-menu:workspace.export-gcode', actions.onExport);
+        UniApi.Event.on('appbar-menu:workspace.export-gcode', onExport);
         return () => {
-            UniApi.Event.off('appbar-menu:workspace.export-gcode', actions.onExport);
+            UniApi.Event.off('appbar-menu:workspace.export-gcode', onExport);
         };
-    }, [selectFileName]);
+    }, [onExport]);
 
     useEffect(() => {
         if (prevProps) {
