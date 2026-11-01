@@ -48,7 +48,7 @@ function getValidTitle(option: SegmentedLabeledOption) {
     return '';
 }
 
-function normalizeOptions(options: SegmentedOptions): any[] {
+function normalizeOptions(options: SegmentedOptions): SegmentedLabeledOption[] {
     return options.map((option) => {
         if (typeof option === 'object' && option !== null) {
             const validTitle = getValidTitle(option);
@@ -62,7 +62,7 @@ function normalizeOptions(options: SegmentedOptions): any[] {
         return {
             label: option?.toString(),
             title: option?.toString(),
-            value: option,
+            value: option as SegmentedRawOption,
         };
     });
 }

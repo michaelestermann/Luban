@@ -130,7 +130,7 @@ function MotionThumb(props: MotionThumbInterface) {
                 };
 
                 if (process.env.NODE_ENV === 'test') {
-                    (motionProps as any)['data-test-style'] = JSON.stringify(mergedStyle);
+                    (motionProps as Record<string, unknown>)['data-test-style'] = JSON.stringify(mergedStyle);
                 }
 
                 return <div {...motionProps} />;

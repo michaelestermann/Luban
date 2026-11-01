@@ -202,7 +202,7 @@ const SetOriginView: React.FC<SetOriginViewProps> = (props) => {
                 });
         });
     };
-    const onChangeCoordinateMode = (e: any | RadioChangeEvent) => {
+    const onChangeCoordinateMode = (e: RadioChangeEvent | { target: { value: SetupCoordinateMethod } }) => {
         if (!isConnected) {
             return;
         }

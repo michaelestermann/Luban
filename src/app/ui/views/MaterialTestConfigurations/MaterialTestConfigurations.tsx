@@ -112,7 +112,7 @@ const MaterialTestConfigurations: React.FC<MaterialTestConfigurationsProps> = ({
             form.setFieldsValue(formData);
         }
     }, [form, formData]);
-    const saveFormData = (nFormData: any) => {
+    const saveFormData = (nFormData: Record<string, number>) => {
         setFormData(nFormData);
         editorStore.set(`${HEAD_LASER}LastMaterialTest`, JSON.stringify(nFormData));
     };

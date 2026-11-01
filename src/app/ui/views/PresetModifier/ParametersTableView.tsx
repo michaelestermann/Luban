@@ -38,6 +38,19 @@ interface DisplayConfig {
 }
 
 /**
+ * A parameter of a preset's `settings` map. Only the fields read here are typed.
+ */
+interface ParameterSetting {
+    childKey?: string[];
+    [field: string]: unknown;
+}
+
+type ParameterSettings = { [key: string]: ParameterSetting };
+
+// eslint-disable-next-line camelcase -- field name of the preset definition data
+type ParameterDefaultValues = { [key: string]: { default_value?: unknown; [field: string]: unknown } };
+
+/**
  * Calculate display configs for keys and their children. (tree view)
  *
  * @param keys
@@ -46,7 +59,7 @@ interface DisplayConfig {
  */
 function calculateDisplayConfigsForKeys(
     keys: string[],
-    settings: { [key: string]: any },
+    settings: ParameterSettings,
     parameterConverter: (key) => DisplayConfig | null,
 ): DisplayConfig[] {
     const displayConfigs = [];
@@ -78,7 +91,7 @@ function calculateDisplayConfigsForKeys(
 function calculateDisplayConfigsGroups(
     viewType = ParametersViewType.ListView,
     optionConfigGroup: { [category: string]: string[] },
-    settings: { [key: string]: any },
+    settings: ParameterSettings,
     parameterConverter: (key) => DisplayConfig | null,
 ): { [category: string]: DisplayConfig[] } {
     const groups = {};
@@ -106,14 +119,14 @@ function calculateDisplayConfigsGroups(
 
 declare type ParameterItemListProps = {
     displayConfigs: DisplayConfig[];
-    settings: { [key: string]: any };
+    settings: ParameterSettings;
     isDefaultDefinition: boolean;
-    onChangePresetSettings: () => void;
-    selectedSettingDefaultValue: { [key: string]: any };
+    onChangePresetSettings: (key: string, value: unknown) => void;
+    selectedSettingDefaultValue: ParameterDefaultValues;
     handleUpdateProfileKey: (category: string, key: string) => void;
     categoryKey: string;
     definitionCategory: string;
-    onChangeMaterialType: () => void;
+    onChangeMaterialType: (materialType: string) => void;
     indent?: number,
 };
 
@@ -183,12 +196,12 @@ const ParameterItemList: React.FC<ParameterItemListProps> = (props) => {
 };
 
 type TProps = {
-    optionConfigGroup: any;
-    settings: any;
-    definitionForManager: any;
-    selectedSettingDefaultValue: any;
-    onChangePresetSettings: any;
-    onChangeMaterialType?: any; // TODO: refactor
+    optionConfigGroup: { [category: string]: string[] };
+    settings: ParameterSettings;
+    definitionForManager: { isRecommended?: boolean; category?: string; [field: string]: unknown };
+    selectedSettingDefaultValue: ParameterDefaultValues;
+    onChangePresetSettings: (key: string, value: unknown) => void;
+    onChangeMaterialType?: (materialType: string) => void; // TODO: refactor
     filters: string[];
     flatten: boolean;
 

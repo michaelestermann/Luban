@@ -627,7 +627,7 @@ const createSvg = (
  * @returns A Promise that resolves to an array of transformed child elements of the created SVG element.
  */
 const getSvgString = async (
-    svg: any,
+    svg: SvgModel,
     viewboxX: number,
     viewboxY: number,
     viewWidth: number,

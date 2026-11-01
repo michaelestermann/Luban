@@ -50,6 +50,16 @@ import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
 import ToolPathGroup from '../../../toolpaths/ToolPathGroup';
 
+/**
+ * A or B point of the A-B position feature (see flux/laser).
+ */
+interface ABPosition {
+    x?: number;
+    y?: number;
+    z?: number;
+    b?: number;
+}
+
 interface VisualizerProps {
     // page: editor or preview
     page: Page;
@@ -80,7 +90,7 @@ interface VisualizerProps {
 
     isOnABPosition: boolean;
     updateIsOnABPosition: (isOnABPosition: boolean) => void;
-    updateABpositionBackground: (APosition: any, BPosition: any) => void;
+    updateABpositionBackground: (APosition: ABPosition, BPosition: ABPosition) => void;
 
     // new: decompose selected svg image
     decomposeSelectedSVG: () => void;
