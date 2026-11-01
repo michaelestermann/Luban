@@ -466,6 +466,9 @@ class Visualizer extends React.Component<VisualizerProps> {
         const workpiece = convertMaterialsToWorkpiece(materials);
         // an object origin keeps the workpiece where the canvas has it
         this.printableArea = new PrintablePlate(workpiece, plateOrigin(origin, props.coordinateMode?.value));
+        const originPoint = props.toolPathGroup?.getObjectOriginPoint?.(origin) || null;
+        this.printableArea.setTargetPoint(originPoint);
+        props.toolPathGroup?.setPreviewOrigin?.(originPoint);
         this.state = {
             limitPicModalShow: false,
             file: null,
@@ -531,7 +534,10 @@ class Visualizer extends React.Component<VisualizerProps> {
             this.actions.autoFocus();
         }
         // the red origin point of the preview follows an object origin
-        this.printableArea.setTargetPoint(nextProps.toolPathGroup?.getObjectOriginPoint?.(nextProps.origin) || null);
+        const originPoint = nextProps.toolPathGroup?.getObjectOriginPoint?.(nextProps.origin) || null;
+        this.printableArea.setTargetPoint(originPoint);
+        // the tool paths (G-code coordinates) go to the origin point of the workpiece
+        nextProps.toolPathGroup?.setPreviewOrigin?.(originPoint);
 
         if (isOverSize !== this.props.isOverSize) {
             this.setState({

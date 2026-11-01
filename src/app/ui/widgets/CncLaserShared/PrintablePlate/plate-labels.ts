@@ -35,3 +35,48 @@ export function isPlateLabelShown(value: number, step: number): boolean {
     const n = value / step;
     return Math.abs(n - Math.round(n)) < 1e-6;
 }
+
+export interface PlateRange {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+export interface PlateAxisLabel {
+    // the number shown (mm from the origin, as in the G-code)
+    value: number;
+    // where it sits on the plate (plate coordinates)
+    at: number;
+}
+
+const multiplesIn = (from: number, to: number, step: number): number[] => {
+    const values = [];
+    for (let v = Math.ceil(from / step - 1e-9) * step; v <= to + 1e-9; v += step) {
+        values.push(v === 0 ? 0 : v); // no -0
+    }
+    return values;
+};
+
+/**
+ * Axes and labels of the plate: they run through the origin, the workpiece origin (0/0 of the plate)
+ * or an object origin point (`origin`, plate coordinates), and count from it like the G-code and the
+ * rulers of the 2D canvas. Labels at the multiples of `step` inside the workpiece (`range`); 0 is
+ * labelled on the Y axis only. X labels go above the axis when it is on the top border, Y labels
+ * right of it when it is on the right border.
+ */
+export function plateAxisLabels(range: PlateRange, origin: { x: number; y: number } | null, step: number) {
+    const axis = { x: origin ? origin.x : 0, y: origin ? origin.y : 0 };
+    const x = multiplesIn(range.minX - axis.x, range.maxX - axis.x, step)
+        .filter(value => value !== 0)
+        .map(value => ({ value, at: axis.x + value }));
+    const y = multiplesIn(range.minY - axis.y, range.maxY - axis.y, step)
+        .map(value => ({ value, at: axis.y + value }));
+    return {
+        axis,
+        x: x as PlateAxisLabel[],
+        y: y as PlateAxisLabel[],
+        top: Math.abs(axis.y - range.maxY) < 1e-6,
+        right: Math.abs(axis.x - range.maxX) < 1e-6,
+    };
+}

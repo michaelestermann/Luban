@@ -9,6 +9,7 @@ import { JobOffsetMode, Origin, OriginType } from '../../constants/coordinate';
 import CompoundOperation from '../../core/CompoundOperation';
 import { controller } from '../../communication/socket-communication';
 import { logSvgSlice } from '../../lib/gaEvent';
+import { stockBoundary } from '../../lib/object-origin';
 import i18n from '../../lib/i18n';
 import { PROCESS_STAGE, STEP_STAGE } from '../../lib/manager/ProgressManager';
 import ToolPathGroup from '../../toolpaths/ToolPathGroup';
@@ -594,16 +595,9 @@ export const processActions = {
             return;
         }
         const { viewPathFile } = taskResult;
-        const coorDelta = {
-            dx: (size.x / 2) * coordinateMode.setting.sizeMultiplyFactor.x,
-            dy: (size.y / 2) * coordinateMode.setting.sizeMultiplyFactor.y
-        };
-        const boundarySize = {
-            minX: -size.x / 2 + coorDelta?.dx,
-            maxX: size.x / 2 + coorDelta?.dx,
-            minY: -size.y / 2 + coorDelta?.dy,
-            maxY: size.y / 2 + coorDelta?.dy
-        };
+        // the stock is drawn with the view paths (G-code coordinates: relative to an object origin point)
+        const originPoint = toolPathGroup.getObjectOriginPoint?.(getState()[headType].origin) || null;
+        const boundarySize = stockBoundary(size, coordinateMode.setting.sizeMultiplyFactor, originPoint);
         await toolPathGroup.onGenerateViewPath(viewPathFile, isRotate ? materials : boundarySize);
 
         dispatch(

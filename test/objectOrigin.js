@@ -10,6 +10,7 @@ import {
     plateOrigin,
     referencePoint,
     rememberOrigin,
+    stockBoundary,
     unionBox,
 } from '../src/app/lib/object-origin';
 
@@ -121,5 +122,17 @@ test('objectReferenceBox: a mirrored object (negative scale gives min > max) sti
     t.deepEqual(referencePoint(result, 'top-right'), { x: 30, y: 40 });
     t.deepEqual(unionBox([box(50, 0, 40, 10), box(0, 0, 10, 10)]), box(0, 0, 50, 10), 'union with a mirrored box');
     t.equal(unionBox([box(NaN, 0, 1, 1)]), null, 'invalid boxes still count as none');
+    t.end();
+});
+
+test('stockBoundary: the workpiece in G-code coordinates for the simulation stock', (t) => {
+    const bottomLeft = { x: 1, y: 1 };
+    t.deepEqual(stockBoundary({ x: 400, y: 300 }, bottomLeft, null), { minX: 0, maxX: 400, minY: 0, maxY: 300 }, 'workpiece origin');
+    t.deepEqual(stockBoundary({ x: 400, y: 300 }, { x: 0, y: 0 }, null), { minX: -200, maxX: 200, minY: -150, maxY: 150 }, 'centre origin');
+    t.deepEqual(
+        stockBoundary({ x: 400, y: 300 }, bottomLeft, { x: 125, y: 100 }),
+        { minX: -125, maxX: 275, minY: -100, maxY: 200 },
+        'object origin: relative to its point'
+    );
     t.end();
 });
