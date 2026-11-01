@@ -133,7 +133,7 @@ test('Drill moves: sequence', (t) => {
     const has = (obj, from = 0) => data.findIndex((c, i) => i >= from && JSON.stringify(c) === JSON.stringify(obj));
     const g90 = has({ G: 90 });
     const g21 = has({ G: 21 }, g90);
-    const jog = has({ G: 0, Z: 5, F: 'jogSpeed' }, g21);
+    const jog = has({ G: 0, Z: 20, F: 'jogSpeed' }, g21); // up to the top (stop height) before the first travel
     const spindle = has({ M: 3, P: 100 }, jog);
     const p1 = has({ G: 0, X: -30, Y: 15, F: 'jogSpeed' }, spindle);
     const up1 = has({ G: 0, Z: 5 }, p1);
@@ -273,5 +273,36 @@ test('Drill UI: choosing drill disables tabs', (t) => {
     t.deepEqual(withDrillDefaults({ pathType: 'drill' }), { pathType: 'drill', enableTab: false });
     t.deepEqual(withDrillDefaults({ pathType: 'path' }), { pathType: 'path' });
     t.deepEqual(withDrillDefaults({ targetDepth: 2 }), { targetDepth: 2 });
+    t.end();
+});
+
+// Z of every travel (G0 with X or Y), in order
+const travelHeights = (data) => {
+    let z = null;
+    const heights = [];
+    for (const c of data) {
+        if ('Z' in c) {
+            z = c.Z;
+        }
+        if (c.G === 0 && ('X' in c || 'Y' in c)) {
+            heights.push(z);
+        }
+    }
+    return heights;
+};
+
+test('Drill moves: travel to the first hole happens at the top (stop height), then down', (t) => {
+    const data = buildDrillMoves([{ x: 1, y: 2 }, { x: 5, y: 6 }], config({ safetyHeight: 2, stopHeight: 10 }));
+    const firstXY = data.findIndex(c => c.G === 0 && 'X' in c);
+    const zBefore = data.slice(0, firstXY).filter(c => 'Z' in c).map(c => c.Z);
+    t.equal(zBefore[zBefore.length - 1], 10, 'at stop height when moving to the first hole');
+    t.ok(zBefore.every(z => z >= 10), 'never below stop height before the first travel');
+    t.deepEqual(travelHeights(data).slice(0, 2), [10, 2], 'first hole from the top, next hole at jog height');
+    t.end();
+});
+
+test('Drill moves: no travel below the jog height', (t) => {
+    const data = buildDrillMoves([{ x: 1, y: 2 }, { x: 5, y: 6 }, { x: 9, y: 1 }], config({ safetyHeight: 3, stopHeight: 1 }));
+    t.ok(travelHeights(data).every(z => z >= 3), 'all XY travel at or above the jog height');
     t.end();
 });
