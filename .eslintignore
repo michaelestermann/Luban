@@ -4,3 +4,7 @@ dist/
 output/
 src/node_modules
 src/server/lib/SACP-SDK
+
+# git submodules (separate Snapmaker repositories, linted there)
+packages/luban-print-settings/
+packages/luban-print-settings-docs/
