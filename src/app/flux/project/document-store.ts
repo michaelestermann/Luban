@@ -92,6 +92,23 @@ class DocumentStore {
         await this.autosaves.get(id);
     }
 
+    /**
+     * Waits until the last autosaves of the documents have settled, at most `timeoutMs` (quit: the server
+     * is stopped right after). True when all settled in time.
+     */
+    public async settleAutosaves(ids: readonly string[], timeoutMs: number): Promise<boolean> {
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const timeout = new Promise<boolean>((resolve) => {
+            timer = setTimeout(() => resolve(false), timeoutMs);
+        });
+        const all = Promise.all(ids.map(async (id) => this.lastAutosave(id))).then(() => true);
+        try {
+            return await Promise.race([all, timeout]);
+        } finally {
+            timer && clearTimeout(timer);
+        }
+    }
+
     /** A document of `headType` is being loaded into its slice (the mode counts as busy meanwhile). */
     public setLoading(headType: string, on: boolean): void {
         const n = (this.loading.get(headType) || 0) + (on ? 1 : -1);

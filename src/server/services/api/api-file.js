@@ -24,6 +24,7 @@ import { pathWithRandomSuffix } from '../../lib/random-utils';
 import { textSerialChannel } from '../machine/channels/TextSerialChannel';
 import serializeByKey from '../../lib/serialize-by-key';
 import { ENV_DOCS_DIR, isValidDocId, orphanDocDirs, resolveEnvDir } from '../../lib/env-dir';
+import { interruptedDirNames, migrateEnvDir, recoverEnvDir, replaceDir } from '../../lib/env-swap';
 
 const log = logger('api:file');
 
@@ -362,6 +363,9 @@ const envDirOfRequest = (res, headType, docId) => {
     }
 };
 
+// Autosaves can overlap; writes, removals and repairs of the same env folder run one at a time
+const envWriteQueue = serializeByKey();
+
 /**
  * get environment data from saved file
  * (GET kept for 4.16 callers; GET bodies are usually empty, so the query is read too. New callers use POST.)
@@ -372,6 +376,8 @@ export const getEnv = async (req, res) => {
     if (!envDir) return;
     const targetPath = `${envDir}/config.json`;
     try {
+        // a write cut off earlier is repaired first (queued: a running write of the same env is not touched)
+        await envWriteQueue(docId ?? headType, async () => recoverEnvDir(envDir));
         const exists = fs.existsSync(targetPath);
         if (exists) {
             const content = fs.readFileSync(targetPath).toString();
@@ -394,65 +400,51 @@ const writeEnv = async (config, content, docId) => {
     const machineInfo = config?.machineInfo;
     const headType = machineInfo?.headType;
     const envDir = resolveEnvDir(DataStorage.envDir, headType, docId);
-    // TODO: not just remove the category but only change the file when model changed
-    rmDir(envDir, false);
-    fs.ensureDirSync(envDir);
-
     const configDir = getConfigDir(machineInfo);
 
-    const result = await new Promise((resolve, reject) => {
-        const targetPath = `${envDir}/config.json`;
-        fs.writeFile(targetPath, content, (err) => {
-            if (err) {
-                log.error(err);
-                reject(err);
-            } else {
-                resolve({
-                    targetPath
-                });
+    // the folder is written next to the old one and swapped in when complete (config.json last): a write
+    // that is cut off (quit, killed server) leaves the previous auto-save as it was
+    await replaceDir(envDir, (dir) => {
+        traverse(config.models, (model) => {
+            // why copy all not just 'uploadName'
+            const { uploadName } = model;
+            if (uploadName) {
+                if (/\.svg$/.test(uploadName) && !(/parsed\.svg$/.test(uploadName))) {
+                    const parseName = uploadName.replace(/\.svg$/, 'parsed.svg');
+                    copyFileSync(`${DataStorage.tmpDir}/${parseName}`, `${dir}/${parseName}`);
+                }
+                copyFileSync(`${DataStorage.tmpDir}/${uploadName}`, `${dir}/${uploadName}`);
             }
         });
-    });
-    traverse(config.models, (model) => {
-        // why copy all not just 'uploadName'
-        const { uploadName } = model;
-        if (uploadName) {
-            if (/\.svg$/.test(uploadName) && !(/parsed\.svg$/.test(uploadName))) {
-                const parseName = uploadName.replace(/\.svg$/, 'parsed.svg');
-                copyFileSync(`${DataStorage.tmpDir}/${parseName}`, `${envDir}/${parseName}`);
-            }
-            copyFileSync(`${DataStorage.tmpDir}/${uploadName}`, `${envDir}/${uploadName}`);
+
+        if (config.defaultMaterialId && /^material.([0-9_]+)$/.test(config.defaultMaterialId)) {
+            copyFileSync(`${configDir}/${config.defaultMaterialId}.def.json`, `${dir}/${config.defaultMaterialId}.def.json`);
         }
-    });
+        const isDual = isDualExtruder(machineInfo?.toolHead?.printingToolhead);
+        if (isDual && config.defaultMaterialIdRight && /^material.([0-9_]+)$/.test(config.defaultMaterialIdRight)) {
+            copyFileSync(`${configDir}/${config.defaultMaterialIdRight}.def.json`, `${dir}/${config.defaultMaterialIdRight}.def.json`);
+        }
 
-    if (config.defaultMaterialId && /^material.([0-9_]+)$/.test(config.defaultMaterialId)) {
-        copyFileSync(`${configDir}/${config.defaultMaterialId}.def.json`, `${envDir}/${config.defaultMaterialId}.def.json`);
-    }
-    const isDual = isDualExtruder(machineInfo?.toolHead?.printingToolhead);
-    if (isDual && config.defaultMaterialIdRight && /^material.([0-9_]+)$/.test(config.defaultMaterialIdRight)) {
-        copyFileSync(`${configDir}/${config.defaultMaterialIdRight}.def.json`, `${envDir}/${config.defaultMaterialIdRight}.def.json`);
-    }
-
-    if (activePresetIds) {
-        for (const stackId of [LEFT_EXTRUDER, RIGHT_EXTRUDER]) {
-            const presetId = activePresetIds[stackId];
-            if (presetId && /^quality.([0-9_]+)$/.test(presetId)) {
-                copyFileSync(`${configDir}/${presetId}.def.json`, `${envDir}/${presetId}.def.json`);
+        if (activePresetIds) {
+            for (const stackId of [LEFT_EXTRUDER, RIGHT_EXTRUDER]) {
+                const presetId = activePresetIds[stackId];
+                if (presetId && /^quality.([0-9_]+)$/.test(presetId)) {
+                    copyFileSync(`${configDir}/${presetId}.def.json`, `${dir}/${presetId}.def.json`);
+                }
             }
         }
-    }
-    if (machineInfo?.headType === HEAD_CNC || machineInfo?.headType === HEAD_LASER) {
-        !!config.toolpaths?.length && config.toolpaths.forEach(toolpath => {
-            if (toolpath.toolParams?.definitionId && /^tool.([0-9_]+)$/.test(toolpath.toolParams.definitionId)) {
-                copyFileSync(`${configDir}/${toolpath.toolParams.definitionId}.def.json`, `${envDir}/${toolpath.toolParams.definitionId}.def.json`);
-            }
-        });
-    }
-    return result;
+        if (machineInfo?.headType === HEAD_CNC || machineInfo?.headType === HEAD_LASER) {
+            !!config.toolpaths?.length && config.toolpaths.forEach(toolpath => {
+                if (toolpath.toolParams?.definitionId && /^tool.([0-9_]+)$/.test(toolpath.toolParams.definitionId)) {
+                    copyFileSync(`${configDir}/${toolpath.toolParams.definitionId}.def.json`, `${dir}/${toolpath.toolParams.definitionId}.def.json`);
+                }
+            });
+        }
+        fs.writeFileSync(`${dir}/config.json`, content);
+    });
+    return { targetPath: `${envDir}/config.json` };
 };
 
-// Autosaves can overlap; each one clears and rewrites the same folder (EPERM on Windows)
-const envWriteQueue = serializeByKey();
 
 /**
  * save editor environment as files, and copy related resource files
@@ -488,6 +480,7 @@ export const recoverEnv = async (req, res) => {
         const headType = config?.machineInfo?.headType;
         const envDir = envDirOfRequest(res, headType, docId);
         if (!envDir) return;
+        await envWriteQueue(docId ?? headType, async () => recoverEnvDir(envDir));
 
         const configDir = getConfigDir(config?.machineInfo);
 
@@ -582,7 +575,15 @@ export const packageEnv = async (req, res) => {
 export const listEnvDocs = async (req, res) => {
     const docsDir = `${DataStorage.envDir}/${ENV_DOCS_DIR}`;
     try {
-        const names = fs.existsSync(docsDir) ? fs.readdirSync(docsDir) : [];
+        let names = fs.existsSync(docsDir) ? fs.readdirSync(docsDir) : [];
+        // auto-saves whose write was cut off (`<id>.writing` / `<id>.previous`) are repaired first
+        const interrupted = interruptedDirNames(names).filter((name) => isValidDocId(name));
+        if (interrupted.length) {
+            for (const docId of interrupted) {
+                await envWriteQueue(docId, async () => recoverEnvDir(resolveEnvDir(DataStorage.envDir, '', docId)));
+            }
+            names = fs.readdirSync(docsDir);
+        }
         const docIds = names.filter((name) => isValidDocId(name) && fs.existsSync(`${docsDir}/${name}/config.json`));
         res.send({ docIds });
         res.end();
@@ -590,6 +591,31 @@ export const listEnvDocs = async (req, res) => {
         log.error(`Failed to list environments: ${e}`);
         res.status(ERR_INTERNAL_SERVER_ERROR).send({
             msg: `Failed to list environments: ${e}`
+        });
+    }
+};
+
+/**
+ * Moves the 4.16 auto-save of a head type (`env/{headType}`) into the folder of a new document
+ * (`env/docs/{docId}`): copied completely first, then `env/{headType}` is emptied. `{ migrated: false }`
+ * when there is no 4.16 auto-save.
+ */
+export const migrateLegacyEnv = async (req, res) => {
+    const { headType, docId } = req.body || {};
+    if (!isValidDocId(docId) || ![HEAD_PRINTING, HEAD_LASER, HEAD_CNC].includes(headType)) {
+        res.status(ERR_BAD_REQUEST).send({ msg: 'invalid docId or headType' });
+        return;
+    }
+    try {
+        const fromDir = resolveEnvDir(DataStorage.envDir, headType);
+        const toDir = resolveEnvDir(DataStorage.envDir, headType, docId);
+        const migrated = await envWriteQueue(headType, () => envWriteQueue(docId, () => migrateEnvDir(fromDir, toDir)));
+        res.send({ migrated });
+        res.end();
+    } catch (e) {
+        log.error(`Failed to migrate environment: ${e}`);
+        res.status(ERR_INTERNAL_SERVER_ERROR).send({
+            msg: `Failed to migrate environment: ${e}`
         });
     }
 };

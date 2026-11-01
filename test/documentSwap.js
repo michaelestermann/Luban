@@ -328,3 +328,23 @@ test('closedDocumentReset: the slice of a closed last document forgets its G-cod
     t.deepEqual(printing, { stage: 0, progress: 0, gcodeFile: null, gcodeLine: null, displayedType: 'model' }, 'printing: only the slice result keys');
     t.end();
 });
+
+test('documentStore.settleAutosaves: quit waits for running autosaves, bounded (final review I-5)', async (t) => {
+    let finish;
+    documentStore.trackAutosave('q1', new Promise((resolve) => { finish = resolve; }));
+    documentStore.trackAutosave('q2', Promise.reject(new Error('write failed')));
+    let settled = false;
+    const waiting = documentStore.settleAutosaves(['q1', 'q2', 'none'], 2000).then((all) => {
+        settled = true;
+        return all;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    t.equal(settled, false, 'still waiting while an autosave runs');
+    finish();
+    t.equal(await waiting, true, 'all settled (a failed one counts as settled)');
+    documentStore.trackAutosave('q3', new Promise(() => undefined));
+    const started = Date.now();
+    t.equal(await documentStore.settleAutosaves(['q3'], 50), false, 'gives up after the timeout');
+    t.ok(Date.now() - started < 1000, 'within the bound');
+    t.end();
+});

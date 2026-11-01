@@ -1008,6 +1008,9 @@ const unsavedDocuments = () => (dispatch, getState): DocumentMeta[] => {
 
 let quitInProgress: Promise<boolean> | null = null;
 
+// longest wait for running autosaves before the app quits
+const QUIT_AUTOSAVE_WAIT_MS = 10000;
+
 /**
  * Asks once before the app quits. No unsaved project → true. One → "Save changes to …?" (Save / Don't
  * save / Cancel). Several → one list grouped by mode ("Save selected and quit" / "Don’t save any" /
@@ -1015,7 +1018,7 @@ let quitInProgress: Promise<boolean> | null = null;
  * (false). Projects that are not saved keep their auto-save, their tabs come back on the next start
  * (board 9). A second request while the question is open gets the same answer.
  */
-const confirmQuit = (history: HistoryLike) => async (dispatch): Promise<boolean> => {
+const confirmQuit = (history: HistoryLike) => async (dispatch, getState): Promise<boolean> => {
     if (quitInProgress) {
         return quitInProgress;
     }
@@ -1045,6 +1048,11 @@ const confirmQuit = (history: HistoryLike) => async (dispatch): Promise<boolean>
             if (!saved) {
                 return false;
             }
+        }
+        // the server is stopped when the window closes: running autosaves ("Don't save" relies on them) finish first
+        const ids = getTabsState(getState()).order;
+        if (!(await documentStore.settleAutosaves(ids, QUIT_AUTOSAVE_WAIT_MS))) {
+            log.warn(`tabs: quit after ${QUIT_AUTOSAVE_WAIT_MS} ms with an autosave still running`);
         }
         await dispatch(persistSession());
         return true;
