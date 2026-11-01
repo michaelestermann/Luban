@@ -174,6 +174,8 @@ const SVGShapeLibrary = (props) => {
             window.document.body.style.overflow = '';
             window.removeEventListener('resize', handleResize);
         };
+        // Fetch labels/shapes once; the first handleResize instance is kept so the same listener is removed again.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
     }, []);
 
 

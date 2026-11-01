@@ -323,6 +323,8 @@ const MachineSettings = forwardRef(({
         if (selectedToolName !== toolMap[`${headType}Toolhead`]) {
             setSelectedToolName(toolMap[`${headType}Toolhead`]);
         }
+        // Reacting to selectedToolName would undo the user's pick.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- only follow external tool head changes
     }, [toolMap, headType]);
 
     useEffect(() => {
@@ -344,6 +346,8 @@ const MachineSettings = forwardRef(({
             _setNozzleDiameterList(LEFT, defaultNozzleDiameterListForSingleExtruder, selectedMachineSeries);
             setRightNozzleDiameterList([]);
         }
+        // toolMap is updated by setToolhead itself, so depending on it would loop.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- push the user's series/tool head choice up
     }, [selectedMachineSeries, selectedToolName]);
 
     const machineOptions = useMemo(() => getMachineOptions(), []);

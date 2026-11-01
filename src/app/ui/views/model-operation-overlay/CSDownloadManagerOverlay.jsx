@@ -310,6 +310,8 @@ const CSDownloadManagerOverlay = (props) => {
             uniApi.DownloadManager.off('download-item-updated', updateDownloadItem);
             uniApi.DownloadManager.off('download-item-done', updateDownloadItem);
         };
+        // The handlers share state through recordsRef.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: load the records and subscribe the download events once
     }, []);
 
     return (

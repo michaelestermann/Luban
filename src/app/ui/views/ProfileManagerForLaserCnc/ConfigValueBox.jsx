@@ -47,12 +47,13 @@ function ConfigValueBox({
             setActiveCateId(cateId);
         }
     }
+    const optionConfigGroupLength = Object.keys(optionConfigGroup).length;
     useEffect(() => {
         fieldsDom.current = fieldsDom.current.slice(
             0,
-            Object.keys(optionConfigGroup).length
+            optionConfigGroupLength
         );
-    }, [Object.keys(optionConfigGroup)]);
+    }, [optionConfigGroupLength]);
 
     useEffect(() => {
         setCurrentFields(fieldsDom.current);

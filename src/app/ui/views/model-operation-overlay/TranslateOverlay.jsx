@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames';
 import { useDispatch, useSelector, shallowEqual } from 'react-redux';
 import { throttle } from 'lodash';
@@ -119,17 +119,17 @@ const TranslateOverlay = React.memo(({
         dispatch(machineActions.updateArrangeSettings(settings));
     };
 
-    const updatePosition = throttle((event) => {
+    const updatePosition = useMemo(() => throttle((event) => {
         const { detail } = event;
         setMoveX(detail.position.x);
         setMoveY(detail.position.y);
-    }, 1000);
+    }, 1000), []);
     useEffect(() => {
         window.addEventListener('update-position', updatePosition);
         return () => {
             window.removeEventListener('update-position', updatePosition);
         };
-    }, []);
+    }, [updatePosition]);
     useEffect(() => {
         if (selectedModelArray.length >= 1) {
             setMoveX(Math.round(transformation.positionX * 10) / 10);
@@ -138,6 +138,8 @@ const TranslateOverlay = React.memo(({
             setMoveX(0);
             setMoveY(0);
         }
+        // Drag updates arrive via 'update-position' and typed values must not be overwritten.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- reset the inputs on selection change only
     }, [selectedModelArray]);
 
     return (

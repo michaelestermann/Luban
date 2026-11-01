@@ -151,6 +151,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
             pathname: '/cnc',
             isRotate: materials?.isRotate
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: init the CNC page and log the page view once
     }, []);
 
     useEffect(() => {
@@ -175,6 +176,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
         if (typeof (enabledIntro) === 'boolean' && !enabledIntro) {
             machineStore.set(isRotate ? 'guideTours.guideTourscnc4Axis' : 'guideTours.guideTourscnc', true);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mark the guide tour finished only when the intro is closed, not when the job type changes
     }, [enabledIntro]);
 
     const { renderStlModal, renderMainToolBar } = useRenderMainToolBar({

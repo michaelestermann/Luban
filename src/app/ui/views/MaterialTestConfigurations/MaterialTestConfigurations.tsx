@@ -106,6 +106,7 @@ const MaterialTestConfigurations: React.FC<MaterialTestConfigurationsProps> = ({
             setGcodeConfig(gcodeConfig);
             updateActiveToolDefinition(toolParams, gcodeConfig);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- updateActiveToolDefinition sets the currentToolDefinition it reads; adding it would loop
     }, [toolParams, gcodeConfig]);
     useEffect(() => {
         if (formData) {

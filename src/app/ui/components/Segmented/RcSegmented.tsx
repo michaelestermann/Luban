@@ -169,7 +169,7 @@ const Segmented = React.forwardRef<HTMLDivElement, SegmentedProps>(
 
         React.useEffect(() => {
             setRawValue(value);
-        }, [value]);
+        }, [value, setRawValue]);
 
         return (
             <div

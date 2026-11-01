@@ -77,6 +77,8 @@ function MotionThumb(props: MotionThumbInterface) {
                 onMotionEnd();
             }
         }
+        // prevValue is updated here; the helpers and callbacks are read at that moment.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- start the thumb motion only when value changes
     }, [value]);
 
     // =========================== Motion ===========================

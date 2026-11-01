@@ -80,12 +80,14 @@ const EditSupportOverlay = ({ onClose }) => {
             window.removeEventListener('keydown', actions.handleKeydown, true);
             window.removeEventListener('wheel', actions.handleMousewheel, true);
         };
+        // The handlers bound here are removed again on unmount; the current diameter is shared via tmpDiameter.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: enter edit-support mode once
     }, []);
 
     useEffect(() => {
         tmpDiameter = diameter;
         dispatch(sceneActions.setSupportBrushRadius(diameter / 2));
-    }, [diameter]);
+    }, [diameter, dispatch]);
 
     return (
         <div className={classNames(styles['edit-support'])}>

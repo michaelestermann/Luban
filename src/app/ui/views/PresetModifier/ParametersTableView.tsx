@@ -277,23 +277,25 @@ const ParametersTableView: React.FC<TProps> = (props) => {
     }, [filters]);
 
     // Fetch description of parameter
-    // @ts-ignore
-    useEffect(async () => {
-        const lang = i18next.language;
-        if (selectedCategory && selectedProfile) {
-            try {
-                const res = await api.getParameterDocument({
-                    lang,
-                    category: selectedCategory,
-                    key: selectedProfile,
-                });
-                setMdContent(res.body?.content);
-                setImgPath(res.body?.imagePath);
-            } catch (e) {
-                log.warn(e);
-                setMdContent('');
+    useEffect(() => {
+        const fetchParameterDocument = async () => {
+            const lang = i18next.language;
+            if (selectedCategory && selectedProfile) {
+                try {
+                    const res = await api.getParameterDocument({
+                        lang,
+                        category: selectedCategory,
+                        key: selectedProfile,
+                    });
+                    setMdContent(res.body?.content);
+                    setImgPath(res.body?.imagePath);
+                } catch (e) {
+                    log.warn(e);
+                    setMdContent('');
+                }
             }
-        }
+        };
+        fetchParameterDocument();
     }, [selectedCategory, selectedProfile]);
 
     const displayConfigsGroups = calculateDisplayConfigsGroups(

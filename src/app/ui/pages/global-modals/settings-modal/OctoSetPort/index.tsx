@@ -1,5 +1,5 @@
 import { Input } from 'antd';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import i18n from '../../../../../lib/i18n';
 import connectActions from '../../../../../flux/workspace/actions-connect';
@@ -16,12 +16,12 @@ const OctoSetPort: React.FC = () => {
 
     const [port, setPort] = useState(storeOctoPort);
 
-    const onSave = async () => {
+    const onSave = useCallback(async () => {
         if (port) {
             await dispatch(connectActions.onResetPort(port));
             machineStore.set('octo-port', port);
         }
-    };
+    }, [dispatch, port]);
 
     const handleChangePort = (e) => {
         const value = e.target.value;

@@ -143,6 +143,8 @@ export function useGetDefinitions(allDefinitions, activeDefinitionID, getDefault
                 selectedSettingDefaultValue
             };
         });
+        // getDefaultDefinition is recreated by the parent on every render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only when the definitions or the active id change
     }, [allDefinitions, activeDefinitionID]);
 
     return [definitionState, setDefinitionState];

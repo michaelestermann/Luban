@@ -126,6 +126,8 @@ function useRenderMainToolBar({ headType, setShowHomePage, setShowJobType, setSh
                 onChangeLogicalY(currentAdjustedTargetModel.y || 0);
             }, 0);
         }
+        // Apply the pending adjustment once the captured model was added, not when the adjustment is requested.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- run on model list changes only
     }, [models]);
 
     // cnc

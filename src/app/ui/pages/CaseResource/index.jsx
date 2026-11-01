@@ -247,6 +247,8 @@ const CaseResource = (props) => {
             msgOff();
             downloadOff();
         };
+        // Registers the iframe, message and download listeners and removes them on unmount.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: register the listeners once
     }, []);
     useEffect(() => {
         const isCaseResourceValid = caseResourceId > 0 || caseResourceId === DetailModalState.Close;
@@ -259,7 +261,7 @@ const CaseResource = (props) => {
 
         // reset for next time open
         dispatch(appGlobalActions.updateState({ caseResourceId: DetailModalState.Reset }));
-    }, [caseResourceId]);
+    }, [caseResourceId, dispatch]);
 
 
     return (
