@@ -17,6 +17,7 @@ import DimensionsOverlay from './measure/DimensionsOverlay';
 import SnapOverlay from './snap/SnapOverlay';
 import OriginMarker from './origin/OriginMarker';
 import OriginPickOverlay from './origin/OriginPickOverlay';
+import OriginKeys from './origin/OriginKeys';
 import ShapeActionKeys from './combine/ShapeActionKeys';
 import RoundCorners from './combine/RoundCorners';
 import OffsetPreview from './combine/OffsetPreview';
@@ -503,6 +504,12 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             headType={props.headType as 'laser' | 'cnc'}
                             isActive={props.isActive}
                             getScreenCTM={getCanvasScreenCTM}
+                        />
+                        <OriginKeys
+                            headType={props.headType as 'laser' | 'cnc'}
+                            mode={props.SVGCanvasMode}
+                            editing={!!(props.SVGCanvasExt as { elem?: unknown })?.elem}
+                            isActive={props.isActive}
                         />
                         <ShapeActionKeys
                             headType={props.headType as 'laser' | 'cnc'}
