@@ -473,6 +473,11 @@ class SVGActionsFactory {
         this.selectedSvgModels = models;
         const elems = models.map(model => model.elem);
         this.svgContentGroup.setSelection(elems);
+        if (models.length > 0) {
+            // the selection box and Position & Size follow the new selection (as when adding models)
+            this.resetSelection();
+            this._setSelectedElementsTransformation(SVGActionsFactory.calculateElementsTransformation(this.getSelectedElements()));
+        }
     }
 
     resetSelection() {

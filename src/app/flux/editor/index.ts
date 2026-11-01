@@ -411,6 +411,9 @@ const listenedModelGroups = new WeakSet<object>();
 // refresh the editor at most every 250 ms instead of once per task (a single task right away)
 const coalesceRefresh = createCoalescer({ minInterval: 250 });
 
+// the latest box selection (see boxSelect)
+let boxSelectRequest = 0;
+
 export const actions = {
     ...baseActions,
 
@@ -3638,6 +3641,8 @@ export const actions = {
         const { size } = getState().machine;
 
         const models = modelGroup.getModels();
+        // results arrive from a worker: only the newest box of a drag may change the selection
+        const request = ++boxSelectRequest;
         workerManager.boxSelect(
             {
                 bbox,
@@ -3654,6 +3659,9 @@ export const actions = {
                 size
             },
             indexs => {
+                if (request !== boxSelectRequest) {
+                    return;
+                }
                 if (indexs.length > 0) {
                     let selectedModels = indexs.map(index => models[index]);
 
