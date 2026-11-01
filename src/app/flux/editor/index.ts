@@ -1,6 +1,7 @@
 import { Machine } from '@snapmaker/luban-platform';
 import { includes, noop } from 'lodash';
 import { isInside } from 'overlap-area';
+import { batch } from 'react-redux';
 import path from 'path';
 import * as THREE from 'three';
 import { v4 as uuid } from 'uuid';
@@ -39,6 +40,7 @@ import CompoundOperation from '../../core/CompoundOperation';
 import OperationHistory from '../../core/OperationHistory';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
+import { createCoalescer } from '../../lib/coalesce';
 import { createObjectOrigin, isOriginBoundToMissingObject, rememberOrigin } from '../../lib/object-origin';
 import {
     computePartTransformation,
@@ -396,6 +398,9 @@ function rectCornersOperation(model, SVGActions, radii: CornerRadii): ShapeToPat
 export const ACTION_UPDATE_STATE = 'editor/ACTION_UPDATE_STATE';
 // Head types with a decompose in progress (guards against double clicks)
 const decomposingHeadTypes = new Set<string>();
+// Server tasks that finish in a row (e.g. the image processing of every part of a decomposed SVG)
+// refresh the editor at most every 250 ms instead of once per task (a single task right away)
+const coalesceRefresh = createCoalescer({ minInterval: 250 });
 
 export const actions = {
     ...baseActions,
@@ -496,12 +501,14 @@ export const actions = {
                 if (headType !== taskResult.headType) {
                     return;
                 }
-                const { progressStatesManager } = getState()[headType];
-                dispatch(
-                    actions.updateState(headType, {
-                        progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_PROCESSING_IMAGE, taskResult.progress)
-                    })
-                );
+                coalesceRefresh(`${headType}/processImage/progress`, () => {
+                    const { progressStatesManager } = getState()[headType];
+                    dispatch(
+                        actions.updateState(headType, {
+                            progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_PROCESSING_IMAGE, taskResult.progress)
+                        })
+                    );
+                });
             });
 
             // task completed
@@ -1597,16 +1604,18 @@ export const actions = {
         model.updateProcessImageName(processImageName);
         SVGActions.updateSvgModelImage(model, processImageName);
 
-        dispatch(baseActions.resetCalculatedState(headType));
-        dispatch(baseActions.render(headType));
+        coalesceRefresh(`${headType}/processImage/completed`, () => batch(() => {
+            dispatch(baseActions.resetCalculatedState(headType));
+            dispatch(baseActions.render(headType));
 
-        dispatch(
-            baseActions.updateState(headType, {
-                stage: STEP_STAGE.CNC_LASER_PROCESSING_IMAGE,
-                progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_PROCESSING_IMAGE, 1)
-            })
-        );
-        progressStatesManager.finishProgress(true);
+            dispatch(
+                baseActions.updateState(headType, {
+                    stage: STEP_STAGE.CNC_LASER_PROCESSING_IMAGE,
+                    progress: progressStatesManager.updateProgress(STEP_STAGE.CNC_LASER_PROCESSING_IMAGE, 1)
+                })
+            );
+            progressStatesManager.finishProgress(true);
+        }));
     },
 
     /**
