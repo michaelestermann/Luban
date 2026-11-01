@@ -474,6 +474,15 @@ class ToolPathGroup {
         return origin ? referencePoint(this.getObjectReferenceBox(origin), origin.reference) : null;
     }
 
+    /**
+     * The tool paths and the simulation are made relative to the work origin (G-code coordinates). For
+     * an object origin they are shown at its point of the workpiece (model coordinates), so that the
+     * preview has the workpiece, the objects and the camera where the 2D canvas has them.
+     */
+    public setPreviewOrigin(point: Point | null): void {
+        this.object.position.set(point ? point.x : 0, point ? point.y : 0, 0);
+    }
+
     public getGenerateToolPathTask(toolPathId: string) {
         let task = null;
         const toolPath = this._getToolPath(toolPathId);

@@ -29,7 +29,7 @@ import {
 import SVGLoader from '../../../../scene/three-extensions/SVGLoader';
 import TargetPoint from '../../../../scene/three-extensions/TargetPoint';
 import GridLine from './GridLine';
-import { isPlateLabelShown, plateLabelStep, worldPerPixel } from './plate-labels';
+import { isPlateLabelShown, plateAxisLabels, plateLabelStep, worldPerPixel } from './plate-labels';
 
 const METRIC_GRID_SPACING = 10; // 10 mm
 const METRIC_GRID_BIG_SPACING = 50;
@@ -85,6 +85,12 @@ class PrintablePlate extends Object3D {
     private coorDelta: { dx: number; dy: number };
 
     private targetPoint = null;
+
+    // object origin point (plate coordinates), null: the workpiece origin
+    private originPoint: { x: number; y: number } | null = null;
+
+    // the axis labels (rebuilt when the origin point moves)
+    private axisLabels: Group = null;
 
     public constructor(workpiece: Workpiece, origin: Origin) {
         super();
@@ -188,26 +194,9 @@ class PrintablePlate extends Object3D {
             group.add(gridLine);
         }
 
-        { // Axis Labels: constant on-screen size, see _addAxisLabel
-            const minX = Math.ceil((-this.canvasSize.x / 2 + this.coorDelta.dx) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
-            const minY = Math.ceil((-this.canvasSize.y / 2 + this.coorDelta.dy) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
-            const maxX = Math.floor((this.canvasSize.x / 2 + this.coorDelta.dx) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
-            const maxY = Math.floor((this.canvasSize.y / 2 + this.coorDelta.dy) / METRIC_GRID_BIG_SPACING) * METRIC_GRID_BIG_SPACING;
-
-            // like the 2D canvas: X labels above the axis for a top origin, Y labels right of it for a right origin
-            const reference = String(this.origin.reference || '');
-            const top = reference.indexOf('Top') !== -1;
-            const right = reference.indexOf('Right') !== -1;
-
-            for (let x = minX; x <= maxX; x += METRIC_GRID_BIG_SPACING) {
-                if (x !== 0) {
-                    this._addAxisLabel(group, x, x, 0, top ? 'above' : 'below');
-                }
-            }
-            for (let y = minY; y <= maxY; y += METRIC_GRID_BIG_SPACING) {
-                this._addAxisLabel(group, y, 0, y, right ? 'right' : 'left');
-            }
-        }
+        // Axis Labels: constant on-screen size, see _addAxisLabel
+        this.axisLabels = this._createAxisLabels();
+        group.add(this.axisLabels);
         this.coordinateSystem = group;
         group.name = 'MetricCoordinateSystem';
         this.add(group);
@@ -260,6 +249,29 @@ class PrintablePlate extends Object3D {
                 this.add(svgGroup);
             });
         }
+    }
+
+    /**
+     * The labels of the axes through the origin (the workpiece origin or the object origin point),
+     * counting from it like the G-code and the rulers of the 2D canvas.
+     */
+    private _createAxisLabels(): Group {
+        const group = new Group();
+        group.name = 'AxisLabels';
+        const range = {
+            minX: -this.canvasSize.x / 2 + this.coorDelta.dx,
+            maxX: this.canvasSize.x / 2 + this.coorDelta.dx,
+            minY: -this.canvasSize.y / 2 + this.coorDelta.dy,
+            maxY: this.canvasSize.y / 2 + this.coorDelta.dy,
+        };
+        const labels = plateAxisLabels(range, this.originPoint, METRIC_GRID_BIG_SPACING);
+        for (const label of labels.x) {
+            this._addAxisLabel(group, label.value, label.at, labels.axis.y, labels.top ? 'above' : 'below');
+        }
+        for (const label of labels.y) {
+            this._addAxisLabel(group, label.value, labels.axis.x, label.at, labels.right ? 'right' : 'left');
+        }
+        return group;
     }
 
     /**
@@ -318,17 +330,27 @@ class PrintablePlate extends Object3D {
     }
 
     /**
-     * Object origin (model coordinates; null: the workpiece origin). The tool paths and the G-code of
-     * the preview are relative to that point, so the plate moves by -point: the red point sits at the
-     * object point of the workpiece and at 0/0 of the tool paths.
+     * Object origin (model coordinates; null: the workpiece origin): the red point and the axes with
+     * their labels go to that point of the workpiece, the labels count from it (as the G-code does).
+     * The plate stays where the workpiece is (the tool paths are moved to the point, see
+     * ToolPathGroup.setPreviewOrigin).
      */
     public setTargetPoint(point: { x: number; y: number } | null) {
         if (this.targetPoint) {
             this.targetPoint.position.setX(point ? point.x : 0);
             this.targetPoint.position.setY(point ? point.y : 0);
         }
-        this.position.setX(point ? -point.x : 0);
-        this.position.setY(point ? -point.y : 0);
+        const old = this.originPoint;
+        const same = (!old && !point) || (old && point && Math.abs(old.x - point.x) < 1e-6 && Math.abs(old.y - point.y) < 1e-6);
+        if (same) {
+            return;
+        }
+        this.originPoint = point ? { x: point.x, y: point.y } : null;
+        if (this.coordinateSystem && this.axisLabels) {
+            this.coordinateSystem.remove(this.axisLabels);
+            this.axisLabels = this._createAxisLabels();
+            this.coordinateSystem.add(this.axisLabels);
+        }
     }
 
     public changeCoordinateVisibility(value: boolean) {

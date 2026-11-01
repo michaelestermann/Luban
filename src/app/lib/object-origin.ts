@@ -127,6 +127,25 @@ export function plateOrigin(origin: Origin, coordinateModeValue: string): Origin
     };
 }
 
+/**
+ * The workpiece (stock of the simulation) in G-code coordinates: placed by the coordinate mode
+ * (`sizeMultiplyFactor`), relative to an object origin point (model coordinates) when there is one.
+ */
+export function stockBoundary(
+    size: { x: number; y: number },
+    sizeMultiplyFactor: { x: number; y: number },
+    originPoint: Point | null,
+): { minX: number; maxX: number; minY: number; maxY: number } {
+    const dx = (size.x / 2) * sizeMultiplyFactor.x - (originPoint ? originPoint.x : 0);
+    const dy = (size.y / 2) * sizeMultiplyFactor.y - (originPoint ? originPoint.y : 0);
+    return {
+        minX: -size.x / 2 + dx,
+        maxX: size.x / 2 + dx,
+        minY: -size.y / 2 + dy,
+        maxY: size.y / 2 + dy,
+    };
+}
+
 const LASER_JOB_SETUP_REFERENCES: string[] = [
     ObjectReference.Center, ObjectReference.TopLeft, ObjectReference.TopRight, ObjectReference.BottomLeft, ObjectReference.BottomRight,
 ];
