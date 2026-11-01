@@ -918,9 +918,9 @@ export const actions = {
             modelName
         }
     ) => async (dispatch, getState) => {
-        const { size, promptDamageModel } = getState().machine;
+        const { promptDamageModel } = getState().machine;
 
-        const { materials, modelGroup, SVGActions, contentGroup, toolPathGroup, coordinateMode, coordinateSize } = getState()[headType];
+        const { materials, SVGActions, toolPathGroup } = getState()[headType];
         sourceType = sourceType || getSourceType(originalName);
         if (!checkParams(headType, sourceType, mode)) {
             log.error(`sourceType or mode error, sourceType: ${sourceType}, mode: ${mode}`);
@@ -939,6 +939,72 @@ export const actions = {
                 }
             });
         }
+
+        const model = dispatch(actions.createModel(headType, {
+            originalName,
+            uploadName,
+            sourceWidth,
+            sourceHeight,
+            mode,
+            sourceType,
+            config,
+            gcodeConfig,
+            transformation,
+            modelID,
+            zIndex,
+            isLimit,
+            modelName,
+            isDamage
+        }));
+        const promptTasks = [];
+        promptDamageModel && isDamage && promptTasks.push({
+            status: 'need-repair-model',
+            model
+        });
+
+        const operation = new AddOperation2D({
+            toolPathGroup,
+            svgActions: SVGActions,
+            target: model
+        });
+        const operations = new CompoundOperation();
+        operations.push(operation);
+
+        dispatch(operationHistoryActions.setOperations(headType, operations));
+
+        SVGActions.clearSelection();
+        SVGActions.addSelectedSvgModelsByModels([model], materials.isRotate);
+
+        if (path.extname(uploadName).toLowerCase() === '.stl') {
+            dispatch(actions.prepareStlVisualizer(headType, model));
+        }
+
+        // Process image right after created
+        // TODO processImage
+        dispatch(actions.processSelectedModel(headType));
+        dispatch(
+            actions.updateState(headType, {
+                stage: promptTasks.length ? STEP_STAGE.CNC_LASER_REPAIRING_MODEL : STEP_STAGE.EMPTY,
+                isOverSize: null,
+                promptTasks
+            })
+        );
+    },
+
+    /**
+     * Create a model and add it to the scene, without history entry,
+     * selection or image processing: the part of generateModel that
+     * decompose repeats for many parts at once. Returns the model.
+     */
+    createModel: (
+        headType,
+        {
+            originalName, uploadName, sourceWidth, sourceHeight, mode, sourceType, config, gcodeConfig, transformation, modelID, zIndex, isLimit,
+            modelName, isDamage = false
+        }
+    ) => (dispatch, getState) => {
+        const { size } = getState().machine;
+        const { materials, modelGroup, contentGroup, coordinateMode, coordinateSize } = getState()[headType];
 
         // Get default configurations
         const modelDefaultConfigs = generateModelDefaultConfigs(headType, sourceType, mode, materials.isRotate);
@@ -1051,39 +1117,7 @@ export const actions = {
         }
         model.setPreSelection(contentGroup.preSelectionGroup);
         model.needRepair = isDamage;
-        const promptTasks = [];
-        promptDamageModel && isDamage && promptTasks.push({
-            status: 'need-repair-model',
-            model
-        });
-
-        const operation = new AddOperation2D({
-            toolPathGroup,
-            svgActions: SVGActions,
-            target: model
-        });
-        const operations = new CompoundOperation();
-        operations.push(operation);
-
-        dispatch(operationHistoryActions.setOperations(headType, operations));
-
-        SVGActions.clearSelection();
-        SVGActions.addSelectedSvgModelsByModels([model], materials.isRotate);
-
-        if (path.extname(uploadName).toLowerCase() === '.stl') {
-            dispatch(actions.prepareStlVisualizer(headType, model));
-        }
-
-        // Process image right after created
-        // TODO processImage
-        dispatch(actions.processSelectedModel(headType));
-        dispatch(
-            actions.updateState(headType, {
-                stage: promptTasks.length ? STEP_STAGE.CNC_LASER_REPAIRING_MODEL : STEP_STAGE.EMPTY,
-                isOverSize: null,
-                promptTasks
-            })
-        );
+        return model;
     },
 
     insertDefaultTextVector: headType => dispatch => {
@@ -1271,36 +1305,34 @@ export const actions = {
 
     // TODO: temporary workaround for model image processing
     processSelectedModel: headType => async (dispatch, getState) => {
-        const { materials, modelGroup, toolParams = {}, progressStatesManager } = getState()[headType];
-
-        const selectedModels = modelGroup.getSelectedModelArray();
+        const selectedModels = getState()[headType].modelGroup.getSelectedModelArray();
         if (selectedModels.length !== 1) {
             return;
         }
-        const selectedModel = selectedModels[0];
+        await dispatch(actions.processModels(headType, selectedModels));
+    },
 
-        if (
-            selectedModel.sourceType !== 'raster'
-            && selectedModel.sourceType !== 'svg'
-            && selectedModel.sourceType !== 'image3d'
-            && selectedModel.config.svgNodeName !== 'text'
-            && selectedModel.sourceType !== 'dxf'
-        ) {
+    /**
+     * Process the images of these models on the server (one task per model;
+     * the results arrive as taskCompleted:processImage). Progress and
+     * process state are updated once for all of them.
+     */
+    processModels: (headType, models) => async (dispatch, getState) => {
+        const { materials, toolParams = {}, progressStatesManager } = getState()[headType];
+
+        const targets = models.filter((model) => model.sourceType === 'raster'
+            || model.sourceType === 'svg'
+            || model.sourceType === 'image3d'
+            || model.config.svgNodeName === 'text'
+            || model.sourceType === 'dxf');
+        if (!targets.length) {
             return;
         }
-        // svg process as image
-        if (selectedModel.sourceType === 'svg' && !selectedModel.uploadImageName) {
-            await selectedModel.uploadSourceImage();
+        // svg process as image (awaited only for svg models, as before)
+        const needUpload = targets.filter((model) => model.sourceType === 'svg' && !model.uploadImageName);
+        if (needUpload.length) {
+            await Promise.all(needUpload.map((model) => model.uploadSourceImage()));
         }
-
-        const options = selectedModel.getTaskInfo();
-        options.transformation = {
-            width: options.transformation.width,
-            height: options.transformation.height
-        };
-
-        options.materials = materials;
-        options.toolParams = toolParams;
 
         if (!progressStatesManager.inProgress()) {
             progressStatesManager.startProgress(PROCESS_STAGE.CNC_LASER_PROCESS_IMAGE, [1]);
@@ -1316,11 +1348,22 @@ export const actions = {
 
         dispatch(actions.resetProcessState(headType));
 
-        controller.commitProcessImage({
-            taskId: uuid(),
-            headType: headType,
-            data: options
-        });
+        for (const model of targets) {
+            const options = model.getTaskInfo();
+            options.transformation = {
+                width: options.transformation.width,
+                height: options.transformation.height
+            };
+
+            options.materials = materials;
+            options.toolParams = toolParams;
+
+            controller.commitProcessImage({
+                taskId: uuid(),
+                headType: headType,
+                data: options
+            });
+        }
     },
 
     updateSVGClipping: (headType, newSVGClipping) => (dispatch, getState) => {
@@ -3780,13 +3823,14 @@ export const actions = {
             const discardPart = (part) => {
                 new AddOperation2D({ target: part, svgActions: SVGActions, toolPathGroup }).undo();
             };
-            const partModels = await createAllOrNone(placed.length, async (i) => {
+            // The parts are created without a history entry, selection change
+            // or render each (that made decompose take minutes for a few
+            // dozen parts); the scene is refreshed once below.
+            const partModels = await modelGroup.batchChanges(async () => createAllOrNone(placed.length, async (i) => {
                 const { originalName, uploadName, sourceWidth, sourceHeight } = uploads[i].body;
                 const modelID = `id${uuid()}`;
-                // History gets one decompose entry instead of one entry per part
-                dispatch(operationHistoryActions.excludeModelById(headType, modelID));
                 try {
-                    await dispatch(actions.generateModel(headType, {
+                    dispatch(actions.createModel(headType, {
                         originalName,
                         uploadName,
                         sourceWidth,
@@ -3799,13 +3843,13 @@ export const actions = {
                         modelID
                     }));
                 } catch (e) {
-                    // generateModel may fail after the model was added
+                    // createModel may fail after the model was added
                     const halfMade = modelGroup.getModel(modelID);
                     if (halfMade) discardPart(halfMade);
                     throw e;
                 }
                 return modelGroup.getModel(modelID);
-            }, discardPart);
+            }, discardPart));
             if (!partModels) {
                 SVGActions.clearSelection();
                 SVGActions.addSelectedSvgModelsByModels([original], materials.isRotate);
@@ -3814,32 +3858,39 @@ export const actions = {
                 return;
             }
 
-            const operation = new DecomposeOperation2D({
-                original,
-                parts: partModels,
-                addOperations: partModels.map(target => new AddOperation2D({ target, svgActions: SVGActions, toolPathGroup })),
-                deleteOperation: new DeleteOperation2D({ target: original, svgActions: SVGActions, toolPathGroup, parentGroup }),
-                modelGroup,
-                toolPathGroup,
-                toolPaths,
-                parentGroup,
-                index
-            });
-            operation.placeParts();
-            operation.state.deleteOperation.redo();
+            // Place the parts, remove the original and select the parts with one
+            // re-render for all of it (model and tool path changes notify once)
+            batch(() => modelGroup.batchChanges(() => {
+                const operation = new DecomposeOperation2D({
+                    original,
+                    parts: partModels,
+                    addOperations: partModels.map(target => new AddOperation2D({ target, svgActions: SVGActions, toolPathGroup })),
+                    deleteOperation: new DeleteOperation2D({ target: original, svgActions: SVGActions, toolPathGroup, parentGroup }),
+                    modelGroup,
+                    toolPathGroup,
+                    toolPaths,
+                    parentGroup,
+                    index
+                });
+                operation.placeParts();
+                operation.state.deleteOperation.redo();
 
-            const operations = new CompoundOperation();
-            operations.push(operation);
-            dispatch(operationHistoryActions.setOperations(headType, operations));
+                const operations = new CompoundOperation();
+                operations.push(operation);
+                dispatch(operationHistoryActions.setOperations(headType, operations));
 
-            SVGActions.clearSelection();
-            modelGroup.selectedGroupID = null;
-            SVGActions.addSelectedSvgModelsByModels(partModels, materials.isRotate);
-            dispatch(recordSelectionChange(headType, operations, selectionBefore));
+                SVGActions.clearSelection();
+                modelGroup.selectedGroupID = null;
+                SVGActions.addSelectedSvgModelsByModels(partModels, materials.isRotate);
+                dispatch(recordSelectionChange(headType, operations, selectionBefore));
 
-            dispatch(baseActions.updateState(headType, modelGroup.getState()));
-            dispatch(baseActions.resetCalculatedState(headType));
-            dispatch(baseActions.render(headType));
+                dispatch(baseActions.updateState(headType, modelGroup.getState()));
+                dispatch(baseActions.resetCalculatedState(headType));
+                dispatch(baseActions.render(headType));
+
+                // Process the parts' images (one server task each, as when importing)
+                dispatch(actions.processModels(headType, partModels));
+            }));
         } catch (e) {
             log.error('Failed to decompose SVG:', e);
         } finally {
