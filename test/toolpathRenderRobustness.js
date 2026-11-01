@@ -99,3 +99,26 @@ test('renderRunFailed: the run ends in G-code or in a failure', (t) => {
     t.equal(renderRunFailed([true], false), true, 'rendered, but a toolpath is still not generated');
     t.end();
 });
+
+test('renderToolPathFiles: progress messages are rate limited, data messages are small', async (t) => {
+    const { messages, emit } = collect();
+    const files = Array.from({ length: 50 }, (_, i) => `${i}.json`);
+    let clock = 0;
+    await renderToolPathFiles(
+        { data: files.map(() => ({})), filenames: files, headType: 'cnc', taskId: 'tp' },
+        async (filename, onProgress) => {
+            onProgress(0.5);
+            onProgress(1);
+            clock += 10; // 10 ms per file
+            return renderResult(filename);
+        },
+        emit,
+        { now: () => clock, progressInterval: 100 }
+    );
+    const progress = messages.filter(m => m.status === 'progress');
+    t.ok(progress.length <= 6, `${progress.length} progress messages for 50 files (500 ms)`);
+    const data = messages.filter(m => m.status === 'data');
+    t.equal(data.length, 50, 'every file still reports its data');
+    t.deepEqual(Object.keys(data[0].value).sort(), ['index', 'renderResult'], 'data carries no copy of the whole task');
+    t.end();
+});

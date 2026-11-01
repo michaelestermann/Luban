@@ -607,11 +607,11 @@ export const actions = {
                                         break;
                                     }
                                     case 'data': {
-                                        const { taskResult: newTaskResult, index, renderResult } = value;
-                                        const toolpath = toolPathGroup._getToolPath(newTaskResult.taskId);
+                                        const { index, renderResult } = value;
+                                        const toolpath = toolPathGroup._getToolPath(taskResult.taskId);
 
                                         if (toolpath) {
-                                            toolpath.onGenerateToolpathModel(newTaskResult.data[index], newTaskResult.filenames[index], renderResult);
+                                            toolpath.onGenerateToolpathModel(taskResult.data[index], taskResult.filenames[index], renderResult);
                                         }
                                         break;
                                     }
