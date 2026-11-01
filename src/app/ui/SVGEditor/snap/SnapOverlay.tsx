@@ -5,6 +5,8 @@ import styles from '../measure/measure-overlay.styl';
 import { SnapGuides, subscribeSnapGuides } from './snap-session';
 
 const PINK = '#be185d';
+// work origin targets
+const ORIGIN_RED = '#d93025';
 
 type Matrix = DOMMatrix | SVGMatrix;
 
@@ -65,7 +67,19 @@ const SnapOverlay: React.FC<SnapOverlayProps> = ({ isActive, getScreenCTM }) => 
                         />
                     );
                 })}
-                {p && <rect x={p.x - 5} y={p.y - 5} width={10} height={10} fill="none" stroke={PINK} strokeWidth={1.6} transform={`rotate(45 ${p.x} ${p.y})`} />}
+                {p && (
+                    <rect
+                        x={p.x - 5}
+                        y={p.y - 5}
+                        width={10}
+                        height={10}
+                        fill="none"
+                        stroke={guides.origin ? ORIGIN_RED : PINK}
+                        strokeWidth={guides.origin ? 2 : 1.6}
+                        transform={`rotate(45 ${p.x} ${p.y})`}
+                        data-snap-origin={guides.origin ? 'true' : undefined}
+                    />
+                )}
             </svg>
             {guides.guides.filter(g => g.label).map((g) => {
                 const l = toScreen(g.label.x, g.label.y);

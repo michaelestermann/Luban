@@ -7,9 +7,12 @@ import { Point, SnapPoint } from '../measure/measure-math';
 import { parsePath } from '../path-edit/path-geometry';
 import { getHelpers, SnapSettings } from '../rail/helper-switches';
 import { Axes, buildCandidates, Guide, snapBox, SnapCandidates, snapPoint, snapRefs, SnapRef } from './snap-math';
+import {
+    buildOriginTargets, canvasToModel, modelToCanvas, ORIGIN_SNAP_PX, OriginTarget, OriginTargetInput, originTolerance, pickOriginTarget,
+} from './origin-targets';
 
 // snapping reach in screen pixels
-const SNAP_PX = 8;
+export const SNAP_PX = ORIGIN_SNAP_PX;
 // a drag shorter than this (screen pixels) is a click: nothing jumps
 const CLICK_PX = 3;
 
@@ -18,6 +21,8 @@ type Matrix = DOMMatrix | SVGMatrix;
 export interface SnapGuides {
     guides: Guide[];
     point: SnapPoint | null;
+    // the point is a work origin target (drawn red)
+    origin?: boolean;
 }
 
 // guides drawn by SnapOverlay
@@ -187,6 +192,67 @@ export class SnapSession {
     }
 
     public clear() {
+        showGuides(null);
+    }
+}
+
+export interface OriginSnapContext {
+    input: OriginTargetInput;
+    ctm: Matrix;
+    // machine size: the canvas zero of the coordinate mode is at (size.x, size.y)
+    size: { x: number; y: number };
+}
+
+/**
+ * Snapping of the work origin marker: always on (the origin can only be bound to a frame point), whatever
+ * the switch "Snap" says. Its targets are tagged with what they bind to (origin-targets).
+ */
+export class OriginSnap {
+    private targets: OriginTarget[];
+
+    private readonly ctx: OriginSnapContext;
+
+    private constructor(ctx: OriginSnapContext) {
+        this.ctx = ctx;
+        this.targets = buildOriginTargets(ctx.input);
+    }
+
+    public static start(ctx: OriginSnapContext): OriginSnap {
+        return new OriginSnap(ctx);
+    }
+
+    /** New targets (Ctrl pressed / released: members of groups). */
+    public rebuild(input: OriginTargetInput): void {
+        this.targets = buildOriginTargets(input);
+    }
+
+    public getTargets(): OriginTarget[] {
+        return this.targets;
+    }
+
+    /** The target under a screen point (client px), null when none is within reach. */
+    public pick(screen: Point): OriginTarget | null {
+        const inverse = this.ctx.ctm.inverse();
+        const canvas = apply(inverse, screen);
+        const model = canvasToModel(canvas, this.ctx.size);
+        return pickOriginTarget(this.targets, model, originTolerance(this.ctx.ctm.a));
+    }
+
+    /** Model point to client px. */
+    public toScreen(p: Point): Point {
+        return apply(this.ctx.ctm, modelToCanvas(p, this.ctx.size));
+    }
+
+    public show(target: OriginTarget | null): void {
+        if (!target) {
+            showGuides(null);
+            return;
+        }
+        const c = modelToCanvas(target.point, this.ctx.size);
+        showGuides({ guides: [], point: { x: c.x, y: c.y, kind: 'corner' } as SnapPoint, origin: true });
+    }
+
+    public clear(): void {
         showGuides(null);
     }
 }
