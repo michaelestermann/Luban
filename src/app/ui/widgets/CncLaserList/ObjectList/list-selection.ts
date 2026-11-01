@@ -27,3 +27,14 @@ export function selectionRange<T>(rows: T[], anchor: T | null, target: T): T[] {
     }
     return rows.slice(Math.min(from, to), Math.max(from, to) + 1);
 }
+
+/**
+ * The rows a Shift click selects: hidden rows are skipped, because hidden and visible objects are never
+ * selected together; a Shift click on a hidden row selects that row alone.
+ */
+export function visibleRange<T extends { visible?: boolean }>(rows: T[], anchor: T | null, target: T): T[] {
+    if (target.visible === false) {
+        return rows.includes(target) ? [target] : [];
+    }
+    return selectionRange(rows, anchor, target).filter((row) => row.visible !== false);
+}

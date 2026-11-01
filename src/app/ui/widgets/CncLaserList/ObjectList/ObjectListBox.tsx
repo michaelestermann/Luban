@@ -6,7 +6,7 @@ import { PAGE_EDITOR } from '../../../../constants';
 import { actions as editorActions } from '../../../../flux/editor';
 import { ShortcutHandlerPriority, ShortcutManager } from '../../../../lib/shortcut';
 import { renameTargetID } from '../../../../models/object-name';
-import { listClickMode, selectionRange } from './list-selection';
+import { listClickMode, visibleRange } from './list-selection';
 import i18n from '../../../../lib/i18n';
 import { getModelOperationColors } from '../../../../toolpaths/operations-panel';
 import modal from '../../../../lib/modal';
@@ -51,10 +51,16 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
         const rows = (models || []).filter(entity => !entity.supportTag).slice().reverse();
         const row = rows.find(entity => entity === model || entity.children?.includes(model));
 
+        // a click on a group row (or a Shift range over rows) selects whole groups, also after a member was selected alone
+        // (the canvas keeps clicks inside an entered group; the list row stands for the group)
+        if (!member && row && (row.type === '2d-group' || mode === 'range')) {
+            dispatch(editorActions.setMemberSelection(headType, null));
+        }
+
         if (mode === 'range' && !member && row) {
             const anchor = rows.find(entity => entity.modelID === anchorID.current) || null;
             // hidden rows are skipped: hidden and visible objects are never selected together
-            const range = selectionRange(rows, anchor, row).filter(entity => entity.visible !== false || entity === row);
+            const range = visibleRange(rows, anchor, row);
             // a group is selected through one of its objects (the click expands to the group)
             const target = (entity) => (entity.type === '2d-group' ? entity.children[0] : entity);
             range.forEach((entity, i) => {
