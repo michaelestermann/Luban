@@ -2732,5 +2732,15 @@
     "key-Tabs/Choose file…": "Choose file…",
     "key-Tabs/This is not a Luban project file.": "This is not a Luban project file.",
     "key-Tabs/Create project": "Create project",
-    "key-CncLaser/JobSetup-Thickness (Z)": "Thickness (Z)"
+    "key-CncLaser/JobSetup-Thickness (Z)": "Thickness (Z)",
+    "key-Tabs/Stop and switch": "Stop and switch",
+    "key-Tabs/Stop and close": "Stop and close",
+    "key-Tabs/Stop and quit": "Stop and quit",
+    "key-Tabs/Wait": "Wait",
+    "key-Tabs/Stop": "Stop",
+    "key-Tabs/{{name}} is still busy.": "{{name}} is still busy.",
+    "key-Tabs/{{name}} are still busy.": "{{name}} are still busy.",
+    "key-Tabs/A calculation is still running. Wait until it is done, or stop it and close the tab. Stopped results are not kept.": "A calculation is still running. Wait until it is done, or stop it and close the tab. Stopped results are not kept.",
+    "key-Tabs/A calculation is still running. Wait until it is done, or stop it and quit. Stopped results are not kept.": "A calculation is still running. Wait until it is done, or stop it and quit. Stopped results are not kept.",
+    "key-Tabs/This is taking unusually long.": "This is taking unusually long."
 }

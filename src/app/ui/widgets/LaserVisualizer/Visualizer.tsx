@@ -25,6 +25,7 @@ import { CoordinateMode, Origin, Workpiece, WorkpieceShape, convertMaterialsToWo
 import { actions as editorActions } from '../../../flux/editor';
 import { actions as operationHistoryActions } from '../../../flux/operation-history';
 import { actions as laserActions } from '../../../flux/laser';
+import { tabsActions } from '../../../flux/project/actions-tabs';
 import i18n from '../../../lib/i18n';
 import { canDecomposeSelection } from '../../../lib/svg-decompose';
 import modal from '../../../lib/modal';
@@ -62,6 +63,8 @@ interface ABPosition {
 }
 
 interface VisualizerProps {
+    // busy guard escape hatch: stops a calculation that hangs (progress overlay "Stop")
+    stopCalculation: () => void;
     // page: editor or preview
     page: Page;
     pageMode: PageMode;
@@ -677,7 +680,7 @@ class Visualizer extends React.Component<VisualizerProps> {
                 )}
 
                 <div>
-                    <ProgressBar tips={notice} progress={progress * 100} />
+                    <ProgressBar tips={notice} progress={progress * 100} onStop={this.props.stopCalculation} />
                 </div>
                 <ContextMenu
                     ref={this.contextMenuRef}
@@ -912,6 +915,7 @@ const mapStateToProps = (state, ownProps) => {
 
 const mapDispatchToProps = (dispatch) => {
     return {
+        stopCalculation: () => dispatch(tabsActions.stopBusyMode('laser')),
         clearOperationHistory: () => dispatch(operationHistoryActions.clear('laser')),
         undo: () => dispatch(editorActions.undo('laser')),
         redo: () => dispatch(editorActions.redo('laser')),

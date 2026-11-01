@@ -17,7 +17,8 @@ import { logModuleVisit } from '../../lib/gaEvent';
 import i18n from '../../lib/i18n';
 import log from '../../lib/log';
 import { stashMachineNotice } from '../../lib/machine-notice';
-import { requestQuitSelection, requestSaveChanges } from '../../lib/tab-dialogs';
+import { controller } from '../../communication/socket-communication';
+import { requestBusyStop, requestQuitSelection, requestSaveChanges } from '../../lib/tab-dialogs';
 import workerManager from '../../lib/manager/workerManager';
 import { machineStore } from '../../store/local-storage';
 import { toast } from '../../ui/components/Toast';
@@ -31,6 +32,7 @@ import { actions as projectActions } from './index';
 import { createDocumentObjects, disposeDocumentObjects, initialStateOf, wireDocumentObjects } from './document-objects';
 import { currentMachineRef, knownMachineOf, machineDisplayName, switchMachineForProject } from './machine-switch';
 /* eslint-enable import/no-cycle */
+import { runningToolPaths, stoppedSliceState } from './busy-stop';
 import { documentStore } from './document-store';
 import { PROJECT_META_KEYS, closedDocumentReset, documentStatusOf, isHeadBusy, planActivation, swapDocumentState } from './document-swap';
 import {
@@ -225,12 +227,44 @@ const installDocument = (
     dispatch(wireDocumentObjects(headType));
 };
 
-/** Toast when a switch within a mode has to wait for a running task. */
-const showBusyToast = (getState, headType: EditorHeadType) => {
+/**
+ * Stops what keeps a mode busy (escape hatch of the busy guard): its server tasks are cancelled (late
+ * results are dropped, lib/task-tracker), running toolpaths are marked failed, the progress manager is
+ * finished and the slice flags are reset, so the progress overlay ends. A pending document load or
+ * project opening is not a calculation and is not stopped. Returns whether the mode is idle afterwards.
+ */
+export const stopBusyMode = (headType: EditorHeadType) => (dispatch, getState): boolean => {
+    const ids = controller.stopTasksOf(headType);
+    const slice = getState()[headType] || {};
+    for (const toolPath of runningToolPaths(slice.toolPathGroup?.toolPaths as Array<{ status?: string; updateStatus?: (s: string) => void }>)) {
+        if (toolPath.updateStatus) {
+            toolPath.updateStatus('failed');
+        } else {
+            toolPath.status = 'failed';
+        }
+    }
+    if (typeof slice.progressStatesManager?.finishProgress === 'function') {
+        slice.progressStatesManager.finishProgress(false);
+    }
+    dispatch(sliceUpdate(headType, stoppedSliceState(headType)));
+    log.warn(`tabs: stopped the busy ${headType} document (${ids.length} task(s) cancelled)`);
+    return !busyHeads(getState()).includes(headType);
+};
+
+/** Name of the live document of a mode (for busy messages). */
+const liveDocumentName = (getState, headType: EditorHeadType): string => {
     const tabs = getTabsState(getState());
     const liveMeta = tabs.documents[tabs.activeDocByHead[headType]];
-    const name = liveMeta ? documentDisplayName(liveMeta, i18n._('key-Tabs/Untitled')) : headType;
-    toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} is still busy. Switch when it is done.', { name })));
+    return liveMeta ? documentDisplayName(liveMeta, i18n._('key-Tabs/Untitled')) : headType;
+};
+
+/** Toast when a switch within a mode has to wait for a running task; "Stop and switch" stops it and switches. */
+const showBusyToast = (getState, headType: EditorHeadType, onStop: () => void) => {
+    const name = liveDocumentName(getState, headType);
+    toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} is still busy. Switch when it is done.', { name }), {
+        label: i18n._('key-Tabs/Stop and switch'),
+        onClick: onStop,
+    }));
 };
 
 /** Leaving a laser/cnc page: finish an open edit (drawing, text) first, as the 4.16 Home/Workspace buttons did. */
@@ -258,7 +292,12 @@ const activateTab = (tabId: string, history: HistoryLike) => async (dispatch, ge
         return tabId === tabs.activeTabId;
     }
     if (plan.blockedBy) {
-        showBusyToast(getState, plan.blockedBy);
+        const blockedBy = plan.blockedBy;
+        showBusyToast(getState, blockedBy, () => {
+            if (dispatch(stopBusyMode(blockedBy))) {
+                dispatch(activateTab(tabId, history));
+            }
+        });
         return false;
     }
     await dispatch(leaveCurrentPage(history));
@@ -640,8 +679,15 @@ const closeDocumentNow = (docId: string, history: HistoryLike, failedLoad: Faile
     const isLive = () => getTabsState(getState()).activeDocByHead[head] === docId;
     // a running task of the live document would land in the next document of the mode
     if (!failedLoad && isLive() && busyHeads(getState()).includes(head)) {
-        toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} is still busy. Close it when it is done.', { name })));
-        return false;
+        // a calculation that hangs must not keep the tab open forever: "Stop and close" / "Wait"
+        const answer = await requestBusyStop([name], 'close');
+        if (answer !== 'stop') {
+            return false;
+        }
+        if (!dispatch(stopBusyMode(head))) {
+            toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} is still busy. Close it when it is done.', { name })));
+            return false;
+        }
     }
     let returnTo = tabsAtStart.activeTabId === docId ? nextTabAfterClose(tabsAtStart, docId) : tabsAtStart.activeTabId;
     if (failedLoad) {
@@ -1076,6 +1122,17 @@ const confirmQuit = (history: HistoryLike) => async (dispatch, getState): Promis
         return quitInProgress;
     }
     const run = async (): Promise<boolean> => {
+        // a busy document cannot be saved or shown: offer to stop its calculation first ("Stop and quit" / "Wait")
+        const busy = busyHeads(getState()).filter((head) => getTabsState(getState()).activeDocByHead[head]);
+        if (busy.length > 0) {
+            const answer = await requestBusyStop(busy.map((head) => liveDocumentName(getState, head)), 'quit');
+            if (answer !== 'stop') {
+                return false;
+            }
+            for (const head of busy) {
+                dispatch(stopBusyMode(head));
+            }
+        }
         const unsaved: DocumentMeta[] = dispatch(unsavedDocuments());
         let toSave: string[] = [];
         if (unsaved.length === 1) {
@@ -1316,6 +1373,7 @@ export const tabsActions = {
     installDocument,
     closeDocument,
     confirmQuit,
+    stopBusyMode,
     persistSession,
     restoreSession,
     loadDocument,

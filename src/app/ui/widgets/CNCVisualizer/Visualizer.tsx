@@ -17,6 +17,7 @@ import { Origin, Workpiece, convertMaterialsToWorkpiece } from '../../../constan
 import { actions as editorActions } from '../../../flux/editor';
 import { actions as machineActions } from '../../../flux/machine';
 import { actions as operationHistoryActions } from '../../../flux/operation-history';
+import { tabsActions } from '../../../flux/project/actions-tabs';
 import { controller } from '../../../communication/socket-communication';
 import i18n from '../../../lib/i18n';
 import { canDecomposeSelection } from '../../../lib/svg-decompose';
@@ -45,6 +46,8 @@ import { isFirstView } from '../CncLaserShared/view-memory';
 
 
 interface VisualizerProps {
+    // busy guard escape hatch: stops a calculation that hangs (progress overlay "Stop")
+    stopCalculation: () => void;
     series: string;
     pathname: string;
     page: string;
@@ -735,7 +738,7 @@ class Visualizer extends React.Component<VisualizerProps> {
                     </div>
                 )}
                 <div className={styles['visualizer-progress']}>
-                    <ProgressBar tips={notice} progress={progress * 100} />
+                    <ProgressBar tips={notice} progress={progress * 100} onStop={this.props.stopCalculation} />
                 </div>
                 <ContextMenu
                     ref={this.contextMenuRef}
@@ -943,6 +946,7 @@ const mapStateToProps = (state, ownProps) => {
 
 const mapDispatchToProps = (dispatch) => {
     return {
+        stopCalculation: () => dispatch(tabsActions.stopBusyMode('cnc')),
         clearOperationHistory: () => dispatch(operationHistoryActions.clear('cnc')),
         undo: () => dispatch(editorActions.undo('cnc')),
         redo: () => dispatch(editorActions.redo('cnc')),

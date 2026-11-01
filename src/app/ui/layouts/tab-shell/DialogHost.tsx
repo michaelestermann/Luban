@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { DialogRequest, subscribeDialogRequests } from '../../../lib/tab-dialogs';
+import BusyStopDialog from './BusyStopDialog';
 import QuitDialog from './QuitDialog';
 import SaveChangesDialog from './SaveChangesDialog';
 
@@ -12,6 +13,9 @@ const DialogHost: React.FC = () => {
 
     if (!request) {
         return null;
+    }
+    if (request.kind === 'busy-stop') {
+        return <BusyStopDialog key={request.id} names={request.names} context={request.context} onAnswer={request.respond} />;
     }
     if (request.kind === 'save-changes') {
         return <SaveChangesDialog key={request.id} name={request.name} context={request.context} onAnswer={request.respond} />;

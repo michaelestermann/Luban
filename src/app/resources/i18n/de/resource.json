@@ -2745,5 +2745,15 @@
     "key-Tabs/Choose file…": "Datei auswählen…",
     "key-Tabs/This is not a Luban project file.": "Das ist keine Luban-Projektdatei.",
     "key-Tabs/Create project": "Projekt erstellen",
-    "key-CncLaser/JobSetup-Thickness (Z)": "Dicke (Z)"
+    "key-CncLaser/JobSetup-Thickness (Z)": "Dicke (Z)",
+    "key-Tabs/Stop and switch": "Stoppen und wechseln",
+    "key-Tabs/Stop and close": "Stoppen und schließen",
+    "key-Tabs/Stop and quit": "Stoppen und beenden",
+    "key-Tabs/Wait": "Warten",
+    "key-Tabs/Stop": "Stoppen",
+    "key-Tabs/{{name}} is still busy.": "{{name}} ist noch beschäftigt.",
+    "key-Tabs/{{name}} are still busy.": "{{name}} sind noch beschäftigt.",
+    "key-Tabs/A calculation is still running. Wait until it is done, or stop it and close the tab. Stopped results are not kept.": "Eine Berechnung läuft noch. Warten Sie, bis sie fertig ist, oder stoppen Sie sie und schließen Sie den Tab. Gestoppte Ergebnisse werden nicht behalten.",
+    "key-Tabs/A calculation is still running. Wait until it is done, or stop it and quit. Stopped results are not kept.": "Eine Berechnung läuft noch. Warten Sie, bis sie fertig ist, oder stoppen Sie sie und beenden Sie Luban. Gestoppte Ergebnisse werden nicht behalten.",
+    "key-Tabs/This is taking unusually long.": "Das dauert ungewöhnlich lange."
 }

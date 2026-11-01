@@ -7,6 +7,7 @@ import { ConnectionType } from '../flux/workspace/state';
 import { lubanVisit } from '../lib/gaEvent';
 import log from '../lib/log';
 import socketController from '../lib/socket-controller';
+import { SLICE_TASK_ID, taskTracker } from '../lib/task-tracker';
 import { machineStore } from '../store/local-storage';
 import SocketEvent from './socket-events';
 
@@ -220,6 +221,12 @@ class SocketCommunication {
                     this.settings = options.settings;
                 }
 
+                // late events of a stopped task (busy guard "Stop") never reach the editor
+                if (taskTracker.shouldDrop(eventName, options)) {
+                    log.info(`socket.on('${eventName}'): dropped, its task was stopped`);
+                    return;
+                }
+
                 this.callbacks[eventName].forEach((callback) => {
                     callback.apply(callback, [options]);
                 });
@@ -274,10 +281,12 @@ class SocketCommunication {
     }
 
     public slice(params) {
+        taskTracker.commit(SLICE_TASK_ID, 'printing');
         socketController.emit('slice', params);
     }
 
     public commitToolPathTaskArray(taskArray) {
+        taskTracker.commit(taskArray?.[0]?.taskId, taskArray?.[0]?.headType);
         socketController.emit('taskCommit:generateToolPath', taskArray);
     }
 
@@ -309,18 +318,22 @@ class SocketCommunication {
     }
 
     public commitViewPathTask(task) {
+        taskTracker.commit(task?.taskId, task?.headType);
         socketController.emit('taskCommit:generateViewPath', task);
     }
 
     public commitGcodeTask(task) {
+        taskTracker.commit(task?.taskId, task?.headType);
         socketController.emit('taskCommit:generateGcode', task);
     }
 
     public commitProcessImage(task) {
+        taskTracker.commit(task?.taskId, task?.headType);
         socketController.emit('taskCommit:processImage', task);
     }
 
     public commitSVGClipping(task) {
+        taskTracker.commit(task?.taskId, task?.headType);
         socketController.emit('taskCommit:svgClipping', task);
     }
 
@@ -330,6 +343,15 @@ class SocketCommunication {
 
     public cancelCutModelTask(taskId) {
         socketController.emit('taskCancel:cutModel', taskId);
+    }
+
+    /** Stops the running server tasks of a mode (busy guard "Stop"); their late events are dropped. */
+    public stopTasksOf(headType: string): string[] {
+        const ids = taskTracker.stop(headType);
+        for (const taskId of ids) {
+            socketController.emit('taskCancel', taskId);
+        }
+        return ids;
     }
 
     public subscribeDiscover(connectionType: ConnectionType, bool: boolean): void {

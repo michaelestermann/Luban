@@ -23,9 +23,16 @@ export interface QuitAnswer {
     ids: string[];
 }
 
+/** A busy document: stop its calculation and go on, or wait. */
+export type BusyStopAnswer = 'stop' | 'wait';
+
+/** What the user wanted to do when the busy guard refused it. */
+export type BusyStopContext = 'close' | 'quit';
+
 export type DialogRequest =
     | { id: number; kind: 'save-changes'; name: string; context: SaveChangesContext; respond: (answer: SaveChangesAnswer) => void }
-    | { id: number; kind: 'quit-selection'; docs: QuitDocument[]; respond: (answer: QuitAnswer) => void };
+    | { id: number; kind: 'quit-selection'; docs: QuitDocument[]; respond: (answer: QuitAnswer) => void }
+    | { id: number; kind: 'busy-stop'; names: string[]; context: BusyStopContext; respond: (answer: BusyStopAnswer) => void };
 
 type Listener = (request: DialogRequest | null) => void;
 
@@ -85,4 +92,9 @@ export async function requestSaveChanges(name: string, context: SaveChangesConte
 /** The quit list: the documents to save (all checked at first), "Save selected and quit" / "Don’t save any" / "Cancel". */
 export async function requestQuitSelection(docs: QuitDocument[]): Promise<QuitAnswer> {
     return enqueue<QuitAnswer>((id, respond) => ({ id, kind: 'quit-selection', docs: docs.map((d) => ({ ...d })), respond }));
+}
+
+/** "{{name}} is still busy." with "Stop and close" (or "Stop and quit") / "Wait". */
+export async function requestBusyStop(names: string[], context: BusyStopContext): Promise<BusyStopAnswer> {
+    return enqueue<BusyStopAnswer>((id, respond) => ({ id, kind: 'busy-stop', names: [...names], context, respond }));
 }

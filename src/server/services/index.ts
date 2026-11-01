@@ -66,6 +66,8 @@ function startServices(server) {
     socketServer.registerEvent('taskCommit:svgClipping', TaskManager.addSVGClipping);
     socketServer.registerEvent('taskCommit:cutModel', TaskManager.addCutModelTask);
     socketServer.registerEvent('taskCancel:cutModel', TaskManager.cancelTask);
+    // busy guard "Stop": any task by its id
+    socketServer.registerEvent('taskCancel', TaskManager.cancelTask);
 
     socketServer.registerChannel('get-free-memory', system.getSystemFreeMemorySize);
 

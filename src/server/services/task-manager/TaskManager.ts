@@ -92,7 +92,7 @@ class TaskManager {
             task.finishTime = new Date().getTime();
             task.socket.emit(`taskCompleted:${task.taskType}`, task.getData());
         }
-        this.tasks.splice(this.tasks.indexOf(task), 1);
+        this.removeTask(task);
     }
 
     private onFail(task: Task, res: string) {
@@ -106,7 +106,7 @@ class TaskManager {
 
             task.socket.emit(`taskCompleted:${task.taskType}`, task.getData());
         }
-        this.tasks.splice(this.tasks.indexOf(task), 1);
+        this.removeTask(task);
     }
 
     private async taskHandle(task: Task) {
@@ -156,24 +156,30 @@ class TaskManager {
     }
 
     public async addTask(task: Task) {
-        let exists = false;
+        // an older run of the same task sends no result any more; it leaves the list when its worker ends
         this.tasks.forEach((t) => {
             if (t.equal(task)) {
                 t.taskStatus = TASK_STATUS_DEPRECATED;
-                exists = true;
             }
         });
-        if (!exists) {
-            this.tasks.push(task);
-        }
+        this.tasks.push(task);
 
         this.taskHandle(task);
     }
 
+    private removeTask(task: Task) {
+        const index = this.tasks.indexOf(task);
+        if (index >= 0) {
+            this.tasks.splice(index, 1);
+        }
+    }
+
     public cancelTask(taskId: string) {
-        const res = this.tasks.find((task) => task.taskId === taskId);
-        if (res) {
-            res.terminateFn();
+        // a cancelled worker never reports back: the task (and older runs of it) end here and send no result
+        for (const res of this.tasks.filter((task) => task.taskId === taskId)) {
+            res.taskStatus = TASK_STATUS_DEPRECATED;
+            res.terminateFn?.();
+            this.removeTask(res);
             log.info(`task: ${taskId} has been cancelled`);
         }
     }

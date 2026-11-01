@@ -39,6 +39,7 @@ import VisualizerPreviewControl from './VisualizerPreviewControl';
 import SceneContextMenu from './components/SceneContextMenu';
 import SceneShortcuts from './components/SceneShortcuts';
 import styles from './styles.styl';
+import { tabsActions } from '../../../flux/project/actions-tabs';
 import MeshColoringControl from '../../../scene/controls/MeshColoringControl';
 
 const initQuaternion = new Quaternion();
@@ -59,6 +60,7 @@ enum CheckModelsBoundingBoxResult {
 class Visualizer extends PureComponent {
     public static propTypes = {
         series: PropTypes.string.isRequired,
+        stopCalculation: PropTypes.func,
         size: PropTypes.object.isRequired,
         stage: PropTypes.number.isRequired,
         promptTasks: PropTypes.array.isRequired,
@@ -651,7 +653,7 @@ class Visualizer extends PureComponent {
                 <ModeToggleBtn />
 
 
-                <ProgressBar tips={notice} progress={progress * 100} />
+                <ProgressBar tips={notice} progress={progress * 100} onStop={this.props.stopCalculation} />
 
                 {/* Context Menu */}
                 <SceneContextMenu
@@ -711,6 +713,7 @@ const mapStateToProps = (state) => {
 };
 
 const mapDispatchToProps = (dispatch) => ({
+    stopCalculation: () => dispatch(tabsActions.stopBusyMode(HEAD_PRINTING)),
     recordAddOperation: (model) => dispatch(printingActions.recordAddOperation(model)),
     recordModelBeforeTransform: (modelGroup) => dispatch(printingActions.recordModelBeforeTransform(modelGroup)),
     recordModelAfterTransform: (transformMode, modelGroup, axis) => dispatch(printingActions.recordModelAfterTransform(transformMode, modelGroup, null, axis)),
