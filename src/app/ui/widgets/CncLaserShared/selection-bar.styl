@@ -2,22 +2,35 @@
 .selection-bar {
     position: absolute;
     top: 14px;
-    left: 50%;
+    // centred on the canvas right of the tool column (72 px)
+    left: calc(50% + 36px);
     transform: translateX(-50%);
     z-index: 15;
     display: flex;
     align-items: center;
     gap: 2px;
-    max-width: calc(100% - 32px);
+    max-width: calc(100% - 104px);
     padding: 4px;
     background: #ffffff;
     border: 1px solid #e3e6ec;
     border-radius: 10px;
     box-shadow: 0 4px 16px rgba(20, 30, 50, .08);
+
+    // a canvas too narrow even for the overflow menu (minimum window width with both panels open): the bar
+    // may cover the tool column and its buttons wrap instead of being cut off
+    &.wrap {
+        left: 50%;
+        // one row as long as it fits (an absolute box would else shrink to the room right of 50%)
+        width: max-content;
+        max-width: calc(100% - 16px);
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 }
 
 .label {
     padding: 0 8px;
+    min-width: 48px;
     max-width: 180px;
     font-size: 12px;
     color: #5b6170;
@@ -78,6 +91,13 @@
         color: #9aa1b0;
         cursor: not-allowed;
     }
+
+    // the bar is too narrow for the labels: icon only, the label is in the tooltip
+    &.icon-only {
+        width: 36px;
+        padding: 0;
+        justify-content: center;
+    }
 }
 
 .align-menu {
@@ -119,14 +139,11 @@
     font-size: 12px;
 }
 
-// "Set origin here" with its point picker at the end of the "⋯" menu
+// "Set origin here": the point picker of the origin button
 .origin-section {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 4px;
-    padding-top: 6px;
-    border-top: 1px solid #eceef2;
 }
 
 .origin-title {
