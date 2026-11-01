@@ -6,6 +6,7 @@ import i18n from '../../../lib/i18n';
 import SvgIcon from '../../components/SvgIcon';
 import ToolParameters from '../ToolPathConfigurations/cnc/ToolParameters';
 import { toHump } from '../../../../shared/lib/utils';
+import log from '../../../lib/log';
 
 class MaterialTestGcodeParams extends PureComponent {
     static propTypes = {
@@ -152,7 +153,7 @@ class MaterialTestGcodeParams extends PureComponent {
             }
         });
 
-        console.log('true', pathType, movementMode, pathType === 'fill' && movementMode === 'greyscale-line');
+        log.debug('true', pathType, movementMode, pathType === 'fill' && movementMode === 'greyscale-line');
 
         return (
             <React.Fragment>

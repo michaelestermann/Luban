@@ -4,6 +4,7 @@ import noop from 'lodash/noop';
 import request from 'superagent';
 import GcodeToBufferGeometryPrint3d from './GcodeToBufferGeometryPrint3d';
 import { DATA_PREFIX } from '../../constants';
+import log from '../../lib/log';
 
 const readFileToListByArrayBuffer = (
     path,
@@ -16,7 +17,7 @@ const readFileToListByArrayBuffer = (
         .responseType('arraybuffer')
         .end((err, res) => {
             if (err) {
-                console.error(err);
+                log.error(err);
                 reject(err);
                 return;
             }
@@ -47,7 +48,7 @@ export const readFileToList = (path, splitChar = '\n') => {
     return new Promise((resolve, reject) => {
         request.get(path).end((err, res) => {
             if (err) {
-                console.error(err);
+                log.error(err);
                 reject(err);
                 return;
             }

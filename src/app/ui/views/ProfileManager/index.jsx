@@ -132,7 +132,6 @@ export function useGetDefinitions(allDefinitions, activeDefinitionID, getDefault
                 if (!definitionForManager) {
                     definitionForManager = allDefinitions[0];
                     log.debug('Preset does not exist. Select first preset instead:', definitionForManager.definitionId);
-                    console.log('Preset does not exist. Select first preset instead:', definitionForManager.definitionId);
                 }
                 selectedSettingDefaultValue = getDefaultDefinition(definitionForManager?.definitionId);
             }

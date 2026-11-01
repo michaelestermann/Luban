@@ -171,7 +171,7 @@ class TextSerialChannel extends Channel implements
     // interface: CncChannelInterface
 
     public async setSpindleSpeed(speed: number): Promise<boolean> {
-        console.log('set speed', speed);
+        log.debug(`set speed ${speed}`);
         // on and off to set speed
         const gcode = [
             `M3 S${speed} C`,

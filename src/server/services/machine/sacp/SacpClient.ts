@@ -675,7 +675,7 @@ export default class SacpClient extends Dispatcher {
     }
 
     public async requestHome(number = 0) {
-        console.log('000000 requestHome');
+        this.log.debug('requestHome');
         return this.send(0x01, 0x35, PeerId.CONTROLLER, Buffer.alloc(1, number)).then(({ response, packet }) => {
             return { response, packet, data: {} };
         });
@@ -683,7 +683,7 @@ export default class SacpClient extends Dispatcher {
 
     public async requestAbsoluteCooridateMove(directions: MoveDirection[] = [0], distances: number[] = [0], jogSpeed = 0.1, coordinateType: CoordinateType) {
         const paramBuffer = new MovementInstruction(undefined, undefined, jogSpeed, directions, distances, coordinateType).toArrayBuffer();
-        console.log('paramBuffer', paramBuffer);
+        this.log.debug(`requestAbsoluteCooridateMove paramBuffer: ${paramBuffer.toString('hex')}`);
         return this.send(0x01, 0x34, PeerId.CONTROLLER, paramBuffer, true).then(({ response, packet }) => {
             return { response, packet, data: {} };
         });

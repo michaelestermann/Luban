@@ -3,6 +3,7 @@ import Canvg from 'canvg';
 import { createSVGElement, setAttributes } from '../element-utils';
 import { NS } from './namespaces';
 import SvgModel from '../../../models/SvgModel';
+import log from '../../../lib/log';
 
 enum SvgImageCombineType {
     mask,
@@ -650,7 +651,7 @@ const getSvgString = async (
             );
         })
         .catch((error) => {
-            console.error('Error:', error);
+            log.error('Error:', error);
         });
 };
 

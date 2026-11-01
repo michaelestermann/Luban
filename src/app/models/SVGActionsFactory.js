@@ -11,6 +11,7 @@ import SvgModel from './SvgModel';
 import api from '../api';
 // import { DEFAULT_SCALE } from '../ui/SVGEditor/constants';
 import { transformListToTransform, transformBox } from '../ui/SVGEditor/element-transform';
+import log from '../lib/log';
 
 const coordGmModelToSvg = (size, transformation) => {
     // eslint-disable-next-line no-unused-vars
@@ -605,7 +606,7 @@ class SVGActionsFactory {
             svgModel.setPreSelection(this.svgContentGroup.preSelectionGroup);
             return svgModel;
         } catch (e) {
-            console.error(e);
+            log.error(e);
             return null;
         }
     }

@@ -15,6 +15,7 @@ import SvgIcon from '../../components/SvgIcon';
 import { db } from '../../../lib/indexDB/db';
 import { KB, MB, ModelFileExt, ProjectFileExt, RecordState } from '../../../constants/downloadManager';
 import uniApi from '../../../lib/uni-api';
+import log from '../../../lib/log';
 
 
 /**
@@ -97,7 +98,7 @@ const CSDownloadManagerOverlay = (props) => {
         // remove file msg in local db
         db.downloadRecords.get({ startTime: record.startTime, savePath: record.savePath })
             .then(r => db.downloadRecords.delete(r.id))
-            .catch(err => console.error(err));
+            .catch(err => log.error(err));
     }
     function sizeFormat(bytes) {
         const unit = 'MB';

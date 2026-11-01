@@ -18,6 +18,7 @@ import { Button } from '../../components/Buttons';
 import { toHump } from '../../../../shared/lib/utils';
 import MaterialTestParameters from './MaterialTestParameters';
 import { editorStore } from '../../../store/local-storage';
+import log from '../../../lib/log';
 
 function getDefaultDefinition(toolDefinitions = []) {
     return toolDefinitions.find(d => d?.definitionId === 'material_test.default_engraving');
@@ -197,7 +198,7 @@ const MaterialTestConfigurations: React.FC<MaterialTestConfigurationsProps> = ({
                     dispatch(editorActions.createElementAndGenToolPath(HEAD_LASER, nFormData, gcodeConfig, toolParams));
                 })
                 .catch((error) => {
-                    console.error('Validation Failed:', error);
+                    log.error('Validation Failed:', error);
                 });
             onClose && onClose();
         },

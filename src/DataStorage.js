@@ -1,5 +1,6 @@
 import * as fs from 'fs-extra';
 import electron from 'electron';
+import log from 'loglevel';
 
 const emptyDir = async (dirPath) => {
     // eslint-disable-next-line no-console
@@ -41,7 +42,7 @@ class DataStorage {
             emptyDir(this.tmpDir, false);
             emptyDir(this.sessionDir, false);
         } catch (e) {
-            console.error(e);
+            log.error(e);
         }
     }
 }

@@ -33,7 +33,7 @@ Sentry.init({
         log.info('Sentry event::: ', event);
         // Log the error to the console
         if (event.exception) {
-            console.error('Captured exception:', event.exception.values[0]);
+            log.error('Captured exception:', event.exception.values[0]);
         }
         return event;
     }
@@ -286,7 +286,7 @@ const startToBegin = (data) => {
     protocol.registerFileProtocol(
         'luban',
         (request, callback) => {
-            console.log('file protocol URL:', request.url);
+            log.info('file protocol URL:', request.url);
             const { pathname } = url.parse(request.url);
             const p = pathname === '/' ? 'index.html' : pathname.substr(1);
             const filePath = path.normalize(`${__dirname}/app/${p}`);
@@ -294,7 +294,7 @@ const startToBegin = (data) => {
         },
         (error) => {
             if (error) {
-                console.error('error', error);
+                log.error('error', error);
             }
         }
     );
@@ -334,14 +334,14 @@ const startToBegin = (data) => {
 
     webContentsSession.setProxy({ proxyRules: 'direct://' })
         .then(() => mainWindow.loadURL(loadUrl).catch(err => {
-            console.log('err', err.message);
+            log.error('err', err.message);
         }));
 
     try {
         // TODO: move to server
         DataStorage.init();
     } catch (err) {
-        console.error(`Initialize data storage error: ${err}`);
+        log.error(`Initialize data storage error: ${err}`);
     }
 };
 
@@ -394,7 +394,7 @@ const showMainWindow = async () => {
                     startToBegin(data);
                 } else if (data.type === UPLOAD_WINDOWS) {
                     window.loadURL(loadUrl).catch(err => {
-                        console.log('err', err.message);
+                        log.error('err', err.message);
                     });
                 }
             });
@@ -403,7 +403,7 @@ const showMainWindow = async () => {
         window.loadURL(path.resolve(__dirname, 'app', 'loading.html'))
             .then(() => window.setTitle(`Snapmaker Luban ${pkg.version}`))
             .catch(err => {
-                console.log('err', err.message);
+                log.error('err', err.message);
             });
         window.setBackgroundColor('#f5f5f7');
         // serverData = await launchServer();
@@ -567,7 +567,7 @@ const showMainWindow = async () => {
             .then(res => {
                 mainWindow.webContents.send('selected-directory', JSON.stringify(res));
             })
-            .catch(e => console.error(e));
+            .catch(e => log.error(e));
     });
 
     ipcMain.on('select-file', async () => {
@@ -595,7 +595,7 @@ const showMainWindow = async () => {
         try {
             files = fs.readdirSync(dirPath);
         } catch (e) {
-            console.error(`Read directory fail ${dirPath}`);
+            log.error(`Read directory fail ${dirPath}`);
             return;
         }
 
@@ -616,7 +616,7 @@ const showMainWindow = async () => {
     const clearPath = removePath => {
         if (fs.existsSync(removePath)) {
             if (fs.statSync(removePath).isFile()) {
-                fs.unlink(removePath, err => err && console.error(err));
+                fs.unlink(removePath, err => err && log.error(err));
             } else {
                 rmDir(removePath, true);
             }
@@ -637,7 +637,7 @@ const showMainWindow = async () => {
             const target = downloadingArr[finishIndex];
             target.ref.cancel();
         } catch (err) {
-            console.error(err);
+            log.error(err);
         }
 
         // remove curr downloadItem

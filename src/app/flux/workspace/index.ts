@@ -934,7 +934,7 @@ export const actions = {
     },
 
     executeCmd: (cmd: string) => {
-        console.log('execute cmd', cmd);
+        log.debug('execute cmd', cmd);
         controller.emitEvent(SocketEvent.ExecuteCmd, { cmd });
     },
 

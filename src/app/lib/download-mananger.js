@@ -1,4 +1,5 @@
 import isElectron from 'is-electron';
+import log from './log';
 
 export default {
     emit: (type, data) => {
@@ -7,7 +8,7 @@ export default {
             ipcRenderer.send(type, data);
         } else {
             // TODO: most of that can be move to server
-            console.warn('browser no such function');
+            log.warn('browser no such function');
         }
     },
     on: (type, listener) => {
@@ -17,7 +18,7 @@ export default {
             ipcRenderer.on(type, listener);
         } else {
             // TODO: most of that can be move to server
-            console.warn('browser no such function');
+            log.warn('browser no such function');
         }
     },
     off: (type, listener) => {

@@ -268,7 +268,7 @@ class ExtractSquareTrace extends React.PureComponent {
                     z = 140;
                 }
             } else if (this.props.toolHead.laserToolhead === LEVEL_TWO_POWER_LASER_FOR_SM2) {
-                console.log('series =', this.props.series);
+                log.debug('series =', this.props.series);
 
                 const defaultPos = LASER_10W_TAKE_PHOTO_POSITION[this.props.series];
                 z = defaultPos.z;
@@ -572,7 +572,7 @@ class ExtractSquareTrace extends React.PureComponent {
     UNSAFE_componentWillReceiveProps(nextProps) {
         if (nextProps.tool !== this.props.tool) {
             //
-            console.log('nextProp.tool =', nextProps.tool);
+            log.debug('nextProp.tool =', nextProps.tool);
         }
     }
 

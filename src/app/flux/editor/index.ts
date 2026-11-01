@@ -915,7 +915,7 @@ export const actions = {
         const { materials, modelGroup, SVGActions, contentGroup, toolPathGroup, coordinateMode, coordinateSize } = getState()[headType];
         sourceType = sourceType || getSourceType(originalName);
         if (!checkParams(headType, sourceType, mode)) {
-            console.error(`sourceType or mode error, sourceType: ${sourceType}, mode: ${mode}`);
+            log.error(`sourceType or mode error, sourceType: ${sourceType}, mode: ${mode}`);
             return;
         }
 

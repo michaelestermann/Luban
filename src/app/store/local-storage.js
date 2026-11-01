@@ -94,7 +94,7 @@ export const downloadManagerStore = getLocalStore('downloadManager');
         const homeDir = os.homedir();
         const initSavePath = path.join(homeDir, 'Downloads');
         if (!fs.existsSync(initSavePath) || !fs.statSync(initSavePath).isDirectory()) {
-            await fs.mkdir(initSavePath, { recursive: true }, err => console.error(err));
+            await fs.mkdir(initSavePath, { recursive: true }, err => log.error(err));
         }
         !downloadManagerStore.get('downloadManangerSavedPath') && downloadManagerStore.set('downloadManangerSavedPath', initSavePath);
     }

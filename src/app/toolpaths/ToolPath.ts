@@ -454,7 +454,7 @@ class ToolPath {
         }
 
         if (!taskInfos || taskInfos.length === 0) {
-            console.error('The models of tool path is empty');
+            log.error('The models of tool path is empty');
             this.status = FAILED;
         } else if (!taskInfos.find((v) => v.visible)) {
             this.status = WARNING;
@@ -462,7 +462,7 @@ class ToolPath {
 
         const types = getToolPathType(taskInfos);
         if (types.length !== 1 || types[0] !== this.type) {
-            console.error('Inconsistent models types for tool path');
+            log.error('Inconsistent models types for tool path');
             this.status = FAILED;
         }
     }

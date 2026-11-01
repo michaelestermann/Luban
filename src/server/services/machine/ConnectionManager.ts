@@ -1383,7 +1383,7 @@ M3`;
         const { eventName, setMotorPowerHoldMod } = options;
         if (includes([NetworkProtocol.SacpOverTCP, NetworkProtocol.SacpOverUDP, SerialPortProtocol.SacpOverSerialPort], this.protocol)) {
             const result = await (this.channel as SystemChannelInterface).setMotorPowerMode(setMotorPowerHoldMod);
-            console.log('setMotorPowerMode result:', result, eventName);
+            log.debug(`setMotorPowerMode result: ${result}, ${eventName}`);
             socket.emit(eventName, { result });
         }
     }

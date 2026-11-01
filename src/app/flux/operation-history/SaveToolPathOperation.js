@@ -1,5 +1,6 @@
 // Not use now
 import Operation from '../../core/Operation';
+import log from '../../lib/log';
 
 export default class SaveToolPathOperation extends Operation {
     state = {};
@@ -34,7 +35,7 @@ export default class SaveToolPathOperation extends Operation {
         const toolPathGroup = this.state.toolPathGroup;
         const prevToolPath = this.state.prevToolPath;
         const prevToolPathState = this.state.prevToolPathState;
-        console.log('undo prevToolPath', prevToolPath, prevToolPath.getState().gcodeConfig);
+        log.debug('undo prevToolPath', prevToolPath, prevToolPath && prevToolPath.getState().gcodeConfig);
         if (prevToolPath) {
             toolPathGroup.saveToolPath(prevToolPathState, null, false);
         } else {

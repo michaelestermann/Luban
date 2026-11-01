@@ -27,6 +27,7 @@ import { CNCMainPage } from './pages/cnc-main';
 import { LaserMainPage } from './pages/laser-main';
 import { LaserWorkspaceRay } from './pages/laser-workspace-ray';
 import { PrintMainPage } from './pages/print-main';
+import log from '../lib/log';
 
 
 // Register Canvas2dZoom with tag name '', it will defaults to <canvas2d-zoom>
@@ -150,7 +151,7 @@ class App extends React.PureComponent<AppProps, AppState> {
     }
 
     public componentDidCatch(error, errorInfo) {
-        console.error('error', error, errorInfo);
+        log.error('error', error, errorInfo);
         logErrorToGA(errorInfo);
     }
 
