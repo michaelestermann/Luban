@@ -1,5 +1,5 @@
 /**
- * Shape actions on the selection, shared by the selection bar ("Combine ▾" and "⋯" menus) and the
+ * Shape actions on the selection, shared by the selection bar (labelled buttons, "Combine ▾") and the
  * right-click context menus. Each entry knows when it fits the selection, its key and how to run it.
  */
 import React from 'react';
@@ -71,7 +71,7 @@ export const COMBINE_ACTIONS: ShapeAction[] = [
     combine('intersect', () => i18n._('key-CncLaser/Combine-Intersect')),
 ];
 
-/** "⋯": rarer actions; the button is shown when at least one fits. */
+/** Offset and Array: labelled buttons in the selection bar (in its overflow "⋯" when the bar does not fit). */
 export const MORE_ACTIONS: ShapeAction[] = [
     {
         id: 'offset',
