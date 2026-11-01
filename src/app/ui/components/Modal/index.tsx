@@ -2,7 +2,9 @@ import { Modal as AntdModal, ModalProps as AntdModalProps } from 'antd';
 import classNames from 'classnames';
 import { filter } from 'lodash';
 // import PropTypes from 'prop-types';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+
+import { focusDefaultButton, installModalKeyboard, pushModal } from '../../../lib/modal-keyboard';
 
 import './modal.styl';
 import Body from './modalBody';
@@ -10,6 +12,9 @@ import Footer from './modalFooter';
 import Title from './modalTitle';
 import styles from './styles.styl';
 
+
+// Enter = default action, Esc = cancel, no key reaches the page behind an open dialog
+installModalKeyboard();
 
 let bodyElement: HTMLBodyElement | null = null;
 
@@ -68,6 +73,35 @@ const Modal: ModalType = React.memo((props) => {
         };
     }, []);
 
+    // keyboard of a blocking dialog (lib/modal-keyboard): the primary button of the footer gets the focus,
+    // Enter runs it, Esc closes; tile dialogs (no mask) do not block the page
+    const keyboardRoot = useRef<HTMLDivElement | null>(null);
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+    useEffect(() => {
+        if (!open || tile) {
+            return undefined;
+        }
+        const element = () => (keyboardRoot.current?.closest('.ant-modal-wrap') as HTMLElement | null) ?? keyboardRoot.current;
+        const remove = pushModal({
+            element,
+            cancel: () => onCloseRef.current?.(undefined),
+        });
+        // the dialog content is rendered into its portal a moment later
+        let frames = 0;
+        let raf = 0;
+        const tryFocus = () => {
+            if (!focusDefaultButton(element()) && frames++ < 20) {
+                raf = requestAnimationFrame(tryFocus);
+            }
+        };
+        raf = requestAnimationFrame(tryFocus);
+        return () => {
+            cancelAnimationFrame(raf);
+            remove();
+        };
+    }, [open, tile]);
+
     const renderSection = (type) => {
         if (children instanceof Array) {
             const titleNode = filter(children, (o) => {
@@ -90,6 +124,11 @@ const Modal: ModalType = React.memo((props) => {
     return (
         <AntdModal
             {...rest}
+            modalRender={(node) => (
+                <div ref={keyboardRoot} className="modal-keyboard-root">
+                    {rest.modalRender ? rest.modalRender(node) : node}
+                </div>
+            )}
             width={width}
             open={open}
             title={renderSection('modalTitle')}
