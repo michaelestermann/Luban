@@ -1,0 +1,109 @@
+// Work origin marker, its drag label and hint (Kombination A+B, boards OriginAB / OriginABStates)
+.overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.graphics {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+}
+
+// only the marker parts take the mouse
+.grab {
+    fill: transparent;
+    pointer-events: auto;
+}
+
+.label {
+    position: absolute;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 4px;
+    background: #d93025;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 22px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.hint {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: rgba(31, 36, 48, .88);
+    color: #ffffff;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.keys {
+    margin-left: 10px;
+    color: #c9cdd6;
+}
+
+// pick mode: clicks beside the points end it
+.pick-background {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    pointer-events: auto;
+    cursor: default;
+}
+
+.pick-point {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    pointer-events: auto;
+    cursor: pointer;
+    &:hover .pick-dot,
+    &:focus-visible .pick-dot,
+    &.active .pick-dot {
+        width: 12px;
+        height: 12px;
+        box-shadow: 0 0 0 3px rgba(217, 48, 37, .25);
+    }
+    &.active {
+        outline: 2px solid #1f6feb;
+        outline-offset: -8px;
+    }
+}
+
+.pick-dot {
+    width: 8px;
+    height: 8px;
+    border: 1px solid #ffffff;
+    border-radius: 50%;
+    background: #d93025;
+}
+
+// screen reader announcement of the active point
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}

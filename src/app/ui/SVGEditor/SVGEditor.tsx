@@ -6,7 +6,7 @@ import styles from './styles.styl';
 import { SVG_EVENT_CONTEXTMENU } from './constants';
 import SVGCanvas from './SVGCanvas';
 import SVGLeftBar from './SVGLeftBar';
-import { Materials, Origin, Workpiece } from '../../constants/coordinate';
+import { Materials, Origin, OriginType, Workpiece } from '../../constants/coordinate';
 import type ModelGroup from '../../models/ModelGroup';
 import { library } from './lib/ext-shapes';
 import Modal from '../components/Modal/tileModal';
@@ -15,6 +15,7 @@ import PointEditOverlay from './path-edit/PointEditOverlay';
 import MeasureOverlay from './measure/MeasureOverlay';
 import DimensionsOverlay from './measure/DimensionsOverlay';
 import SnapOverlay from './snap/SnapOverlay';
+import OriginMarker from './origin/OriginMarker';
 import ShapeActionKeys from './combine/ShapeActionKeys';
 import RoundCorners from './combine/RoundCorners';
 import OffsetPreview from './combine/OffsetPreview';
@@ -421,6 +422,7 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             workpiece={props.workpiece}
                             origin={props.origin}
                             originPoint={originPoint}
+                            originDotHidden={props.origin?.type !== OriginType.CNCLockingBlock}
                             ref={canvas}
                             onCreateElement={props.onCreateElement}
                             onSelectElements={props.onSelectElements}
@@ -450,6 +452,15 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                         <SnapOverlay
                             isActive={props.isActive}
                             getScreenCTM={getCanvasScreenCTM}
+                        />
+                        <OriginMarker
+                            headType={props.headType as 'laser' | 'cnc'}
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
+                            size={props.size as { x: number; y: number }}
+                            coordinateMode={props.coordinateMode as { value: string }}
+                            coordinateSize={props.coordinateSize as { x: number; y: number }}
+                            locked={props.SVGCanvasMode !== 'select' || !!(props.SVGCanvasExt as { elem?: unknown })?.elem}
                         />
                         <DimensionsOverlay
                             headType={props.headType}

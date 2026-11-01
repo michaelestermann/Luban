@@ -6,6 +6,7 @@
 import { ObjectReference, Origin, OriginOffset, OriginType } from '../../../constants/coordinate';
 import { Point, boundModelIds } from '../../../lib/object-origin';
 import { boundGroupId, isWorkpieceFrameOrigin, originOffset } from '../../../lib/work-origin';
+import type { OriginTarget } from '../snap/origin-targets';
 
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -107,4 +108,13 @@ export function describeOrigin(origin: Origin, ctx: OriginDescribeContext, t: Tr
     const targetName = originTargetName(kind, name, t);
     const point = kind === 'free' ? null : pointName(origin.reference, t);
     return { name: targetName, pointName: point, label: originLabel(targetName, point, null) };
+}
+
+/** "Logo · bottom left  X 70.0 Y 140.0" for a snap target (selection, group, object, workpiece). */
+export function targetLabel(target: OriginTarget, t: Translate, withNumbers = true): string {
+    const kindByTarget: Record<OriginTarget['source']['kind'], OriginTargetKind> = {
+        object: 'object', selection: 'selection', group: 'group', workpiece: 'workpiece',
+    };
+    const name = originTargetName(kindByTarget[target.source.kind], target.name || null, t);
+    return originLabel(name, pointName(target.reference, t), withNumbers ? target.point : null);
 }

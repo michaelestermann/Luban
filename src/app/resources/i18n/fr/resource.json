@@ -2763,5 +2763,14 @@
     "key-CncLaser/Origin-Workpiece": "Workpiece",
     "key-CncLaser/Origin-Free": "Free",
     "key-CncLaser/Origin-All objects": "All objects",
-    "key-CncLaser/Origin-Ungrouped · origin kept on the {{count}} members": "Ungrouped · origin kept on the {{count}} members"
+    "key-CncLaser/Origin-Ungrouped · origin kept on the {{count}} members": "Ungrouped · origin kept on the {{count}} members",
+    "key-CncLaser/Origin-Drag to move · double-click for details": "Drag to move · double-click for details",
+    "key-CncLaser/Origin-Moving the work origin · snaps to frame points": "Moving the work origin · snaps to frame points",
+    "key-CncLaser/Origin-Alt: free · Ctrl: inside groups · Esc: cancel": "Alt: free · Ctrl: inside groups · Esc: cancel",
+    "key-CncLaser/Origin-Ctrl: inside groups · Esc: cancel": "Ctrl: inside groups · Esc: cancel",
+    "key-CncLaser/Origin-Only on flat workpieces": "Only on flat workpieces",
+    "key-CncLaser/Origin-Pick origin point on the canvas (0)": "Pick origin point on the canvas (0)",
+    "key-CncLaser/Origin-Origin…": "Origin…",
+    "key-CncLaser/Origin-Origin… (Shift+O)": "Origin… (Shift+O)",
+    "key-CncLaser/Origin-Click a point · Esc cancels": "Click a point · Esc cancels"
 }

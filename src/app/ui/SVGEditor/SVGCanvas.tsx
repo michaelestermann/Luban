@@ -79,6 +79,8 @@ interface SVGCanvasProps {
     origin: Origin;
     // object origin point (model coordinates), null: the workpiece origin
     originPoint?: { x: number; y: number } | null;
+    // the origin marker (OriginMarker) draws the dot: the canvas dot is hidden
+    originDotHidden?: boolean;
 }
 
 class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
@@ -124,6 +126,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         materials: PropTypes.object,
         // object origin point (model coordinates), null: the workpiece origin
         originPoint: PropTypes.object,
+        originDotHidden: PropTypes.bool,
         editable: PropTypes.bool.isRequired,
         hideLeftBarOverlay: PropTypes.func.isRequired,
 
@@ -237,6 +240,9 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         if (nextProps.materials !== this.props.materials) {
             materials = nextProps.materials;
             shouldUpdateCanvas = true;
+        }
+        if (nextProps.originDotHidden !== this.props.originDotHidden) {
+            this.printableArea?.setOriginDotVisible(!nextProps.originDotHidden);
         }
         if (nextProps.originPoint !== this.props.originPoint) {
             // the object origin moved (or the workpiece origin applies again)
@@ -464,6 +470,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
             coordinateMode: this.props.coordinateMode,
             originPoint: this.props.originPoint || null,
         });
+        this.printableArea.setOriginDotVisible(!this.props.originDotHidden);
     }
 
     public setMode(mode, extShape) {
@@ -652,6 +659,10 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
 
     public onMouseDown = (event) => {
         // event.preventDefault();
+        // the origin marker handles its own mouse (no pan, no object move)
+        if (event.target?.closest?.('[data-origin-marker]')) {
+            return;
+        }
 
         const rightClick = event.button === 2;
 
@@ -1536,7 +1547,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
     };
 
     public onDblClick = (evt) => {
-        if (this.mode === 'measure') {
+        if (this.mode === 'measure' || evt.target?.closest?.('[data-origin-marker]')) {
             return;
         }
         const matrix = this.svgContentGroup.getScreenCTM().inverse();

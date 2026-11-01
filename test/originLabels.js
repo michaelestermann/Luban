@@ -7,6 +7,7 @@ import {
     originSetToast,
     originTargetName,
     pointName,
+    targetLabel,
 } from '../src/app/ui/SVGEditor/origin/origin-labels';
 import { createObjectOrigin } from '../src/app/lib/object-origin';
 import { createFreeOrigin, createGroupOrigin, createWorkpieceFrameOrigin, workpieceOrigin } from '../src/app/lib/work-origin';
@@ -64,5 +65,14 @@ test('describeOrigin', (tt) => {
     tt.deepEqual([f.name, f.pointName, f.label], ['Free', null, 'Free']);
     tt.equal(describeOrigin(createObjectOrigin('center', []), ctx, t).name, 'All objects');
     tt.equal(describeOrigin(createObjectOrigin('center', ['gone']), ctx, t).name, 'Selection', 'unknown single id: no name');
+    tt.end();
+});
+
+test('targetLabel: names the kind of the target', (tt) => {
+    const target = (source, name, reference, point) => ({ point, reference, source, rank: 0, name });
+    tt.equal(targetLabel(target({ kind: 'object', modelID: 'p' }, 'Plate', 'bottom-center', { x: 205, y: 40 }), t), 'Plate · bottom centre  X 205.0 Y 40.0');
+    tt.equal(targetLabel(target({ kind: 'selection', modelIDs: [] }, '', 'bottom-left', { x: 70, y: 140 }), t), 'Selection · bottom left  X 70.0 Y 140.0');
+    tt.equal(targetLabel(target({ kind: 'group', groupID: 'g' }, 'Badge', 'top-right', { x: 300, y: 240 }), t, false), 'Group “Badge” · top right');
+    tt.equal(targetLabel(target({ kind: 'workpiece' }, '', 'center', { x: 200, y: 150 }), t, false), 'Workpiece · centre');
     tt.end();
 });

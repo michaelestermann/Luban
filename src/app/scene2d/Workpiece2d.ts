@@ -68,6 +68,11 @@ class Workpiece2d {
     // object origin point (model coordinates, y up), null: the origin of the coordinate mode
     private originPoint: { x: number; y: number } | null = null;
 
+    // the red origin dot (hidden while the editor's origin marker draws it)
+    private originDotVisible = true;
+
+    private originDot: Element | null = null;
+
     public constructor(options: Workpiece2dOptions) {
         this.id = uuid();
         this.size = {
@@ -174,6 +179,12 @@ class Workpiece2d {
         this._setGridLine();
         this._setMaterialsRect();
         this._setOriginPoint();
+    }
+
+    /** Shows or hides the red origin dot (the editor's origin marker replaces it in step 1). */
+    public setOriginDotVisible(visible: boolean) {
+        this.originDotVisible = visible;
+        this.originDot?.setAttribute('visibility', visible ? 'visible' : 'hidden');
     }
 
     // the origin on the canvas (SVG coordinates)
@@ -458,9 +469,13 @@ class Workpiece2d {
                     stroke: '#FF5759',
                     'stroke-width': 1 / this.scale,
                     opacity: 1,
-                    'fill-opacity': 1
+                    'fill-opacity': 1,
+                    id: 'origin-dot',
+                    // the editor draws the origin marker itself (OriginMarker); axes and rulers stay
+                    visibility: this.originDotVisible ? 'visible' : 'hidden',
                 }
             });
+            this.originDot = originElement;
         }
         this.printableAreaGroup.append(originElement);
     }
