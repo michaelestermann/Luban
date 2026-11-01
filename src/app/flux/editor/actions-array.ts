@@ -12,6 +12,7 @@ import { MembershipChange } from '../operation-history/ReplaceModelsOperation2D'
 import { actions as operationHistoryActions } from '../operation-history';
 import { canEditShapes, markChanged, warn } from './actions-combine';
 import { baseActions } from './actions-base';
+import { recordSelectionChange, snapshotSelection } from './selection-history';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type HeadType = 'laser' | 'cnc';
@@ -110,6 +111,7 @@ export const arrayActions = {
         }
         const { modelGroup, SVGActions, toolPathGroup, materials } = state[headType];
         const selection = arraySelection(modelGroup);
+        const selectionBefore = snapshotSelection(modelGroup);
         const box = selection && selectionBox(selection.leaves, SVGActions.svgContentGroup.group);
         if (!selection || !box) {
             dispatch(arrayActions.cancelArray(headType));
@@ -183,6 +185,7 @@ export const arrayActions = {
         SVGActions.clearSelection();
         SVGActions.addSelectedSvgModelsByModels(selected, !!materials?.isRotate);
         modelGroup.selectedGroupID = session.group ? groups[groups.length - 1].group.modelID : null;
+        dispatch(recordSelectionChange(headType, operations, selectionBefore));
         dispatch(baseActions.updateState(headType, { ...modelGroup.getState(), arraySession: null }));
         markChanged(dispatch, headType);
         dispatch(baseActions.render(headType));

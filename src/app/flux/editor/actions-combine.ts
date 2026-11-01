@@ -11,6 +11,7 @@ import { makeSceneToast } from '../../ui/views/toasts/SceneToast';
 import ReplaceModelsOperation2D, { MembershipChange } from '../operation-history/ReplaceModelsOperation2D';
 import { actions as operationHistoryActions } from '../operation-history';
 import { baseActions } from './actions-base';
+import { recordSelectionChange, snapshotSelection } from './selection-history';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type HeadType = 'laser' | 'cnc';
@@ -104,6 +105,7 @@ function replaceModels(dispatch, getState, headType: HeadType, { removed, placem
 }) {
     const { modelGroup, SVGActions, toolPathGroup, materials } = getState()[headType];
     const added = placements.reduce((all, p) => all.concat(p.added), []);
+    const selectionBefore = snapshotSelection(modelGroup);
     const layerBefore = modelGroup.models.filter(m => !added.includes(m));
     // each group of new models goes where its anchor is (in its place if the anchor is removed)
     const layerAfter = placements.reduce(
@@ -136,6 +138,7 @@ function replaceModels(dispatch, getState, headType: HeadType, { removed, placem
     SVGActions.clearSelection();
     modelGroup.selectedGroupID = null;
     SVGActions.addSelectedSvgModelsByModels(added, !!materials?.isRotate);
+    dispatch(recordSelectionChange(headType, operations, selectionBefore));
     dispatch(baseActions.updateState(headType, modelGroup.getState()));
     markChanged(dispatch, headType);
     dispatch(baseActions.render(headType));

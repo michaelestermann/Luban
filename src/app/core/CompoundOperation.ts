@@ -16,6 +16,9 @@ class CompoundOperation {
 
     private callback: CallbackFunction | null = null;
 
+    // the selection before / after the operation, restored after undo / redo (see recordSelection)
+    private selection: { before: unknown; after: unknown; restore: (selection: unknown) => void } | null = null;
+
     public push(...operations: Operation<T>[]) {
         this.operations.push(...operations);
     }
@@ -46,6 +49,7 @@ class CompoundOperation {
         }
 
         this.runRedoCallback();
+        this.selection && this.selection.restore(this.selection.after);
     }
 
     public undo(): void {
@@ -53,6 +57,15 @@ class CompoundOperation {
             operation.undo();
         }
         this.runUndoCallback();
+        this.selection && this.selection.restore(this.selection.before);
+    }
+
+    /**
+     * Undo selects `before` again, redo `after` (by `restore`, after the operations and callbacks ran):
+     * operations that replace objects (combine, offset, array, decompose, group ...) keep the selection.
+     */
+    public recordSelection<S>(before: S, after: S, restore: (selection: S) => void) {
+        this.selection = { before, after, restore: restore as (selection: unknown) => void };
     }
 
     /**
