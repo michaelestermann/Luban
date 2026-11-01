@@ -51,6 +51,7 @@ const GoHomeModal: React.FC = () => {
                 setHoming(false);
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- decide on connect/homing changes only; a workflow status change must not reopen the modal
     }, [isConnected, activeMachine, activeMachineToolOptions, isHomed]);
 
     const onClickGoHome = useCallback(() => {

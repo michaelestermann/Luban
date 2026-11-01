@@ -30,25 +30,26 @@ const MoreInfo = () => {
 
     const carouselRef = useRef();
     const carouselSleep = 5 * 1000;
-    let lastSlidePagination = null;
-    let paginationInterverTimer = null;
-    let paginationTimeoutTimer = null;
+    // Kept in refs so that every render's onCarouselAfterChange and the unmount cleanup see the same timers
+    const lastSlidePaginationRef = useRef(null);
+    const paginationInterverTimerRef = useRef(null);
+    const paginationTimeoutTimerRef = useRef(null);
     const onCarouselAfterChange = () => {
-        clearTimeout(paginationTimeoutTimer);
-        clearInterval(paginationInterverTimer);
-        lastSlidePagination && (lastSlidePagination.style.width = '');
+        clearTimeout(paginationTimeoutTimerRef.current);
+        clearInterval(paginationInterverTimerRef.current);
+        lastSlidePaginationRef.current && (lastSlidePaginationRef.current.style.width = '');
         const currSlidePagination = document.querySelector('.slick-active button');
         let currProgress = 0;
-        paginationInterverTimer = setInterval(() => {
+        paginationInterverTimerRef.current = setInterval(() => {
             currProgress += 1;
             currSlidePagination && (currSlidePagination.style.width = `${currProgress}%`);
         }, carouselSleep / 100);
 
-        lastSlidePagination = currSlidePagination;
+        lastSlidePaginationRef.current = currSlidePagination;
 
         // timer over
-        paginationTimeoutTimer = setTimeout(() => {
-            clearInterval(paginationInterverTimer);
+        paginationTimeoutTimerRef.current = setTimeout(() => {
+            clearInterval(paginationInterverTimerRef.current);
             carouselRef.current && carouselRef.current.next();
         }, carouselSleep);
     };
@@ -71,9 +72,10 @@ const MoreInfo = () => {
         return () => {
             isMounted = false;
             clearInterval(timer);
-            clearTimeout(paginationTimeoutTimer);
-            clearInterval(paginationInterverTimer);
+            clearTimeout(paginationTimeoutTimerRef.current);
+            clearInterval(paginationInterverTimerRef.current);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: fetch the information flow once and start the carousel timer
     }, []);
 
     return (
@@ -98,7 +100,8 @@ const MoreInfo = () => {
                                                 <div className={styles['swiper-title']}>{swiper.title}</div>
                                                 <div className={styles['swiper-desc']}>{swiper.desc}</div>
                                             </div>
-                                            {/* <a className={styles['swiper-a']} href={swiper.btn.href} target="_blank" rel="noopener noreferrer">{`${swiper.btn.text}`} </a> */}
+                                            {/* <a className={styles['swiper-a']} href={swiper.btn.href} target="_blank" rel="noopener noreferrer">
+                                                {`${swiper.btn.text}`} </a> */}
                                         </div>
                                         <div className={styles['swiper-img']}>
                                             <img className="width-percent-100" src={swiper.imgSrc} alt={swiper.title} />

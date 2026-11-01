@@ -56,9 +56,9 @@ function useRenderWarning() {
 
     const onClose = () => setShowWarning(false);
 
-    function onChangeShouldShowWarning(value) {
+    const onChangeShouldShowWarning = (value) => {
         dispatch(machineActions.setShouldShowCncWarning(value));
-    }
+    };
 
     return showWarning && renderModal({
         onClose,
@@ -151,6 +151,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
             pathname: '/cnc',
             isRotate: materials?.isRotate
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: init the CNC page and log the page view once
     }, []);
 
     useEffect(() => {
@@ -175,6 +176,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
         if (typeof (enabledIntro) === 'boolean' && !enabledIntro) {
             machineStore.set(isRotate ? 'guideTours.guideTourscnc4Axis' : 'guideTours.guideTourscnc', true);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mark the guide tour finished only when the intro is closed, not when the job type changes
     }, [enabledIntro]);
 
     const { renderStlModal, renderMainToolBar } = useRenderMainToolBar({
@@ -248,7 +250,7 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
         });
     }
 
-    function handleChange(nextIndex) {
+    const handleChange = (nextIndex) => {
         if (nextIndex === 1) {
             let pathConfig = {};
             if (isRotate) {
@@ -295,8 +297,8 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
             }
             dispatch(projectActions.openProject(pathConfig, history, true, true));
         }
-    }
-    async function handleBeforeChange(nextIndex) {
+    };
+    const handleBeforeChange = async (nextIndex) => {
         if (nextIndex === 4) {
             dispatch(editorActions.switchToPage(HEAD_CNC, 'process'));
             dispatch(editorActions.selectToolPathId(HEAD_CNC, toolPaths[0].id));
@@ -305,10 +307,10 @@ const Cnc: React.FC<CNCMainPageProps> = ({ location }) => {
             await dispatch(editorActions.preview(HEAD_CNC));
             await dispatch(editorActions.commitGenerateGcode(HEAD_CNC, thumbnailRef));
         }
-    }
-    function handleExit() {
+    };
+    const handleExit = () => {
         setEnabledIntro(false);
-    }
+    };
 
     const renderStep = () => {
         const stepArr = [

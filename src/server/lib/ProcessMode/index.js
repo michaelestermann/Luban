@@ -11,9 +11,12 @@ import {
 } from '../../constants';
 
 import { MeshProcess } from '../MeshProcess/MeshProcess';
+import logger from '../logger';
+
+const log = logger('lib:ProcessMode');
 
 const processImage3d = (modelInfo, onProgress) => {
-    console.log('processImage3d');
+    log.debug('processImage3d');
     const mesh = new MeshProcess(modelInfo, onProgress);
     return mesh.convertToImage();
 };

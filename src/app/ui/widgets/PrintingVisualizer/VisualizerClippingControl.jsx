@@ -47,7 +47,7 @@ function VisualizerClippingControl() {
             workerManager.off(WorkerEvents.clipperWorkerIdle, onClippingFinish);
             workerManager.off(WorkerEvents.clipperWorkerDestroyed, onClippingFinish);
         };
-    }, []);
+    }, [modelGroup]);
 
     const [isSpecialMode, setIsSpecialMode] = useState(false);
     useEffect(() => {

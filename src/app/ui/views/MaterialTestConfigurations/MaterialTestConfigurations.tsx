@@ -18,6 +18,7 @@ import { Button } from '../../components/Buttons';
 import { toHump } from '../../../../shared/lib/utils';
 import MaterialTestParameters from './MaterialTestParameters';
 import { editorStore } from '../../../store/local-storage';
+import log from '../../../lib/log';
 
 function getDefaultDefinition(toolDefinitions = []) {
     return toolDefinitions.find(d => d?.definitionId === 'material_test.default_engraving');
@@ -105,13 +106,14 @@ const MaterialTestConfigurations: React.FC<MaterialTestConfigurationsProps> = ({
             setGcodeConfig(gcodeConfig);
             updateActiveToolDefinition(toolParams, gcodeConfig);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- updateActiveToolDefinition sets the currentToolDefinition it reads; adding it would loop
     }, [toolParams, gcodeConfig]);
     useEffect(() => {
         if (formData) {
             form.setFieldsValue(formData);
         }
     }, [form, formData]);
-    const saveFormData = (nFormData: any) => {
+    const saveFormData = (nFormData: Record<string, number>) => {
         setFormData(nFormData);
         editorStore.set(`${HEAD_LASER}LastMaterialTest`, JSON.stringify(nFormData));
     };
@@ -197,7 +199,7 @@ const MaterialTestConfigurations: React.FC<MaterialTestConfigurationsProps> = ({
                     dispatch(editorActions.createElementAndGenToolPath(HEAD_LASER, nFormData, gcodeConfig, toolParams));
                 })
                 .catch((error) => {
-                    console.error('Validation Failed:', error);
+                    log.error('Validation Failed:', error);
                 });
             onClose && onClose();
         },

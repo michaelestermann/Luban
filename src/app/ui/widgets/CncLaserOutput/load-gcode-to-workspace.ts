@@ -1,7 +1,11 @@
 import workspaceBaseActions from '../../../flux/workspace/actions-base';
 import gcodeActions from '../../../flux/workspace/actions-gcode';
+import { GCodeFileMetadata } from '../../../flux/workspace/types';
 import { planSingleFileWorkspaceLoad, planWorkspaceLoad } from '../../../flux/workspace/gcode-file-list';
 import { logGcodeExport } from '../../../lib/gaEvent';
+
+/** Generated G-code file of the Laser/CNC editor, tagged with the job it belongs to. */
+type JobGcodeFile = GCodeFileMetadata & { jobName?: string };
 
 /**
  * Load the generated G-code of the Laser/CNC editor into the workspace.
@@ -19,7 +23,7 @@ export const loadGcodeToWorkspace = (headType: 'laser' | 'cnc', renderImmediatel
 
     logGcodeExport(headType, 'workspace', materials?.isRotate);
 
-    const files: any[] = gcodeFiles.length > 0 ? gcodeFiles : [gcodeFile];
+    const files: JobGcodeFile[] = gcodeFiles.length > 0 ? gcodeFiles : [gcodeFile];
     dispatch(gcodeActions.removeGcodeFilesOfJob(files[0].jobName));
     const { listOnly, active } = planWorkspaceLoad(files);
     listOnly.forEach(file => dispatch(gcodeActions.addGCodeFile(file)));
@@ -36,7 +40,7 @@ export const loadGcodeToWorkspace = (headType: 'laser' | 'cnc', renderImmediatel
  */
 export const loadGcodeFileToWorkspace = (headType: 'laser' | 'cnc', uploadName: string, renderImmediately = false) => async (dispatch, getState) => {
     const { gcodeFile, gcodeFiles = [], materials } = getState()[headType];
-    const jobFiles: any[] = gcodeFiles.length > 0 ? gcodeFiles : [gcodeFile].filter(Boolean);
+    const jobFiles: JobGcodeFile[] = gcodeFiles.length > 0 ? gcodeFiles : [gcodeFile].filter(Boolean);
     const { keep, active } = planSingleFileWorkspaceLoad(getState().workspace.gcodeFiles || [], jobFiles, uploadName);
     if (!active) {
         return false;

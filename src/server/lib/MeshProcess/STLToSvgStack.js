@@ -172,7 +172,8 @@ class STLToSvgStack {
                 points: [
                     [svgFileState.startX + aabb.length.x + 2, svgFileState.startY + 2], [svgFileState.startX + boundingBoxX - 2, svgFileState.startY + 2],
                     [svgFileState.startX + boundingBoxX - 2, svgFileState.startY + boundingBoxY - 2],
-                    [svgFileState.startX + aabb.length.x + 2, svgFileState.startY + boundingBoxY - 2], [svgFileState.startX + aabb.length.x + 2, svgFileState.startY + 2]
+                    [svgFileState.startX + aabb.length.x + 2, svgFileState.startY + boundingBoxY - 2],
+                    [svgFileState.startX + aabb.length.x + 2, svgFileState.startY + 2]
                 ]
             });
 

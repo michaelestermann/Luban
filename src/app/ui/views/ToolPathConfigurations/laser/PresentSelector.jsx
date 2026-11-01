@@ -26,14 +26,14 @@ const PresentSelector = ({
     const toolDefinitionOptions = [];
     const toolDefinitionOptionsObj = {};
 
-    function onShowManager() {
+    const onShowManager = () => {
         setShowManager(true);
-    }
+    };
 
     function renderModalView() {
-        function onclose() {
+        const onclose = () => {
             setShowManager(false);
-        }
+        };
         let saveToolPathFunc;
         if (shouldSaveToolpath) {
             saveToolPathFunc = saveToolPath;
@@ -50,7 +50,7 @@ const PresentSelector = ({
         );
     }
 
-    async function onChangeActiveToolListValue(option) {
+    const onChangeActiveToolListValue = async (option) => {
         if (option.definitionId === 'new') {
             await onShowManager();
             setCurrentValueAsProfile();
@@ -59,7 +59,7 @@ const PresentSelector = ({
             const newDefinition = toolDefinitions.find(d => d.definitionId === definitionId);
             setCurrentToolDefinition(newDefinition);
         }
-    }
+    };
 
     toolDefinitions.forEach(tool => {
         const category = tool.category;

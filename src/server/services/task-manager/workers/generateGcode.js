@@ -87,7 +87,10 @@ const checkoutBoundingBoxIsNull = (boundingBox) => {
 /**
  * Write the toolpaths into one G-code file with its own header.
  */
-export const writeGcodeFile = (toolPaths, { size, toolHead, origin, jobOffsetMode, series, metadata, motorMode, headType, thumbnail, onProgress = () => {} }) => {
+export const writeGcodeFile = (
+    toolPaths,
+    { size, toolHead, origin, jobOffsetMode, series, metadata, motorMode, headType, thumbnail, onProgress = () => {} }
+) => {
     const suffix = headType === 'laser' ? '.nc' : '.cnc';
 
     let fileTotalLines = 0;

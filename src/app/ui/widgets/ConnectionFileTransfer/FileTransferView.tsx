@@ -146,6 +146,14 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
         }));
     }, [dispatch, selectFileName, gcodeFiles]);
 
+    const onExport = useCallback(() => {
+        if (!selectFileName) {
+            return;
+        }
+        const selectGcodeFile = _.find(gcodeFiles, { uploadName: selectFileName });
+        dispatch(projectActions.exportFile(selectFileName, selectGcodeFile.renderGcodeFileName));
+    }, [dispatch, selectFileName, gcodeFiles]);
+
     const actions = {
         onChangeFile: async (event) => {
             const file = event.target.files[0];
@@ -164,13 +172,7 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
                 fileInput.current.click();
             }
         },
-        onExport: () => {
-            if (!selectFileName) {
-                return;
-            }
-            const selectGcodeFile = _.find(gcodeFiles, { uploadName: selectFileName });
-            dispatch(projectActions.exportFile(selectFileName, selectGcodeFile.renderGcodeFileName));
-        },
+        onExport,
         onChangeShouldPreview: () => {
             setLoadToWorkspaceOnLoad(!loadToWorkspaceOnLoad);
         },
@@ -285,7 +287,7 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
         if (isRotate) {
             dispatch(workspaceActions.updateIsLaserPrintAutoMode(false));
         }
-    }, [isRotate, connectionType, toolHeadName]);
+    }, [isRotate, connectionType, toolHeadName, dispatch]);
 
 
     useEffect(() => {
@@ -299,6 +301,7 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
         return () => {
             UniApi.Event.off('appbar-menu:workspace.import', actions.importFile);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: set up the preview group and the import menu handler once
     }, []);
 
     useEffect(() => {
@@ -310,15 +313,16 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
         } else {
             setHasFile(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- reselect when the file list changes only; onSelectFile updates the selection itself
     }, [gcodeFiles]);
 
 
     useEffect(() => {
-        UniApi.Event.on('appbar-menu:workspace.export-gcode', actions.onExport);
+        UniApi.Event.on('appbar-menu:workspace.export-gcode', onExport);
         return () => {
-            UniApi.Event.off('appbar-menu:workspace.export-gcode', actions.onExport);
+            UniApi.Event.off('appbar-menu:workspace.export-gcode', onExport);
         };
-    }, [selectFileName]);
+    }, [onExport]);
 
     useEffect(() => {
         if (prevProps) {
@@ -338,6 +342,7 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
                 }
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: focus the camera when the preview stage switches to loaded
     }, [previewStage]);
 
     // Wi-Fi transfer file to Snapmaker

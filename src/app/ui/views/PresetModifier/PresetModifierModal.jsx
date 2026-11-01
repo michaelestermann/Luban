@@ -12,6 +12,7 @@ import Modal from '../../components/Modal';
 import definitionManager from '../../../flux/manager/DefinitionManager';
 import PresetContent from './PresetContent';
 import StackPresetSelector from './StackPresetSelector';
+import log from '../../../lib/log';
 
 /**
  * Preset modifier modal.
@@ -106,7 +107,7 @@ function PresetModifierModal(
 
             for (const key of definitionManager.qualityProfileArr) {
                 if (!selectedPresetDefaultValues[key]) {
-                    console.warn(`preset ${selectedPresetId}, missing default value for key ${key}.`);
+                    log.warn(`preset ${selectedPresetId}, missing default value for key ${key}.`);
                     continue;
                 }
                 if (selectedPresetDefaultValues[key].default_value !== selectedPresetModel.settings[key].default_value) {

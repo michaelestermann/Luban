@@ -6,8 +6,8 @@ import {
 let timer;
 
 export function appbarMenuMiddleware() {
-    return function (next) {
-        return function (action) {
+    return function handleNext(next) {
+        return function handleAction(action) {
             switch (action.type) {
                 case APPBAR_MENU_ACTION_UPDATE_STATE: // notify main process to update menu
                     if (action.state.menu) {

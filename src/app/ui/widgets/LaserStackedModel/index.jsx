@@ -117,20 +117,25 @@ const StackedModel = ({ setStackedModelModalDsiabled }) => {
             dispatch(editorActions.setShortcutStatus(HEAD_LASER, true));
             dispatch(menuActions.enableMenu());
         };
+        // Disable shortcuts and menu while the modal is open, and init the module-level canvas range
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
     }, []);
     useEffect(() => {
         setDisabled(isProcessing);
         setStackedModelModalDsiabled(isProcessing);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: mirror isProcessing to the parent when it changes
     }, [isProcessing]);
     useEffect(() => {
         if (size.x && size.y && size.z && thickness && !cuttingModel) {
             actions.generateModelStack();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- regenerate on size/thickness changes only; generating also changes cuttingModel
     }, [size, thickness]);
     useEffect(() => {
         if (stlInfo && stlInfo.filename && cuttingModel) {
             actions.loadModel();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: load the model when a new STL has been generated
     }, [stlInfo]);
     return (
         <div className={classNames(styles['model-cut-modal'])}>

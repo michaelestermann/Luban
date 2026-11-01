@@ -117,7 +117,7 @@ class Octo {
         callback(`Octo port is : ${this.port}`);
     }
 
-    private sendGcodeFile = async (socket: SocketServer, file): Promise<any> => {
+    private sendGcodeFile = async (socket: SocketServer, file): Promise<{ err?: unknown; text?: string }> => {
         return new Promise((resolve) => {
             const event = SocketEvent.UploadFile;
             socket.once(event, (data) => {

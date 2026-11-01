@@ -212,7 +212,8 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         }
     }
 
-    public componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    public UNSAFE_componentWillReceiveProps(nextProps) {
         let shouldUpdateCanvas = false;
         const size = nextProps.size;
         let materials = nextProps.materials;

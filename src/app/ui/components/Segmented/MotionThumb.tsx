@@ -77,6 +77,8 @@ function MotionThumb(props: MotionThumbInterface) {
                 onMotionEnd();
             }
         }
+        // prevValue is updated here; the helpers and callbacks are read at that moment.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- start the thumb motion only when value changes
     }, [value]);
 
     // =========================== Motion ===========================
@@ -130,7 +132,7 @@ function MotionThumb(props: MotionThumbInterface) {
                 };
 
                 if (process.env.NODE_ENV === 'test') {
-                    (motionProps as any)['data-test-style'] = JSON.stringify(mergedStyle);
+                    (motionProps as Record<string, unknown>)['data-test-style'] = JSON.stringify(mergedStyle);
                 }
 
                 return <div {...motionProps} />;

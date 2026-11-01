@@ -141,7 +141,7 @@ const ABPositionOverlay: React.FC<ABPositionOverlayProps> = (props) => {
     };
 
     const widgetActions = {
-        setTitle: function () { return null; }
+        setTitle() { return null; }
     };
     const numberformat = (value) => (typeof value === 'undefined' ? '--' : value);
 

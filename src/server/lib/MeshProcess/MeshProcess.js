@@ -10,6 +10,9 @@ import { pathWithRandomSuffix } from '../../../shared/lib/random-utils';
 import { round } from '../../../shared/lib/utils';
 import { Line } from '../../../shared/lib/math/Line';
 import { Slicer } from './Slicer';
+import logger from '../logger';
+
+const log = logger('lib:MeshProcess');
 
 /**
  * Calculate whether a point is inside the triangle
@@ -353,7 +356,7 @@ export class MeshProcess {
     }
 
     convertToImage() {
-        console.log('convertToImage');
+        log.debug('convertToImage');
         this.outputFilename = `${pathWithRandomSuffix(this.uploadName).replace('.stl', '')}.png`;
 
         this.mesh.resize({

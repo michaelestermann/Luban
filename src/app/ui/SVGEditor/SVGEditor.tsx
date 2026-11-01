@@ -7,6 +7,7 @@ import { SVG_EVENT_CONTEXTMENU } from './constants';
 import SVGCanvas from './SVGCanvas';
 import SVGLeftBar from './SVGLeftBar';
 import { Materials, Origin, Workpiece } from '../../constants/coordinate';
+import type ModelGroup from '../../models/ModelGroup';
 import { library } from './lib/ext-shapes';
 import Modal from '../components/Modal/tileModal';
 import SVGShapeLibrary from './SVGShapeLibrary';
@@ -34,6 +35,8 @@ type SVGEditorProps = {
     materials: Materials;
 
     SVGActions: object;
+    // getEnteredGroupId is only available on the laser/CNC model group
+    modelGroup?: ModelGroup & { getEnteredGroupId?: () => string | null };
     scale: number;
     minScale: number;
     maxScale: number;
@@ -249,6 +252,7 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
         props.editorActions,
         props.SVGCanvasMode,
         props.isActive,
+        props.modelGroup,
     ]);
 
     const changeCanvasMode = (_mode, ext) => {
@@ -267,6 +271,7 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
         // Init, Setup SVGContentGroup
         props.initContentGroup(canvas.current.svgContentGroup);
         setDrawGroup(canvas.current.svgContentGroup.drawGroup);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time canvas setup on mount; re-running would add another context menu listener
     }, []);
 
     const getCanvasScreenCTM = useCallback(() => {

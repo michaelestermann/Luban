@@ -67,12 +67,12 @@ const ToolpathItem = ({
     if (!toolPath) {
         return null;
     }
-    function handleOnDoubleClick(e) {
+    const handleOnDoubleClick = (e) => {
         e.stopPropagation();
         setEditingToolpath(toolPath);
         selectToolPathById(toolPath.id);
-    }
-    function handleOnClick(e) {
+    };
+    const handleOnClick = (e) => {
         e.stopPropagation();
         if (e.detail > 1) { // Check difference to double click
             return;
@@ -82,18 +82,18 @@ const ToolpathItem = ({
         } else {
             selectOneToolPathId(toolPath.id);
         }
-    }
-    function handleOnKeyDown(e) {
+    };
+    const handleOnKeyDown = (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             e.stopPropagation();
             selectOneToolPathId(toolPath.id);
         }
-    }
-    function handleOnClickVisible(e) {
+    };
+    const handleOnClickVisible = (e) => {
         e.stopPropagation();
         onClickVisible(toolPath.id, toolPath.visible, toolPath.check);
-    }
+    };
     const title = `${index + 1} · ${toolPath.name}`;
     const method = methodLabel(getOperationMethodId(toolPath, headType), headType);
     const toolName = toolPath.toolParams?.definitionName ? i18n._(toolPath.toolParams.definitionName) : null;
@@ -277,14 +277,14 @@ const ToolPathListBox = (props) => {
     // only set when rendered as a widget (the left panel renders the list directly)
     useEffect(() => {
         props.widgetActions?.setTitle(i18n._('key-CncLaser/ToolPathList/Button/-Toolpath List'));
-    }, []);
+    }, [props.widgetActions]);
     useEffect(() => {
         if (page === PAGE_EDITOR) {
             props.widgetActions?.setDisplay(false);
         } else if (page === PAGE_PROCESS) {
             props.widgetActions?.setDisplay(true);
         }
-    }, [page]);
+    }, [page, props.widgetActions]);
 
     const blocked = isOnABPosition || inProgress;
     // drag and drop sorting of the cards (same order as Prioritize / Deprioritize)

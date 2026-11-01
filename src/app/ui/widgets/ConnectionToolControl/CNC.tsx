@@ -1,6 +1,6 @@
 import { WorkflowStatus } from '@snapmaker/luban-platform';
 import _, { includes } from 'lodash';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { controller } from '../../../communication/socket-communication';
@@ -39,7 +39,7 @@ const CNC: React.FC = () => {
         [SnapmakerA350Machine.identifier, SnapmakerA250Machine.identifier, SnapmakerA150Machine.identifier],
         activeMachine.identifier
     ), [activeMachine]);
-    let timeRef = null;
+    const timeRef = useRef(null);
     const onClickToolHead = useCallback(() => {
         let speed = null;
         if (toolHead === STANDARD_CNC_TOOLHEAD_FOR_SM2 || (toolHead === LEVEL_TWO_CNC_TOOLHEAD_FOR_SM2 && isConnectedSnapmake2())) {
@@ -54,10 +54,10 @@ const CNC: React.FC = () => {
             toolHead,
         });
 
-        clearTimeout(timeRef);
+        clearTimeout(timeRef.current);
         setSwitchLoading(true);
-        timeRef = setTimeout(() => setSwitchLoading(false), 3000);
-    }, [isHeadOn, cncTargetSpindleSpeed, toolHead]);
+        timeRef.current = setTimeout(() => setSwitchLoading(false), 3000);
+    }, [isHeadOn, cncTargetSpindleSpeed, toolHead, isConnectedSnapmake2]);
 
     const updateToolHeadSpeed = useCallback((speed: number) => {
         // Technically, cncTargetSpindleSpeed should be obtained from the backend,
@@ -69,7 +69,7 @@ const CNC: React.FC = () => {
         controller.emitEvent(SocketEvent.SetSpindleSpeed, {
             speed,
         });
-    }, []);
+    }, [dispatch, isConnectedSnapmake2]);
 
     const isPrinting = useMemo(() => {
         return includes(

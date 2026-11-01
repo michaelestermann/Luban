@@ -482,6 +482,7 @@ const Printing: React.FC<PrintMainPageProps> = ({ location }) => {
         logPageView({
             pathname: '/printing'
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: init printing, open a downloaded model and log the page view once
     }, []);
 
     useEffect(() => {
@@ -501,6 +502,8 @@ const Printing: React.FC<PrintMainPageProps> = ({ location }) => {
 
         setMaterialInfo(material);
         renderMainToolBar(activeMachine, material, isConnected);
+        // renderMainToolBar is recreated every render and its result is not used here.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- materialInfo derives from the listed values
     }, [activeMachine, series, leftMaterial, rightMaterial, printingToolhead]);
 
     // Determine page mode
@@ -517,6 +520,7 @@ const Printing: React.FC<PrintMainPageProps> = ({ location }) => {
 
     useEffect(() => {
         renderMainToolBar(activeMachine, materialInfo, isConnected);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- renderMainToolBar is recreated every render and its result is not used here; kept as is
     }, [isConnected]);
 
     const onDropAccepted = useCallback(async (files) => {

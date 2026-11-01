@@ -702,23 +702,71 @@ class TransformControls extends Object3D {
                     maxObjectBoundingBox.y,
                     maxObjectBoundingBox.z
                 );
-                this.leftPlane.position.copy(new Vector3(minObjectBoundingBox.x, (maxObjectBoundingBox.y + minObjectBoundingBox.y) / 2, (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2));
-                this.leftPlane.scale.set(1, 1, 1).multiply(new Vector3(1, maxObjectBoundingBox.y - minObjectBoundingBox.y, maxObjectBoundingBox.z - minObjectBoundingBox.z));
+                this.leftPlane.position.copy(new Vector3(
+                    minObjectBoundingBox.x,
+                    (maxObjectBoundingBox.y + minObjectBoundingBox.y) / 2,
+                    (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2
+                ));
+                this.leftPlane.scale.set(1, 1, 1).multiply(new Vector3(
+                    1,
+                    maxObjectBoundingBox.y - minObjectBoundingBox.y,
+                    maxObjectBoundingBox.z - minObjectBoundingBox.z
+                ));
 
-                this.rightPlane.position.copy(new Vector3(maxObjectBoundingBox.x, (maxObjectBoundingBox.y + minObjectBoundingBox.y) / 2, (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2));
-                this.rightPlane.scale.set(1, 1, 1).multiply(new Vector3(1, maxObjectBoundingBox.y - minObjectBoundingBox.y, maxObjectBoundingBox.z - minObjectBoundingBox.z));
+                this.rightPlane.position.copy(new Vector3(
+                    maxObjectBoundingBox.x,
+                    (maxObjectBoundingBox.y + minObjectBoundingBox.y) / 2,
+                    (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2
+                ));
+                this.rightPlane.scale.set(1, 1, 1).multiply(new Vector3(
+                    1,
+                    maxObjectBoundingBox.y - minObjectBoundingBox.y,
+                    maxObjectBoundingBox.z - minObjectBoundingBox.z
+                ));
 
-                this.topPlane.position.copy(new Vector3((minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2, (minObjectBoundingBox.y + maxObjectBoundingBox.y) / 2, maxObjectBoundingBox.z));
-                this.topPlane.scale.set(1, 1, 1).multiply(new Vector3(maxObjectBoundingBox.x - minObjectBoundingBox.x, maxObjectBoundingBox.y - minObjectBoundingBox.y, 1));
+                this.topPlane.position.copy(new Vector3(
+                    (minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2,
+                    (minObjectBoundingBox.y + maxObjectBoundingBox.y) / 2,
+                    maxObjectBoundingBox.z
+                ));
+                this.topPlane.scale.set(1, 1, 1).multiply(new Vector3(
+                    maxObjectBoundingBox.x - minObjectBoundingBox.x,
+                    maxObjectBoundingBox.y - minObjectBoundingBox.y,
+                    1
+                ));
 
-                this.bottomPlane.position.copy(new Vector3((minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2, (minObjectBoundingBox.y + maxObjectBoundingBox.y) / 2, minObjectBoundingBox.z));
-                this.bottomPlane.scale.set(1, 1, 1).multiply(new Vector3(maxObjectBoundingBox.x - minObjectBoundingBox.x, maxObjectBoundingBox.y - minObjectBoundingBox.y, 1));
+                this.bottomPlane.position.copy(new Vector3(
+                    (minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2,
+                    (minObjectBoundingBox.y + maxObjectBoundingBox.y) / 2,
+                    minObjectBoundingBox.z
+                ));
+                this.bottomPlane.scale.set(1, 1, 1).multiply(new Vector3(
+                    maxObjectBoundingBox.x - minObjectBoundingBox.x,
+                    maxObjectBoundingBox.y - minObjectBoundingBox.y,
+                    1
+                ));
 
-                this.frontPlane.position.copy(new Vector3((minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2, minObjectBoundingBox.y, (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2));
-                this.frontPlane.scale.set(1, 1, 1).multiply(new Vector3(maxObjectBoundingBox.x - minObjectBoundingBox.x, 1, maxObjectBoundingBox.z - minObjectBoundingBox.z));
+                this.frontPlane.position.copy(new Vector3(
+                    (minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2,
+                    minObjectBoundingBox.y,
+                    (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2
+                ));
+                this.frontPlane.scale.set(1, 1, 1).multiply(new Vector3(
+                    maxObjectBoundingBox.x - minObjectBoundingBox.x,
+                    1,
+                    maxObjectBoundingBox.z - minObjectBoundingBox.z
+                ));
 
-                this.backPlane.position.copy(new Vector3((minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2, maxObjectBoundingBox.y, (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2));
-                this.backPlane.scale.set(1, 1, 1).multiply(new Vector3(maxObjectBoundingBox.x - minObjectBoundingBox.x, 1, maxObjectBoundingBox.z - minObjectBoundingBox.z));
+                this.backPlane.position.copy(new Vector3(
+                    (minObjectBoundingBox.x + maxObjectBoundingBox.x) / 2,
+                    maxObjectBoundingBox.y,
+                    (minObjectBoundingBox.z + maxObjectBoundingBox.z) / 2
+                ));
+                this.backPlane.scale.set(1, 1, 1).multiply(new Vector3(
+                    maxObjectBoundingBox.x - minObjectBoundingBox.x,
+                    1,
+                    maxObjectBoundingBox.z - minObjectBoundingBox.z
+                ));
                 this.selectedFrontLeftBottom.position.copy(FrontLeftBottomPosition);
                 this.selectedFrontRightBottom.position.copy(FrontRightBottomPosition);
 

@@ -24,9 +24,9 @@ import styles from './styles.styl';
 function useShowToggleBtn() {
     const [showToggleBtn, setShowToggleBtn] = useState(true);
 
-    function onToggleToggleBtn() {
+    const onToggleToggleBtn = () => {
         setShowToggleBtn(!showToggleBtn);
-    }
+    };
 
     return {
         renderToggleBtn: () => {
@@ -59,6 +59,8 @@ function GcodeLayout() {
             layerRangeDisplayed[0],
             layerRangeDisplayed[1] + temp
         ]);
+        // temp follows layerCount, which is updated together with the range.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- sync from the displayed range only
     }, [layerRangeDisplayed]);
 
 
@@ -140,12 +142,12 @@ function VisualizerPreviewControl() {
         setShowOriginalModel(show);
     }
 
-    function toggleRenderLineType(option) {
+    const toggleRenderLineType = (option) => {
         dispatch(printingActions.updateState({
             renderLineType: option.value
         }));
         dispatch(printingActions.setGcodeColorByRenderLineType());
-    }
+    };
 
     useEffect(() => {
         setShowPreviewPanel(displayedType === 'gcode');
@@ -157,11 +159,12 @@ function VisualizerPreviewControl() {
         if (displayedType === 'gcode') {
             dispatch(printingActions.setShowOriginalModel(showOriginalModel));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the displayed type only; showOriginalModel changes are handled by the next effect
     }, [displayedType]);
 
     useEffect(() => {
         dispatch(printingActions.setShowOriginalModel(showOriginalModel));
-    }, [showOriginalModel]);
+    }, [showOriginalModel, dispatch]);
 
     useEffect(() => {
         setAllShowTypes(gcodeTypeInitialVisibility);

@@ -33,7 +33,8 @@ class DegreeInput extends PureComponent {
         };
     }
 
-    componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    UNSAFE_componentWillReceiveProps(nextProps) {
         // new value passed in
         if (nextProps.value !== this.state.value) {
             this.setState({

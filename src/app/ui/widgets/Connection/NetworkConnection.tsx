@@ -602,6 +602,8 @@ const NetworkConnection: React.FC = () => {
         }
 
         return newModuleStatusList;
+        // The module status values are listed on purpose to refresh the list whenever any module status changes
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional extra dependencies
     }, [
         isConnected,
         moduleList,

@@ -78,7 +78,7 @@ const MaterialSettings = ({ toolMap, loading }) => {
                 )
             );
         }
-    }, [materialDefinitions, leftMaterialDefinitionId]);
+    }, [materialDefinitions, leftMaterialDefinitionId, dispatch]);
     useEffect(() => {
         const definition = materialDefinitions.find(
             (d) => d.definitionId === rightMaterialDefinitionId
@@ -91,7 +91,7 @@ const MaterialSettings = ({ toolMap, loading }) => {
                 )
             );
         }
-    }, [materialDefinitions, rightMaterialDefinitionId]);
+    }, [materialDefinitions, rightMaterialDefinitionId, dispatch]);
     useEffect(() => {
         let definitionByCategoryTemp = {};
         materialDefinitions.forEach((definition) => {
@@ -293,6 +293,8 @@ const MaterialSettings = ({ toolMap, loading }) => {
         if (defaultMaterialId !== rightMaterialDefinitionId) {
             setRightMaterialDefinitionId(defaultMaterialIdRight);
         }
+        // Reacting to the local selection would overwrite the user's pick.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- sync from the store defaults only
     }, [defaultMaterialId, defaultMaterialIdRight]);
 
     const renderAddMaterial = () => {

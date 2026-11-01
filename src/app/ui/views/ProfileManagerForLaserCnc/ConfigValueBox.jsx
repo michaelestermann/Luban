@@ -9,6 +9,7 @@ import Anchor from '../../components/Anchor';
 import styles from './styles.styl';
 import SvgIcon from '../../components/SvgIcon';
 import { HEAD_CNC } from '../../../constants';
+import log from '../../../lib/log';
 
 function ConfigValueBox({
     optionConfigGroup,
@@ -46,12 +47,13 @@ function ConfigValueBox({
             setActiveCateId(cateId);
         }
     }
+    const optionConfigGroupLength = Object.keys(optionConfigGroup).length;
     useEffect(() => {
         fieldsDom.current = fieldsDom.current.slice(
             0,
-            Object.keys(optionConfigGroup).length
+            optionConfigGroupLength
         );
-    }, [Object.keys(optionConfigGroup)]);
+    }, [optionConfigGroupLength]);
 
     useEffect(() => {
         setCurrentFields(fieldsDom.current);
@@ -153,7 +155,7 @@ function ConfigValueBox({
                                                     && group.fields.map((key) => {
                                                         const defaultSetting = selectedSettingDefaultValue && selectedSettingDefaultValue[key];
                                                         if (!defaultSetting) {
-                                                            console.warn('missing default parameter for', key);
+                                                            log.warn('missing default parameter for', key);
                                                         }
 
                                                         if (type === 'input') {

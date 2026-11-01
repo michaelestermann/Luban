@@ -60,6 +60,7 @@ const HomePage: React.FC<HomePageProps> = (props) => { // Todo, what's the props
                 pathname: '/'
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: show the guide and log the page view once per visit
     }, []);
 
     useEffect(() => {

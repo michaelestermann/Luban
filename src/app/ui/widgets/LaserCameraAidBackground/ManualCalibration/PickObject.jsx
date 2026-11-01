@@ -17,6 +17,7 @@ const PickObject = (props) => {
         return () => {
             props.resetPanel();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only (the ref never changes): load the image once and reset the panel on unmount
     }, [calibrationPreview]);
 
     const actions = {

@@ -106,6 +106,8 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                 minSize > 0.1 && setMinSize(0.1);
             }
         });
+        // With a mixed selection, depending on minSize would flip-flop forever.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- minSize only skips redundant updates
     }, [selectedModelArray]);
 
     // anchor offset from the selection centre (logical, Y up)

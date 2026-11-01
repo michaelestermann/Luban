@@ -9,6 +9,7 @@ import type ModelGroup from './ModelGroup';
 import BaseModel, { ModelInfo, ModelTransformation, TSize } from './ThreeBaseModel';
 import type ThreeModel from './ThreeModel';
 import { ModelEvents } from './events';
+import log from '../lib/log';
 
 type traverseCallback = (mesh: ThreeModel) => void;
 
@@ -294,7 +295,7 @@ export default class ThreeGroup extends BaseModel {
             convexGeometry = null;
             this.convexGeometry.mergeVertices();
         } else {
-            console.error('setConvexGeometry, met Geometry!!');
+            log.error('setConvexGeometry, met Geometry!!');
             this.convexGeometry = convexGeometry;
         }
     }

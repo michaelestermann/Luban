@@ -28,7 +28,7 @@ function routeToHeadType(history, headType, forceRefresh = false) {
     }
 }
 
-export default function (headType, onClose) {
+export default function useRecoveryModal(headType, onClose) {
     const dispatch = useDispatch();
     const history = useHistory();
     function onRecovery() {

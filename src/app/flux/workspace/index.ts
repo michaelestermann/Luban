@@ -44,6 +44,18 @@ import { initialState } from './state';
 import { GCodeFileMetadata } from './types';
 import { STANDARD_CNC_TOOLHEAD_FOR_SM2 } from '../../machines/snapmaker-2-toolheads';
 
+/**
+ * Module entry of `workspace.moduleList` (SM 2.0), see 'machine:module-list' and 'machine:module-info'.
+ */
+type ModuleListItem = {
+    key: number;
+    moduleId: number;
+    status?: boolean;
+    laserFocalLength?: number;
+    spindleSpeed?: number;
+    [field: string]: unknown;
+};
+
 
 export { WORKSPACE_STAGE } from './state';
 
@@ -544,7 +556,7 @@ export const actions = {
             // Only works for SM 2.0
             'machine:module-info': (options) => {
                 const moduleInfo = options.moduleInfo;
-                const moduleList: Array<any> = getState().workspace.moduleList;
+                const moduleList: Array<ModuleListItem> = getState().workspace.moduleList;
 
                 const newModuleList = moduleInfo.map(m => {
                     const targetModule = moduleList.find(v => v.key === m.key);
@@ -934,7 +946,7 @@ export const actions = {
     },
 
     executeCmd: (cmd: string) => {
-        console.log('execute cmd', cmd);
+        log.debug('execute cmd', cmd);
         controller.emitEvent(SocketEvent.ExecuteCmd, { cmd });
     },
 

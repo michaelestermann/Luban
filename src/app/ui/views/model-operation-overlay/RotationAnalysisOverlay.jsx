@@ -102,12 +102,15 @@ const Table = React.memo(({ tableColumns, onRowSelect, selectedRow, data, setDat
                 setColWidthArr(newWidthArr);
             }
         }
+        // colWidthArr is only compared to skip a redundant update.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- measure when the columns or rows change
     }, [tableColumns, data]);
     useEffect(() => {
         const index = data.indexOf(selectedRow);
         if (index > -1 && scrollToSelectedRow) {
             refTbody.current.children[index].scrollIntoView();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- scroll only when the selection changes, not when the rows are re-sorted
     }, [selectedRow]);
     return (
         <div>
@@ -229,6 +232,7 @@ function RotationAnalysisOverlay({ onClose }) {
             window.removeEventListener('keydown', actions.exitModal, true);
             initialTransformation = null;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: start the analysis once and remove the same keydown handler on unmount
     }, []);
 
     useEffect(() => {
@@ -248,6 +252,8 @@ function RotationAnalysisOverlay({ onClose }) {
             const defaultSelected = tableData[defaultIndex];
             actions.onRowSelect(defaultSelected);
         }
+        // actions is recreated every render and onRowSelect dispatches.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- react to a new analysis result only
     }, [rotationAnalysisTable]);
 
     useEffect(() => {
@@ -255,6 +261,8 @@ function RotationAnalysisOverlay({ onClose }) {
             const row = data.find(item => item.faceId === rotationAnalysisSelectedRowId);
             actions.onRowSelect(row, true);
         }
+        // actions is recreated every render and onRowSelect dispatches.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- react to a face picked in the scene only
     }, [rotationAnalysisSelectedRowId]);
     return (
         <div className={classNames(styles['rotation-analysis'])}>

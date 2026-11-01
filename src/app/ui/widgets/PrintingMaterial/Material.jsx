@@ -109,6 +109,7 @@ function Material({ widgetActions }) {
             dispatch(printingActions.updateDefaultMaterialId(plaMaterialId));
         }
         updateActiveDefinition(definition, PRINTING_MANAGER_TYPE_MATERIAL);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: apply the material when the selected id changes
     }, [defaultMaterialId]);
 
     const materialDefinitionOptions = getMaterialSelectOptions(
@@ -156,6 +157,7 @@ function Material({ widgetActions }) {
             });
         }
         setDiametersOptions(diametersOptions);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- extend the options (in place, as before) when a nozzle size changes only
     }, [leftDiameter, rightDiameter]);
 
     const [selectorCustomValue, setSelectorCustomValue] = useState('');

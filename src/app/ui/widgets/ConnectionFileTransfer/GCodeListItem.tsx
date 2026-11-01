@@ -98,12 +98,14 @@ const GcodePreviewItem: React.FC<GcodePreviewItemProps> = (props) => {
         if (selected) {
             setSelectFileIndex(index);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- record the index when the item becomes selected; the parent picks the next file by it
     }, [selected]);
 
     useEffect(() => {
         if (isEdit) {
             onRenameStart(gcodeFile.uploadName, gcodeFile, gcodeFile.renderGcodeFileName);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- trigger only: start renaming when edit mode is switched on
     }, [isEdit]);
 
     return (

@@ -50,6 +50,16 @@ import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
 import ToolPathGroup from '../../../toolpaths/ToolPathGroup';
 
+/**
+ * A or B point of the A-B position feature (see flux/laser).
+ */
+interface ABPosition {
+    x?: number;
+    y?: number;
+    z?: number;
+    b?: number;
+}
+
 interface VisualizerProps {
     // page: editor or preview
     page: Page;
@@ -80,7 +90,7 @@ interface VisualizerProps {
 
     isOnABPosition: boolean;
     updateIsOnABPosition: (isOnABPosition: boolean) => void;
-    updateABpositionBackground: (APosition: any, BPosition: any) => void;
+    updateABpositionBackground: (APosition: ABPosition, BPosition: ABPosition) => void;
 
     // new: decompose selected svg image
     decomposeSelectedSVG: () => void;
@@ -90,7 +100,6 @@ interface VisualizerProps {
 
 class Visualizer extends React.Component<VisualizerProps> {
     public static propTypes = {
-        ...withRouter.propTypes,
         series: PropTypes.string.isRequired,
         pathname: PropTypes.string,
         page: PropTypes.string.isRequired,
@@ -452,7 +461,8 @@ class Visualizer extends React.Component<VisualizerProps> {
         UniApi.Event.on('appbar-menu:laser.import', this.actions.importFile);
     }
 
-    public componentWillReceiveProps(nextProps) {
+    // eslint-disable-next-line camelcase -- React lifecycle name, renamed from the deprecated componentWillReceiveProps
+    public UNSAFE_componentWillReceiveProps(nextProps) {
         const { renderingTimestamp, isOverSize } = nextProps;
 
         // const { model } = nextProps;
