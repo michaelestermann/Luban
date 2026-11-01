@@ -7,6 +7,8 @@ import type SvgModel from '../../models/SvgModel';
 import type SVGActionsFactory from '../../models/SVGActionsFactory';
 import { baseActions } from './actions-base';
 import { recordSelectionChange, snapshotSelection } from './selection-history';
+import { originApplier, t, toastWithUndo } from './actions-origin';
+import { pushOriginRebind } from './ungroup-origin';
 
 type HeadType = 'laser' | 'cnc';
 
@@ -93,10 +95,18 @@ export const groupActions = {
         const op = new UngroupSvgOperation({ modelGroup, target });
         const compound = new CompoundOperation();
         compound.push(op);
+        // an origin on the group stays on its members, in the same undo step
+        const memberIDs = target.children.map((child) => child.modelID);
+        const rebound = pushOriginRebind(compound, {
+            origin: state.origin, groupID: selectedGroupID, memberIDs, apply: originApplier(dispatch, headType),
+        });
         compound.registerCallbackAll(() => {
             syncEditorAfterGroupChange(dispatch, headType, getState);
         });
         compound.redo();
+        if (rebound) {
+            toastWithUndo(dispatch, headType, t('key-CncLaser/Origin-Ungrouped · origin kept on the {{count}} members', { count: memberIDs.length }));
+        }
         dispatch(recordSelectionChange(headType, compound, selectionBefore));
         if (operationHistory && typeof operationHistory.push === 'function') {
             operationHistory.push(compound);

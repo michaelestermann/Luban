@@ -2772,5 +2772,6 @@
     "key-CncLaser/Origin-Group “{{name}}”": "Gruppe „{{name}}“",
     "key-CncLaser/Origin-Workpiece": "Werkstück",
     "key-CncLaser/Origin-Free": "Frei",
-    "key-CncLaser/Origin-All objects": "Alle Objekte"
+    "key-CncLaser/Origin-All objects": "Alle Objekte",
+    "key-CncLaser/Origin-Ungrouped · origin kept on the {{count}} members": "Gruppierung aufgehoben · Ursprung bleibt auf den {{count}} Elementen"
 }

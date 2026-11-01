@@ -53,6 +53,23 @@ export function bindEditorActions(actions: EditorActionsLike): void {
 
 export const t: Translate = (key, options) => i18n._(key, options);
 
+/** Sets an origin for an undo step (state, tool paths, process reset, render). */
+export function originApplier(dispatch, headType: HeadType): (origin: Origin) => void {
+    return (origin: Origin) => {
+        dispatch(editor.setOrigin(headType, origin));
+        dispatch(editor.resetProcessState(headType));
+        dispatch(baseActions.render(headType));
+    };
+}
+
+/** Toast with Undo (one step back). */
+export function toastWithUndo(dispatch, headType: HeadType, text: string, type: 'info' | 'warning' = 'info'): void {
+    toast(makeSceneToast(type, text, {
+        label: t('key-CncLaser/Origin-Undo'),
+        onClick: () => dispatch(editor.undo(headType)),
+    }));
+}
+
 /** Names of objects and groups for labels. */
 export function originNameContext(modelGroup: ModelGroup2D | null | undefined) {
     return {
@@ -75,11 +92,7 @@ export const originActions = {
         if (sameOrigin(before, next)) {
             return false;
         }
-        const apply = (origin: Origin) => {
-            dispatch(editor.setOrigin(headType, origin));
-            dispatch(editor.resetProcessState(headType));
-            dispatch(baseActions.render(headType));
-        };
+        const apply = originApplier(dispatch, headType);
         const operation = new OriginOperation2D({ before, after: next, apply });
         operation.redo();
         const operations = new CompoundOperation();
@@ -88,10 +101,7 @@ export const originActions = {
 
         const label = options.label || describeOrigin(next, originNameContext(state.modelGroup), t).label;
         const outside = false;
-        toast(makeSceneToast(outside ? 'warning' : 'info', originSetToast(label, options.removedOffset ?? null, outside, t), {
-            label: t('key-CncLaser/Origin-Undo'),
-            onClick: () => dispatch(editor.undo(headType)),
-        }));
+        toastWithUndo(dispatch, headType, originSetToast(label, options.removedOffset ?? null, outside, t), outside ? 'warning' : 'info');
         return true;
     },
 
