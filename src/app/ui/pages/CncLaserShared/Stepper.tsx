@@ -191,27 +191,44 @@ export const StepperActions: React.FC<StepperActionsProps> = ({ headType, blocke
         previous = 'design';
     }
 
+    // every label the group can show: invisible copies in the same grid cell give it the width of
+    // its widest state, so the steps left of it never move when the step changes
+    const sizerLabels = [
+        i18n._('key-CncLaser/Stepper-Next: Toolpaths'),
+        i18n._('key-CncLaser/Stepper-Generate G-code'),
+        i18n._('key-CncLaser/Stepper-Load all to workspace'),
+        i18n._('key-CncLaser/G-codeAction-Load G-code to Workspace'),
+    ];
+
     return (
-        // starter guide: the "Generate G-code and Preview" and "Export" steps point at this group
-        <div className={classNames(styles.actions, `${headType}-preview-export-intro-part`)}>
-            {previous && (
+        <div className={styles['actions-slot']}>
+            {sizerLabels.map(label => (
+                <div key={label} className={classNames(styles.actions, styles.sizer)} aria-hidden="true">
+                    <span className={styles.secondary}>{i18n._('key-CncLaser/Stepper-Back')}</span>
+                    <span className={styles.primary}>{label}</span>
+                </div>
+            ))}
+            {/* starter guide: the "Generate G-code and Preview" and "Export" steps point at this group */}
+            <div className={classNames(styles.actions, `${headType}-preview-export-intro-part`)}>
+                {previous && (
+                    <button
+                        type="button"
+                        className={styles.secondary}
+                        disabled={blocked}
+                        onClick={() => dispatch(goToStep(headType, previous))}
+                    >
+                        {i18n._('key-CncLaser/Stepper-Back')}
+                    </button>
+                )}
                 <button
                     type="button"
-                    className={styles.secondary}
-                    disabled={blocked}
-                    onClick={() => dispatch(goToStep(headType, previous))}
+                    className={styles.primary}
+                    disabled={primary.disabled}
+                    onClick={primary.onClick}
                 >
-                    {i18n._('key-CncLaser/Stepper-Back')}
+                    {primary.label}
                 </button>
-            )}
-            <button
-                type="button"
-                className={styles.primary}
-                disabled={primary.disabled}
-                onClick={primary.onClick}
-            >
-                {primary.label}
-            </button>
+            </div>
         </div>
     );
 };
