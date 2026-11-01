@@ -280,6 +280,7 @@
     "eslint-plugin-jsx-a11y": "6.4.1",
     "eslint-plugin-react": "7.26.1",
     "eslint-plugin-react-hooks": "4.2.0",
+    "exceljs": "4.4.0",
     "fancy-log": "1.3.3",
     "file-loader": "6.2.0",
     "find-imports": "1.1.0",
@@ -315,8 +316,7 @@
     "webpack-dev-server": "5.2.7",
     "webpack-manifest-plugin": "5.0.0",
     "word-wrap": "1.2.5",
-    "worker-loader": "3.0.8",
-    "xlsx": "0.18.5"
+    "worker-loader": "3.0.8"
   },
   "overrides": {
     "socketio-jwt": {
@@ -332,6 +332,9 @@
       "semver": "^7.7.2"
     },
     "sockjs": {
+      "uuid": "$uuid"
+    },
+    "exceljs": {
       "uuid": "$uuid"
     },
     "node-gyp": {
