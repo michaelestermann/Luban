@@ -27,6 +27,8 @@ class DocumentStore {
 
     private loading = new Map<string, number>();
 
+    private loadingDocs = new Set<string>();
+
     public park(id: string, p: ParkedDocument): void {
         this.parked.set(id, p);
     }
@@ -121,6 +123,19 @@ class DocumentStore {
 
     public loadingHeads(): string[] {
         return Array.from(this.loading.keys());
+    }
+
+    /** A document's content is being loaded from its auto-save or file: no autosave may overwrite it meanwhile. */
+    public setDocLoading(id: string, on: boolean): void {
+        if (on) {
+            this.loadingDocs.add(id);
+        } else {
+            this.loadingDocs.delete(id);
+        }
+    }
+
+    public isDocLoading(id: string | undefined): boolean {
+        return !!id && this.loadingDocs.has(id);
     }
 
     private readyEntry(id: string): ReadyEntry {

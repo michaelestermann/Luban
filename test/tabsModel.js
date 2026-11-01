@@ -37,6 +37,7 @@ import {
     droppedFilesToOpen,
     tabKeyAction,
     sessionPersistAllowed,
+    keepFailedDocument,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -708,5 +709,33 @@ test('sessionPersistAllowed: a start that could not read the auto-save list neve
     t.equal(sessionPersistAllowed('kept-open'), true, 'documents were open already: their session is stored');
     t.equal(sessionPersistAllowed('unreadable'), false, 'auto-save list unreadable: the stored session is kept as it is');
     t.equal(sessionPersistAllowed('failed'), false, 'restore threw: the stored session is kept as it is');
+    t.end();
+});
+
+test('keepFailedDocument: a failed load keeps the tab and its auto-save (final review I-4)', (t) => {
+    // "Untitled 2" was restored from its auto-save; loading it made it live, then the load threw
+    const original = doc('u2', 'cnc', { untitledIndex: 2, unSaved: true, loaded: false, source: 'env' });
+    let s = withDocs(doc('a', 'cnc'), original);
+    s = updateDocument(activateTab(s, 'u2', 5), 'u2', { loaded: true, source: 'live' });
+    s = activateTab(s, 'a', 6);
+    s = keepFailedDocument(s, 'u2', original);
+    t.deepEqual(s.order, ['a', 'u2'], 'the tab stays');
+    t.equal(s.documents.u2.loaded, false, 'not loaded: a click loads it again');
+    t.equal(s.documents.u2.loadFailed, true, 'marked as failed');
+    t.equal(s.documents.u2.source, 'env', 'loads from its auto-save again');
+    t.equal(s.documents.u2.unSaved, true, 'still unsaved');
+    t.equal(s.activeDocByHead.cnc, 'a', 'the other document is live');
+    // still active and live (no other tab could be shown): it is detached and Home is shown
+    let only = updateDocument(activateTab(withDocs(original), 'u2', 1), 'u2', { loaded: true, source: 'live' });
+    only = keepFailedDocument(only, 'u2', original);
+    t.equal(only.activeTabId, HOME_TAB, 'Home is shown');
+    t.equal(only.activeDocByHead.cnc, undefined, 'no live document of the mode');
+    // the session keeps it, and the next start finds its auto-save
+    const next = planRestore(parseSession(serializeSession(s)), ['u2'], () => false);
+    t.deepEqual(next.state.order, ['a', 'u2'].filter((id) => next.state.documents[id]), 'kept in the session');
+    t.ok(next.state.documents.u2, 'restored from its auto-save on the next start');
+    t.equal(next.state.documents.u2.loadFailed, undefined, 'the failure mark is not stored');
+    // a later successful load clears the mark
+    t.equal(updateDocument(s, 'u2', { loaded: true, source: 'live', loadFailed: false }).documents.u2.loadFailed, false);
     t.end();
 });

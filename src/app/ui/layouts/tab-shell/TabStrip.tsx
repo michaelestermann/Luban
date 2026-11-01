@@ -350,14 +350,22 @@ const TabStrip: React.FC<TabStripProps> = ({ onActivate, onClose, onAdd }) => {
                         return (
                             <div
                                 key={meta.id}
-                                className={classNames(styles.tab, styles['doc-tab'], { [styles.active]: active, [styles.dirty]: meta.unSaved })}
+                                className={classNames(styles.tab, styles['doc-tab'], {
+                                    [styles.active]: active,
+                                    [styles.dirty]: meta.unSaved,
+                                    [styles['load-failed']]: meta.loadFailed,
+                                })}
                                 role="tab"
                                 aria-selected={active}
                                 data-tab-id={meta.id}
                                 data-tab-kind="doc"
                                 data-head-type={meta.headType}
                                 data-unsaved={meta.unSaved ? 'true' : 'false'}
-                                title={meta.openedFile?.path || name}
+                                data-load-failed={meta.loadFailed ? 'true' : undefined}
+                                title={meta.loadFailed
+                                    ? `${meta.openedFile?.path || name}
+${i18n._('key-Tabs/Could not be opened. Click to try again.')}`
+                                    : meta.openedFile?.path || name}
                                 tabIndex={active ? 0 : -1}
                                 onClick={() => onActivate(meta.id)}
                                 onMouseDown={(e) => {

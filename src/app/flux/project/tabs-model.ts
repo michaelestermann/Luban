@@ -33,6 +33,8 @@ export interface DocumentMeta {
     machineToolHead: Record<string, string> | null;
     status: DocumentStatus;
     lastActiveAt: number;
+    /** the last load of this (unloaded) document failed; a click on the tab tries again. Not stored. */
+    loadFailed?: boolean;
 }
 
 export interface TabsState {
@@ -620,6 +622,35 @@ export function restoreEntryPoint(s: TabsState): { state: TabsState; activate: s
     return {
         state: { ...s, activeTabId: HOME_TAB, activeDocByHead: {} },
         activate: s.activeTabId,
+    };
+}
+
+/**
+ * A document whose load failed stays as a tab: not loaded (a click loads it again), with its source and
+ * unsaved flag from before the load (so its auto-save keeps being used and is never removed) and marked
+ * `loadFailed`. It is no longer the live document of its mode; when it is still the active tab, Home is shown.
+ */
+export function keepFailedDocument(s: TabsState, id: string, before: DocumentMeta): TabsState {
+    const meta = s.documents[id];
+    if (!meta) {
+        return s;
+    }
+    const activeDocByHead = { ...s.activeDocByHead };
+    if (activeDocByHead[meta.headType] === id) {
+        delete activeDocByHead[meta.headType];
+    }
+    let source: DocumentSource = before.source;
+    if (source === 'live') {
+        source = before.openedFile && !before.unSaved ? 'file' : 'env';
+    }
+    return {
+        ...s,
+        activeTabId: s.activeTabId === id ? HOME_TAB : s.activeTabId,
+        activeDocByHead,
+        documents: {
+            ...s.documents,
+            [id]: { ...meta, loaded: false, source, unSaved: !!before.unSaved, loadFailed: true },
+        },
     };
 }
 

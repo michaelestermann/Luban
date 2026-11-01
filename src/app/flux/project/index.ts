@@ -115,6 +115,10 @@ export const actions = {
     autoSaveEnvironment: (headType, isSaveEditor = false) => (dispatch, getState) => {
         // the document this autosave belongs to (taken before the mesh syncs are awaited)
         const docId = activeDocId(getState(), headType);
+        if (documentStore.isDocLoading(docId)) {
+            // a half-loaded document must not overwrite its auto-save (it may be the only copy)
+            return Promise.resolve();
+        }
         const promise = dispatch(actions.autoSaveDocument(headType, docId, isSaveEditor));
         docId && documentStore.trackAutosave(docId, promise);
         return promise;

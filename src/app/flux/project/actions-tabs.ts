@@ -47,6 +47,7 @@ import {
     documentDisplayName,
     findDocumentByPath,
     isEditorHeadType,
+    keepFailedDocument,
     needsMachineSwitch,
     nextTabAfterClose,
     RestoreOutcome,
@@ -592,7 +593,14 @@ const documentNeedsSave = (state, id: string): boolean => {
  * its auto-save folder `env/docs/<id>` is removed; the right neighbour (else the left one, else Home)
  * becomes active when it was the active tab, otherwise the active tab stays.
  */
-const closeDocumentNow = (docId: string, history: HistoryLike) => async (dispatch, getState): Promise<boolean> => {
+interface FailedLoad {
+    /** the meta before the load (source, unsaved flag) */
+    before: DocumentMeta;
+    /** the tab that was shown before the load */
+    returnTo: string;
+}
+
+const closeDocumentNow = (docId: string, history: HistoryLike, failedLoad: FailedLoad | null = null) => async (dispatch, getState): Promise<boolean> => {
     const tabsAtStart = getTabsState(getState());
     const meta = tabsAtStart.documents[docId];
     if (!meta) {
@@ -602,13 +610,19 @@ const closeDocumentNow = (docId: string, history: HistoryLike) => async (dispatc
     const name = documentDisplayName(meta, i18n._('key-Tabs/Untitled'));
     const isLive = () => getTabsState(getState()).activeDocByHead[head] === docId;
     // a running task of the live document would land in the next document of the mode
-    if (isLive() && busyHeads(getState()).includes(head)) {
+    if (!failedLoad && isLive() && busyHeads(getState()).includes(head)) {
         toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} is still busy. Close it when it is done.', { name })));
         return false;
     }
-    const returnTo = tabsAtStart.activeTabId === docId ? nextTabAfterClose(tabsAtStart, docId) : tabsAtStart.activeTabId;
+    let returnTo = tabsAtStart.activeTabId === docId ? nextTabAfterClose(tabsAtStart, docId) : tabsAtStart.activeTabId;
+    if (failedLoad) {
+        // back to where the user was (the neighbour could be another document that is not loaded)
+        returnTo = failedLoad.returnTo !== docId && (tabsAtStart.documents[failedLoad.returnTo] || failedLoad.returnTo === WORKSPACE_TAB)
+            ? failedLoad.returnTo
+            : HOME_TAB;
+    }
 
-    if (documentNeedsSave(getState(), docId)) {
+    if (!failedLoad && documentNeedsSave(getState(), docId)) {
         if (!isLive()) {
             // Save works on the live slice: show the document
             const shown = await dispatch(activateTab(docId, history));
@@ -651,13 +665,22 @@ const closeDocumentNow = (docId: string, history: HistoryLike) => async (dispatc
         dispatch(projectActions.closeProject(head));
         dispatch(sliceUpdate(head, closedDocumentReset(initialStateOf(head), head)));
     }
-    dispatch(setTabs((s) => removeDocument(s, docId)));
+    if (failedLoad) {
+        // a failed load: the tab stays (not loaded, marked) and its auto-save is kept, it may be the only copy
+        dispatch(setTabs((s) => keepFailedDocument(s, docId, failedLoad.before)));
+    } else {
+        dispatch(setTabs((s) => removeDocument(s, docId)));
+    }
     if (wasLive) {
         dispatch(projectActions.updateState(head, { ...EMPTY_PROJECT_META }));
     }
     // an autosave started by the close must not write the folder again after it is removed
     await documentStore.lastAutosave(docId);
     documentStore.delete(docId);
+    if (failedLoad) {
+        documentStore.resetEditorReady(docId);
+        return true;
+    }
     try {
         await api.env.removeEnv({ headType: head, docId });
     } catch (e) {
@@ -808,8 +831,10 @@ const loadDocument = (docId: string, history: HistoryLike) => async (dispatch, g
         return false;
     }
     const head = meta.headType;
+    const returnTo = tabs.activeTabId;
     let ok = false;
     documentStore.setLoading(head, true);
+    documentStore.setDocLoading(docId, true);
     try {
         const liveId = tabs.activeDocByHead[head];
         if (liveId && liveId !== docId && tabs.documents[liveId]) {
@@ -822,7 +847,7 @@ const loadDocument = (docId: string, history: HistoryLike) => async (dispatch, g
             documentStore.resetEditorReady(docId);
             dispatch(setTabs((s) => activateTabInModel(s, docId, Date.now())));
         }
-        dispatch(setTabs((s) => updateDocument(s, docId, { loaded: true, source: 'live' })));
+        dispatch(setTabs((s) => updateDocument(s, docId, { loaded: true, source: 'live', loadFailed: false })));
         if (!isOnPage(history, head)) {
             history.push(`/${head}`);
         }
@@ -835,13 +860,17 @@ const loadDocument = (docId: string, history: HistoryLike) => async (dispatch, g
         ok = false;
     } finally {
         documentStore.setLoading(head, false);
+        documentStore.setDocLoading(docId, false);
     }
     if (!ok) {
-        toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} could not be opened.', { name: displayName(meta) })));
-        // nothing of it was loaded: closing must not ask
+        // the tab stays (marked, not loaded) and its auto-save is never removed: a click tries again
+        toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} could not be opened. Its autosave is kept; click its tab to try again.', {
+            name: displayName(meta),
+            interpolation: { escapeValue: false },
+        })));
+        // what was loaded of it is not saved anywhere (the auto-save stays as it was)
         dispatch(projectActions.updateState(head, { unSaved: false }));
-        dispatch(setTabs((s) => updateDocument(s, docId, { unSaved: false })));
-        await dispatch(closeDocument(docId, history));
+        await dispatch(closeDocumentNow(docId, history, { before: meta, returnTo }));
         return false;
     }
     return true;
