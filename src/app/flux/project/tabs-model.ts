@@ -10,7 +10,7 @@ export const HOME_TAB = 'home';
 export const WORKSPACE_TAB = 'workspace';
 
 export type EditorHeadType = 'printing' | 'laser' | 'cnc';
-export type DocumentSource = 'live' | 'env' | 'file' | 'legacy-env';
+export type DocumentSource = 'live' | 'env' | 'file';
 export type DocumentStatus = 'design' | 'gcode-ready' | 'sliced';
 
 export const EDITOR_HEAD_TYPES: readonly EditorHeadType[] = ['printing', 'laser', 'cnc'];
@@ -566,25 +566,27 @@ export function planRestore(m: SessionManifest, envDocIds: string[], fileExists:
 }
 
 /**
- * First start without a session manifest: every head type with a 4.16 auto-save (`env/{head}`) becomes an
- * untitled, unsaved, not yet loaded document (`source 'legacy-env'`). The first one is the active tab.
+ * First start without a session manifest: every head type whose 4.16 auto-save (`env/{head}`) was copied
+ * into a document folder (`env/docs/<id>`, server side) becomes an untitled, unsaved, not yet loaded
+ * document that loads from that folder (`source 'env'`), so it comes back on every start until its tab is
+ * closed. The first one is the active tab.
  */
-export function planLegacyMigration(heads: readonly string[], newId: () => string): TabsState {
+export function planLegacyMigration(migrated: ReadonlyArray<{ headType: string; id: string }>): TabsState {
     let state = createTabsState();
     const seen = new Set<string>();
-    for (const head of heads) {
-        if (!isEditorHeadType(head) || seen.has(head)) {
+    for (const { headType: head, id } of migrated) {
+        if (!isEditorHeadType(head) || seen.has(head) || !id) {
             continue;
         }
         seen.add(head);
         state = addDocument(state, {
-            id: newId(),
+            id,
             headType: head,
             openedFile: null,
             untitledIndex: nextUntitledIndex(state, head),
             unSaved: true,
             loaded: false,
-            source: 'legacy-env',
+            source: 'env',
             isRotate: false,
             machineSeries: null,
             machineToolHead: null,

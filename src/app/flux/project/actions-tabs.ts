@@ -723,6 +723,7 @@ interface EnvApiBody {
     content?: string;
     docIds?: string[];
     removed?: string[];
+    migrated?: boolean;
 }
 
 const bodyOf = (response: unknown): EnvApiBody => (response as { body?: EnvApiBody } | undefined)?.body || {};
@@ -749,8 +750,8 @@ const envHasModels = (content: string | null): boolean => {
 
 /**
  * Loads the content of a document that is now live in its (empty) slice. `env`: its auto-save, restored
- * unsaved with its file name; `file`: the project file; `legacy-env`: the 4.16 auto-save of the mode,
- * which is emptied afterwards. False when nothing could be loaded.
+ * unsaved with its file name (also a migrated 4.16 auto-save); `file`: the project file. False when nothing
+ * could be loaded.
  */
 const loadDocumentContent = (meta: DocumentMeta) => async (dispatch): Promise<boolean> => {
     const head = meta.headType;
@@ -768,8 +769,7 @@ const loadDocumentContent = (meta: DocumentMeta) => async (dispatch): Promise<bo
     if (meta.source === 'file') {
         return loadFile();
     }
-    const legacy = meta.source === 'legacy-env';
-    const content = await readEnv(legacy ? { headType: head } : { headType: head, docId: meta.id });
+    const content = await readEnv({ headType: head, docId: meta.id });
     if (!content) {
         // no auto-save (anymore): the file, or an empty untitled project
         if (meta.openedFile) {
@@ -778,11 +778,7 @@ const loadDocumentContent = (meta: DocumentMeta) => async (dispatch): Promise<bo
         return !meta.unSaved;
     }
     const envObj = JSON.parse(content);
-    if (legacy) {
-        // the files of a 4.16 auto-save are in env/{head}; copy them to Tmp here (onRecovery would use the doc env)
-        await api.env.recoverEnv({ content });
-    }
-    await dispatch(projectActions.onRecovery(head, envObj, !legacy, false));
+    await dispatch(projectActions.onRecovery(head, envObj, true, false));
     if (!meta.machineSeries && knownMachineOf(envObj?.machineInfo?.series)) {
         // a migrated 4.16 auto-save: its tab is for the machine it was made with
         const machineInit = projectMachineInit(envObj.machineInfo);
@@ -795,9 +791,6 @@ const loadDocumentContent = (meta: DocumentMeta) => async (dispatch): Promise<bo
         initState: false,
         content,
     }));
-    if (legacy) {
-        await api.env.removeEnv({ headType: head });
-    }
     return true;
 };
 
@@ -1099,18 +1092,24 @@ const restoreSessionNow = (history: HistoryLike) => async (dispatch, getState): 
         plan = planRestore(manifest, envIds, fileExistsOnDisk);
         restored = plan.state;
     } else {
-        // first start with tabs: the 4.16 auto-saves of the modes become tabs
-        const heads: EditorHeadType[] = [];
+        // first start with tabs: the 4.16 auto-saves of the modes become tabs. Each one is copied into its
+        // own document folder first (server side; env/{head} is emptied only after the copy), so the tab
+        // loads from env/docs/<id> and comes back on every start until it is closed
+        const migrated: Array<{ headType: EditorHeadType; id: string }> = [];
         for (const head of EDITOR_HEAD_TYPES) {
             try {
                 if (envHasModels(await readEnv({ headType: head }))) {
-                    heads.push(head);
+                    const id = uuid();
+                    if (bodyOf(await api.env.migrateLegacyEnv({ headType: head, docId: id })).migrated) {
+                        migrated.push({ headType: head, id });
+                    }
                 }
             } catch (e) {
-                log.warn(`tabs: could not read the ${head} auto-save: ${e}`);
+                // env/{head} stays as it is (4.16 still finds it)
+                log.warn(`tabs: could not migrate the ${head} auto-save: ${e}`);
             }
         }
-        restored = planLegacyMigration(heads, uuid);
+        restored = planLegacyMigration(migrated);
     }
 
     // auto-saves that no restored tab uses are removed (only env/docs/<uuid> folders, on the server)

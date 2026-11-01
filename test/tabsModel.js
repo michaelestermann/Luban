@@ -464,11 +464,12 @@ test('planRestore keeps the tab order and the active tab', (t) => {
 });
 
 test('planRestore migrates legacy envs when there is no manifest (planLegacyMigration)', (t) => {
-    let n = 0;
-    const s = planLegacyMigration(['cnc', 'laser', 'cnc', 'bogus'], () => `id${++n}`);
+    const s = planLegacyMigration([
+        { headType: 'cnc', id: 'id1' }, { headType: 'laser', id: 'id2' }, { headType: 'cnc', id: 'id3' }, { headType: 'bogus', id: 'id4' },
+    ]);
     t.deepEqual(s.order, ['id1', 'id2'], 'one doc per head type, unknown heads ignored');
     t.equal(s.documents.id1.headType, 'cnc');
-    t.equal(s.documents.id1.source, 'legacy-env');
+    t.equal(s.documents.id1.source, 'env', 'the 4.16 auto-save was copied into env/docs/<id>');
     t.equal(s.documents.id1.unSaved, true);
     t.equal(s.documents.id1.loaded, false);
     t.equal(s.documents.id1.openedFile, null);
@@ -476,8 +477,23 @@ test('planRestore migrates legacy envs when there is no manifest (planLegacyMigr
     t.equal(s.documents.id2.untitledIndex, 1, 'numbered per head type');
     t.equal(s.activeTabId, 'id1', 'the first migrated doc is shown');
     t.equal(s.activeDocByHead.cnc, 'id1');
-    t.equal(planLegacyMigration([], () => 'x').order.length, 0);
-    t.equal(planLegacyMigration([], () => 'x').activeTabId, HOME_TAB);
+    t.equal(planLegacyMigration([]).order.length, 0);
+    t.equal(planLegacyMigration([]).activeTabId, HOME_TAB);
+    t.end();
+});
+
+test('a migrated 4.16 tab that was never opened survives the next starts (final review I-3)', (t) => {
+    const first = planLegacyMigration([{ headType: 'laser', id: 'l1' }, { headType: 'cnc', id: 'c1' }]);
+    // first 4.17 session: only the laser tab is opened; the session is stored with both tabs
+    const stored = serializeSession(updateDocument(first, 'l1', { loaded: true, source: 'live' }));
+    // env/docs/l1 and env/docs/c1 exist (the server copied them at migration)
+    const second = planRestore(parseSession(stored), ['l1', 'c1'], () => false);
+    t.deepEqual(second.state.order, ['l1', 'c1'], 'both tabs come back');
+    t.deepEqual(second.dropped, [], 'nothing is dropped');
+    t.equal(second.state.documents.c1.source, 'env', 'the CNC tab loads from its own auto-save');
+    t.equal(second.state.documents.c1.unSaved, true);
+    const third = planRestore(parseSession(serializeSession(second.state)), ['l1', 'c1'], () => false);
+    t.deepEqual(third.state.order, ['l1', 'c1'], 'and again on the start after that');
     t.end();
 });
 
