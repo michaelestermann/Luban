@@ -62,15 +62,21 @@
         flex: 0 0 auto;
     }
 
+    // the dot sits in the slot of the close button (no layout shift when one replaces the other)
     .unsaved-dot {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        margin-top: -4px;
         width: 8px;
         height: 8px;
         border-radius: 4px;
         background: #1f2430;
-        flex: 0 0 auto;
         display: block;
+        pointer-events: none;
     }
 
+    // always takes its 20px, shown on hover / for the active tab (hidden keeps the tab width steady)
     .close {
         width: 20px;
         height: 20px;
@@ -78,7 +84,8 @@
         border-radius: 5px;
         background: transparent;
         color: #5b6170;
-        display: none;
+        display: flex;
+        visibility: hidden;
         align-items: center;
         justify-content: center;
         cursor: pointer;
@@ -92,11 +99,11 @@
     }
 
     &:hover .close {
-        display: flex;
+        visibility: visible;
     }
 
     &:hover .unsaved-dot {
-        display: none;
+        visibility: hidden;
     }
 }
 
@@ -106,15 +113,15 @@
     box-shadow: 0 -1px 0 #e3e6ec inset;
 
     .close {
-        display: flex;
+        visibility: visible;
     }
 
     &.dirty .close {
-        display: none;
+        visibility: hidden;
     }
 
     &.dirty:hover .close {
-        display: flex;
+        visibility: visible;
     }
 }
 
