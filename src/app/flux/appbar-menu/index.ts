@@ -6,6 +6,7 @@ import { getCaseList } from '../../lib/caseLibrary';
 import i18n from '../../lib/i18n';
 import { CONNECTION_WIFI_STATUS_TEST } from '../../constants';
 import { controller } from '../../communication/socket-communication';
+import { isMenuUnchanged, menuSignature, PublishedMenu } from './menu-update';
 
 export const ACTION_UPDATE_STATE = 'appbar-menu/ACTION_UPDATE_STATE';
 const DEFAULT_IDS = [
@@ -42,6 +43,8 @@ function caseConfigToMenuItems(caseConfig) {
         return item;
     });
 }
+
+let lastPublishedMenu: PublishedMenu = null;
 
 function traverseMenu(menu, callback) {
     for (const item of menu) {
@@ -286,12 +289,19 @@ export const actions = {
             });
         }
 
+        // recomputed after every action burst: publish only a changed menu (clicks always)
+        const signature = menuSignature(menu);
+        if (menuIndex === -1 && isMenuUnchanged(lastPublishedMenu, menu, signature)) {
+            return;
+        }
+        const newMenu = [...menu];
         dispatch({
             type: ACTION_UPDATE_STATE,
             state: {
-                menu: [...menu]
+                menu: newMenu
             }
         });
+        lastPublishedMenu = { menu: newMenu, signature };
     },
     hideMenu: () => (dispatch, getState) => {
         const menu = getState().appbarMenu.menu;
