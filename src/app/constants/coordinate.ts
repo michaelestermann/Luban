@@ -141,6 +141,20 @@ export enum JobOffsetMode {
     LaserSpot = 'LaserSpot'
 }
 
+/**
+ * What Job Setup (and the new project dialog) applies to a laser / CNC project: editorActions.applyJobSetup.
+ */
+export type JobSetupSettings = {
+    workpiece: Workpiece;
+    origin: Origin;
+    // the canvas reference of the workpiece; null keeps the current one (an origin on objects)
+    coordinateMode: CoordinateMode | null;
+    // laser only (Ray): crosshair or laser spot
+    jobOffsetMode?: JobOffsetMode;
+    // CNC only (Artisan): position of the locking block
+    lockingBlockPosition?: string;
+};
+
 
 export type OriginTypeOption = {
     value: OriginType;

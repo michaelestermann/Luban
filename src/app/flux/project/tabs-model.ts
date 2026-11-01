@@ -35,6 +35,8 @@ export interface DocumentMeta {
     lastActiveAt: number;
     /** the last load of this (unloaded) document failed; a click on the tab tries again. Not stored. */
     loadFailed?: boolean;
+    /** name given in the new project dialog: the tab title until the project is saved, and Save proposes it */
+    projectName?: string;
 }
 
 export interface TabsState {
@@ -46,7 +48,7 @@ export interface TabsState {
 }
 
 export type SessionDocument = Pick<DocumentMeta,
-    'id' | 'headType' | 'openedFile' | 'untitledIndex' | 'unSaved' | 'isRotate' | 'machineSeries' | 'machineToolHead'>;
+    'id' | 'headType' | 'openedFile' | 'untitledIndex' | 'unSaved' | 'isRotate' | 'machineSeries' | 'machineToolHead' | 'projectName'>;
 
 export interface SessionManifest {
     version: 1;
@@ -327,6 +329,9 @@ export function documentDisplayName(meta: DocumentMeta, untitledLabel: string): 
     if (meta.openedFile?.name) {
         return meta.openedFile.name;
     }
+    if (meta.projectName) {
+        return meta.projectName;
+    }
     return `${untitledLabel} ${meta.untitledIndex}`;
 }
 
@@ -407,6 +412,7 @@ function toSessionDocument(meta: DocumentMeta): SessionDocument {
         isRotate: meta.isRotate,
         machineSeries: meta.machineSeries,
         machineToolHead: meta.machineToolHead,
+        ...(meta.projectName ? { projectName: meta.projectName } : {}),
     };
 }
 
@@ -443,6 +449,7 @@ function parseSessionDocument(raw: unknown): SessionDocument | null {
         isRotate: d.isRotate === true,
         machineSeries: typeof d.machineSeries === 'string' ? d.machineSeries : null,
         machineToolHead: toolHead && typeof toolHead === 'object' && !Array.isArray(toolHead) ? { ...(toolHead as Record<string, string>) } : null,
+        ...(typeof d.projectName === 'string' && d.projectName ? { projectName: d.projectName } : {}),
     };
 }
 

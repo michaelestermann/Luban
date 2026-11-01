@@ -39,7 +39,8 @@ import { actions as workspaceActions } from '../workspace';
 
 import ThreeModel from '../../models/ThreeModel';
 import { savedLayerOrder, withLayerPositionZ } from '../../models/z-order';
-import { createTabsState, isEditorHeadType, TabsState, updateDocument } from './tabs-model';
+import { createTabsState, documentDisplayName, isEditorHeadType, TabsState, updateDocument } from './tabs-model';
+import { projectFileName } from './new-project';
 import { routeAutosaveResult } from './document-swap';
 import { documentStore } from './document-store';
 /* eslint-disable-next-line import/no-cycle */
@@ -573,8 +574,11 @@ export const actions = {
             tmpFile = `/Tmp/${targetFile}`;
         }
 
+        // 4.17 tabs: an untitled project proposes the name given in the new project dialog
+        const docMeta = getState().project.tabs?.documents?.[activeDocId(getState(), headType)];
+        const suggestedName = !openedFile && docMeta?.projectName ? projectFileName(docMeta.projectName, headType) : null;
         // 4.17 tabs: resolves false when the dialog is cancelled (close / quit are aborted then)
-        const result = await saveAsPromise((callback) => UniApi.File.saveAs(newTargetFile, tmpFile, callback));
+        const result = await saveAsPromise((callback) => UniApi.File.saveAs(newTargetFile, tmpFile, callback, suggestedName));
         if (!result.saved) {
             return false;
         }
@@ -940,7 +944,10 @@ export const actions = {
         if (openedFile) {
             UniApi.Window.setOpenedFile(unSaved ? `${openedFile?.name} *` : openedFile?.name);
         } else {
-            UniApi.Window.setOpenedFile(unSaved ? 'New *' : 'New');
+            // 4.17 tabs: an untitled project shows its tab name (the project name of the new project dialog)
+            const meta = getState().project.tabs?.documents?.[activeDocId(getState(), headType)];
+            const name = meta ? documentDisplayName(meta, i18n._('key-Tabs/Untitled')) : 'New';
+            UniApi.Window.setOpenedFile(unSaved ? `${name} *` : name);
         }
     }
 };

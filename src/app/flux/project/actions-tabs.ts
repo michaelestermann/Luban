@@ -11,6 +11,7 @@ import api from '../../api';
 
 import { DISPLAYED_TYPE_MODEL, PAGE_EDITOR } from '../../constants';
 import { HEAD_CNC, HEAD_LASER } from '../../constants/machines';
+import { JobSetupSettings } from '../../constants/coordinate';
 import { checkIsGCodeFile, checkIsSnapmakerProjectFile } from '../../lib/check-name';
 import { logModuleVisit } from '../../lib/gaEvent';
 import i18n from '../../lib/i18n';
@@ -81,6 +82,7 @@ export interface RegisterInit {
     machineSeries?: string | null;
     machineToolHead?: Record<string, string> | null;
     unSaved?: boolean;
+    projectName?: string;
 }
 
 const getTabsState = (state): TabsState => state.project.tabs;
@@ -112,6 +114,7 @@ const registerDocument = (headType: EditorHeadType, init: RegisterInit = {}) => 
         machineToolHead: init.machineToolHead ?? (toolHead ? { ...toolHead } : null),
         status: 'design',
         lastActiveAt: Date.now(),
+        ...(init.projectName && !openedFile ? { projectName: init.projectName } : {}),
     };
     dispatch(setTabs((s) => addDocument(s, meta)));
     return id;
@@ -519,12 +522,22 @@ const openProjectInTab = (file: ProjectFileLike, history: HistoryLike) => async 
     return job;
 };
 
+export interface NewDocumentOptions {
+    isRotate?: boolean;
+    /** new project dialog: the tab title until the first save, which proposes it as file name */
+    projectName?: string;
+    /** new project dialog (laser / CNC): workpiece, origin … applied after the 4.16 defaults */
+    jobSetup?: JobSetupSettings;
+}
+
 /**
  * A new, empty project of `headType` in its own tab (always a new tab, also next to an empty untitled
- * one): the 4.16 new-file steps (tool head, workpiece, origin, fit) run on the new document.
+ * one): the 4.16 new-file steps (tool head, workpiece, origin, fit) run on the new document, then the
+ * settings of the new project dialog. The project stays clean (nothing to save until something is added).
  */
-const newDocument = (headType: EditorHeadType, opts: { isRotate?: boolean }, history: HistoryLike) => async (dispatch, getState): Promise<string | null> => {
+const newDocument = (headType: EditorHeadType, opts: NewDocumentOptions, history: HistoryLike) => async (dispatch, getState): Promise<string | null> => {
     const isRotate = !!opts?.isRotate;
+    const projectName = opts?.projectName || undefined;
     if (busyHeads(getState()).includes(headType) && getTabsState(getState()).activeDocByHead[headType]) {
         showBusyToast(getState, headType);
         return null;
@@ -532,7 +545,7 @@ const newDocument = (headType: EditorHeadType, opts: { isRotate?: boolean }, his
     await dispatch(leaveCurrentPage(history));
     documentStore.setLoading(headType, true);
     try {
-        const id = dispatch(startDocument(headType, { isRotate }, history, false)) as unknown as string;
+        const id = dispatch(startDocument(headType, { isRotate, projectName }, history, false)) as unknown as string;
         await dispatch(projectActions.clearEnvironmentsForNewProject(headType));
         if (isEditor2D(headType)) {
             dispatch(editorActions.updateState(headType, {
@@ -552,6 +565,9 @@ const newDocument = (headType: EditorHeadType, opts: { isRotate?: boolean }, his
             await editorReady(id);
             await dispatch(editorActions.initializeWorkpiece(headType as 'laser' | 'cnc', { isRotate }));
             await dispatch(editorActions.initializeOrigin(headType as 'laser' | 'cnc'));
+            if (opts?.jobSetup) {
+                await dispatch(editorActions.applyJobSetup(headType as 'laser' | 'cnc', opts.jobSetup));
+            }
             await dispatch(editorActions.scaleCanvasToFit(headType));
         }
         return id;

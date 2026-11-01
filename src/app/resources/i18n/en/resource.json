@@ -2748,5 +2748,15 @@
     "key-Tabs/All tabs": "All tabs",
     "key-Tabs/Search {{count}} open projects": "Search {{count}} open projects",
     "key-Tabs/No open project matches.": "No open project matches.",
-    "key-Tabs/This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.": "This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept."
+    "key-Tabs/This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.": "This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.",
+    "key-Tabs/Project name": "Project name",
+    "key-Tabs/Tab title; Save proposes {{file}}": "Tab title; Save proposes {{file}}",
+    "key-Tabs/Tab title and file name on the first save": "Tab title and file name on the first save",
+    "key-Tabs/Printer, nozzles and materials are set in the project, as for every 3D printing project.": "Printer, nozzles and materials are set in the project, as for every 3D printing project.",
+    "key-Tabs/Drop a project file here": "Drop a project file here",
+    "key-Tabs/{{ext}} files of this mode, or any other Luban project": "{{ext}} files of this mode, or any other Luban project",
+    "key-Tabs/Choose file…": "Choose file…",
+    "key-Tabs/This is not a Luban project file.": "This is not a Luban project file.",
+    "key-Tabs/Create project": "Create project",
+    "key-CncLaser/JobSetup-Thickness (Z)": "Thickness (Z)"
 }

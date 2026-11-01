@@ -9,6 +9,7 @@ import {
 import {
     CylinderWorkpieceSize,
     JobOffsetMode,
+    JobSetupSettings,
     Materials,
     Origin,
     OriginReference,
@@ -31,21 +32,45 @@ import { getSupportedRunBoundaryModeOptions } from '../../../../constants/machin
 
 
 export type JobSetupViewHandle = {
+    // applies the settings to the open project (Job Setup)
     onChange: () => void;
+    // the settings as entered (the new project dialog applies them to the new project)
+    getSettings: () => JobSetupSettings;
 }
 
-const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
+export type JobSetupInitial = {
+    materials: Materials;
+    origin: Origin;
+};
+
+export type JobSetupViewProps = {
+    // new project dialog: start from these values instead of the open project's (nothing locked)
+    initial?: JobSetupInitial;
+    // z-index of the drop-down lists (the view in a dialog above the antd layers)
+    popupZIndex?: number;
+    // without the left margin of the Job Setup modal
+    compact?: boolean;
+};
+
+const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ initial, popupZIndex, compact }, ref) => {
     const activeMachine = useSelector((state: RootState) => state.machine.activeMachine) as Machine;
+    const isDraft = !!initial;
+    const dropdownStyle = popupZIndex ? { zIndex: popupZIndex } : undefined;
 
     const toolHead = useSelector((state: RootState) => state.machine.toolHead);
     const toolIdentifer = toolHead.laserToolhead;
 
     // const machineToolOptions = getMachineToolOptions(activeMachine?.identifier, toolIdentifer);
 
-    const materials = useSelector((state: RootState) => state[HEAD_LASER]?.materials, shallowEqual) as Materials;
-    const origin = useSelector((state: RootState) => state[HEAD_LASER].origin, shallowEqual) as Origin;
+    const projectMaterials = useSelector((state: RootState) => state[HEAD_LASER]?.materials, shallowEqual) as Materials;
+    const projectOrigin = useSelector((state: RootState) => state[HEAD_LASER].origin, shallowEqual) as Origin;
+    const materials = initial ? initial.materials : projectMaterials;
+    const origin = initial ? initial.origin : projectOrigin;
 
-    const { inProgress, useBackground, useABPosition } = useSelector((state: RootState) => state[HEAD_LASER]);
+    const projectState = useSelector((state: RootState) => state[HEAD_LASER]);
+    const inProgress = isDraft ? false : projectState.inProgress;
+    const useBackground = isDraft ? false : projectState.useBackground;
+    const useABPosition = isDraft ? false : projectState.useABPosition;
 
     // workpiece
     const [workpiece, updateWorkpiece] = useSetState<Workpiece>({
@@ -138,6 +163,13 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
         updateSelectedOrigin(origin);
     }, [updateSelectedOrigin, origin]);
 
+    // an origin type the shape does not offer (a remembered one): the first one it offers
+    useEffect(() => {
+        if (originTypeOptions.length && !originTypeOptions.some(option => option.value === selectedOrigin.type)) {
+            updateSelectedOrigin({ type: originTypeOptions[0].value });
+        }
+    }, [originTypeOptions, selectedOrigin.type, updateSelectedOrigin]);
+
     const originReferenceOptions = useMemo(() => {
         return getOriginReferenceOptions(workpiece.shape);
     }, [workpiece.shape]);
@@ -210,51 +242,19 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
 
     const dispatch = useDispatch();
     useImperativeHandle(ref, () => {
+        const getSettings = (): JobSetupSettings => {
+            const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
+            return {
+                workpiece: { shape: workpiece.shape, size: { ...workpiece.size } },
+                origin: { ...selectedOrigin },
+                coordinateMode: targetOption?.mode || null,
+                jobOffsetMode: selectedJobOffsetMode,
+            };
+        };
         return {
+            getSettings,
             onChange: () => {
-                // Workpiece
-                dispatch(editorActions.setWorkpiece(
-                    HEAD_LASER,
-                    workpiece.shape,
-                    workpiece.size,
-                ));
-
-                dispatch(editorActions.updateWorkpieceObject(HEAD_LASER));
-
-                // Origin
-                dispatch(editorActions.setOrigin(
-                    HEAD_LASER,
-                    selectedOrigin,
-                ));
-
-                // Run Boudanry Mode
-                dispatch(editorActions.setJobOffsetMode(selectedJobOffsetMode));
-
-                const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
-
-                // FIXME
-                if (workpiece.shape === WorkpieceShape.Rectangle) {
-                    dispatch(editorActions.changeCoordinateMode(
-                        HEAD_LASER,
-                        targetOption.mode,
-                        {
-                            x: (workpiece.size as RectangleWorkpieceSize).x,
-                            y: (workpiece.size as RectangleWorkpieceSize).y,
-                            z: (workpiece.size as RectangleWorkpieceSize).z,
-                        }
-                    ));
-                } else if (workpiece.shape === WorkpieceShape.Cylinder) {
-                    dispatch(editorActions.changeCoordinateMode(
-                        HEAD_LASER,
-                        targetOption.mode,
-                        {
-                            x: (workpiece.size as CylinderWorkpieceSize).diameter * Math.PI,
-                            y: (workpiece.size as CylinderWorkpieceSize).length,
-                        }
-                    ));
-                }
-
-                dispatch(editorActions.scaleCanvasToFit(HEAD_LASER));
+                dispatch(editorActions.applyJobSetup(HEAD_LASER, getSettings()));
             },
         };
     }, [
@@ -270,7 +270,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
     ]);
 
     return (
-        <div className="margin-left-50">
+        <div className={compact ? '' : 'margin-left-50'}>
             <div>
                 <div className="margin-bottom-16 font-weight-bold">
                     {i18n._('key-Term/Workpiece Size')}
@@ -409,6 +409,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                         <Select
                                             backspaceRemoves={false}
                                             size="120px"
+                                            dropdownStyle={dropdownStyle}
                                             clearable={false}
                                             options={originTypeOptions}
                                             isGroup={false}
@@ -424,6 +425,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                     <Select
                                         backspaceRemoves={false}
                                         size="120px"
+                                        dropdownStyle={dropdownStyle}
                                         clearable={false}
                                         options={originReferenceOptions}
                                         isGroup={false}
@@ -456,6 +458,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                 <Select
                                     backspaceRemoves={false}
                                     size="120px"
+                                    dropdownStyle={dropdownStyle}
                                     clearable={false}
                                     options={[
                                         {
@@ -483,13 +486,17 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                             title={i18n._('Job Offset Mode')}
                             content={i18n._('Crosshair mode uses the crosshair for positioning, while Laser Spot mode uses the working laser for positioning.')}
                         >
-                            <div className="sm-flex justify-space-between height-32">
+                            <div
+                                className={compact ? 'sm-flex height-32' : 'sm-flex justify-space-between height-32'}
+                                style={compact && workpiece.shape === WorkpieceShape.Rectangle ? { marginLeft: 116 } : undefined}
+                            >
                                 <span className="width-144 margin-right-8 text-overflow-ellipsis">
 
                                     {i18n._('Job Offset Mode')}
                                 </span>
                                 <Select
                                     className="width-120"
+                                    dropdownStyle={dropdownStyle}
                                     options={runBoundaryModeOptions}
                                     value={selectedJobOffsetMode}
                                     onChange={onChangeJobOffsetMode}

@@ -13,6 +13,7 @@ import {
 } from '../../../../constants';
 import {
     CylinderWorkpieceSize,
+    JobSetupSettings,
     Materials,
     Origin,
     OriginReference,
@@ -31,6 +32,7 @@ import Select from '../../../components/Select';
 import OriginPointPicker from '../../../widgets/CncLaserShared/OriginPointPicker';
 import { localizedAnchorName } from '../../../widgets/CncLaserShared/FramePicker';
 import { boundModelIds, createObjectOrigin, isObjectReference, referenceAnchor } from '../../../../lib/object-origin';
+import { lockingBlockWorkpieceSize } from '../../../../flux/project/new-project';
 
 
 type OriginTypeOption = {
@@ -160,18 +162,41 @@ function localizedReference(reference: string): string {
 }
 
 export type JobSetupViewHandle = {
+    // applies the settings to the open project (Job Setup)
     onChange: () => void;
+    // the settings as entered (the new project dialog applies them to the new project)
+    getSettings: () => JobSetupSettings;
 }
 
-const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
+export type JobSetupInitial = {
+    materials: Materials;
+    origin: Origin;
+    lockingBlockPosition?: string;
+};
+
+export type JobSetupViewProps = {
+    // new project dialog: start from these values instead of the open project's (no objects, nothing locked)
+    initial?: JobSetupInitial;
+    // z-index of the drop-down lists (the view in a dialog above the antd layers)
+    popupZIndex?: number;
+};
+
+const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ initial, popupZIndex }, ref) => {
     const activeMachine = useSelector((state: RootState) => state.machine.activeMachine) as Machine;
+    const isDraft = !!initial;
 
-    const materials = useSelector((state: RootState) => state[HEAD_CNC]?.materials, shallowEqual) as Materials;
-    const origin = useSelector((state: RootState) => state[HEAD_CNC].origin, shallowEqual) as Origin;
+    const projectMaterials = useSelector((state: RootState) => state[HEAD_CNC]?.materials, shallowEqual) as Materials;
+    const projectOrigin = useSelector((state: RootState) => state[HEAD_CNC].origin, shallowEqual) as Origin;
+    const materials = initial ? initial.materials : projectMaterials;
+    const origin = initial ? initial.origin : projectOrigin;
 
-    const { inProgress, useBackground, coordinateMode } = useSelector((state: RootState) => state[HEAD_CNC]);
+    const projectState = useSelector((state: RootState) => state[HEAD_CNC]);
+    const inProgress = isDraft ? false : projectState.inProgress;
+    const useBackground = isDraft ? false : projectState.useBackground;
+    const coordinateMode = isDraft ? null : projectState.coordinateMode;
+    const dropdownStyle = popupZIndex ? { zIndex: popupZIndex } : undefined;
     // origin on an object: the selected objects, else the ones it is set to, else all objects of the operations
-    const modelGroup = useSelector((state: RootState) => state[HEAD_CNC].modelGroup);
+    const modelGroup = isDraft ? null : projectState.modelGroup;
     const selectedIds: string[] = (modelGroup?.getSelectedModelArray?.() || [])
         .filter(model => model.visible !== false)
         .map(model => model.modelID);
@@ -253,6 +278,26 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
         return getOriginTypeOptions(workpiece.shape);
     }, [workpiece.shape]);
 
+    // Maximum
+    const maxX = activeMachine?.metadata.size.x || 0;
+    const maxY = activeMachine?.metadata.size.y || 0;
+    const maxZ = activeMachine?.metadata.size.z || 0;
+
+    // Locking Block (Artisan Only, L Bracket)
+    const projectLockingBlockPosition = useSelector((state: RootState) => state[HEAD_CNC].lockingBlockPosition);
+    const [lockingBlockPosition, setLockingBlockPosition] = useState(
+        initial ? (initial.lockingBlockPosition || 'A') : projectLockingBlockPosition
+    );
+
+    // the work area follows the locking block (Artisan): set when the origin type or the block position is
+    // changed by hand (4.16 set it on every open too, which reset the workpiece size to 400 x 400)
+    const setRectangleArea = useCallback((area: { x: number; y: number }) => {
+        if (workpiece.shape !== WorkpieceShape.Rectangle) {
+            return;
+        }
+        setWorkpieceSize({ ...(workpiece.size as RectangleWorkpieceSize), x: area.x, y: area.y });
+    }, [setWorkpieceSize, workpiece.shape, workpiece.size]);
+
     const onChangeOriginType = useCallback((option: OriginTypeOption) => {
         if (option.value === OriginType.Workpiece && selectedOrigin.type === OriginType.Object && coordinateMode) {
             // back from an object origin: the workpiece reference the canvas has
@@ -260,7 +305,14 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
         } else {
             updateSelectedOrigin({ type: option.value });
         }
-    }, [updateSelectedOrigin, selectedOrigin.type, coordinateMode]);
+        if (option.value === OriginType.CNCLockingBlock && selectedOrigin.type !== OriginType.CNCLockingBlock) {
+            // Note: Artisan Only
+            setRectangleArea(lockingBlockWorkpieceSize(lockingBlockPosition));
+        } else if (option.value !== OriginType.CNCLockingBlock && selectedOrigin.type === OriginType.CNCLockingBlock) {
+            // off the locking block: the whole work area again
+            setRectangleArea({ x: maxX, y: maxY });
+        }
+    }, [updateSelectedOrigin, selectedOrigin.type, coordinateMode, setRectangleArea, lockingBlockPosition, maxX, maxY]);
 
     // origin reference
     const setOriginReference = useCallback((reference: OriginReference) => {
@@ -272,6 +324,13 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
     useEffect(() => {
         updateSelectedOrigin(origin);
     }, [updateSelectedOrigin, origin]);
+
+    // an origin type the shape does not offer (a remembered one): the first one it offers
+    useEffect(() => {
+        if (originTypeOptions.length && !originTypeOptions.some(option => option.value === selectedOrigin.type)) {
+            updateSelectedOrigin({ type: originTypeOptions[0].value });
+        }
+    }, [originTypeOptions, selectedOrigin.type, updateSelectedOrigin]);
 
     const originReferenceOptions = useMemo(() => {
         return getOriginReferenceOptions(workpiece.shape, selectedOrigin.type);
@@ -298,48 +357,17 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
         originReferenceOptions, selectedOrigin.type, selectedOrigin.reference,
     ]);
 
-    // Locking Block (Artisan Only, L Bracket)
-    const initialLockingBlockPosition = useSelector((state: RootState) => state[HEAD_CNC].lockingBlockPosition);
-    const [lockingBlockPosition, setLockingBlockPosition] = useState(initialLockingBlockPosition);
-
     const lockingBlockPositionOptions = useMemo(() => {
         return getLockingBlockPositionOptions();
     }, []);
 
-    useEffect(() => {
-        if (selectedOrigin.type !== OriginType.CNCLockingBlock) {
-            // setLockingBlockPosition('A');
-            const coordinateSize = {
-                x: 400,
-                y: 400,
-            };
-            setWorkpieceSize(coordinateSize);
-        } else {
-            // Note: Artisan Only
-            const workpieceSize = {
-                x: lockingBlockPosition === 'A' ? 375 : 290,
-                y: lockingBlockPosition === 'A' ? 395 : 305,
-            };
-            setWorkpieceSize(workpieceSize);
-        }
-    }, [selectedOrigin.type, setWorkpieceSize, lockingBlockPosition]);
-
     const onChangeLockingBlockPosition = useCallback((option) => {
         setLockingBlockPosition(option.value);
-
         // Note: Artisan Only
-        const workpieceSize = {
-            x: option.value === 'A' ? 375 : 290,
-            y: option.value === 'A' ? 395 : 305,
-        };
-        setWorkpieceSize(workpieceSize);
-    }, [setWorkpieceSize]);
+        setRectangleArea(lockingBlockWorkpieceSize(option.value));
+    }, [setRectangleArea]);
 
     const imgLockingBlockPosition = `/resources/images/cnc-laser/lock-block-${lockingBlockPosition?.toLowerCase()}.png`;
-
-    // Maximum
-    const maxX = activeMachine?.metadata.size.x || 0;
-    const maxY = activeMachine?.metadata.size.y || 0;
 
     // FIXME: Add image to origin options
     let imgOF3axisCoordinateMode = '';
@@ -354,53 +382,21 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
 
     const dispatch = useDispatch();
     useImperativeHandle(ref, () => {
+        const getSettings = (): JobSetupSettings => {
+            const isObjectOrigin = workpiece.shape === WorkpieceShape.Rectangle && selectedOrigin.type === OriginType.Object;
+            // the elements move with the reference (an object origin keeps the workpiece where it is on the canvas)
+            const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
+            return {
+                workpiece: { shape: workpiece.shape, size: { ...workpiece.size } },
+                origin: isObjectOrigin ? createObjectOrigin(selectedOrigin.reference, objectIds) : { ...selectedOrigin, referenceMetadata: {} },
+                coordinateMode: isObjectOrigin ? coordinateMode : (targetOption?.mode || null),
+                lockingBlockPosition,
+            };
+        };
         return {
+            getSettings,
             onChange: () => {
-                dispatch(editorActions.setWorkpiece(
-                    HEAD_CNC,
-                    workpiece.shape,
-                    workpiece.size,
-                ));
-
-                dispatch(editorActions.updateWorkpieceObject(HEAD_CNC));
-
-                const isObjectOrigin = workpiece.shape === WorkpieceShape.Rectangle && selectedOrigin.type === OriginType.Object;
-                dispatch(editorActions.setOrigin(
-                    HEAD_CNC,
-                    isObjectOrigin ? createObjectOrigin(selectedOrigin.reference, objectIds) : { ...selectedOrigin, referenceMetadata: {} },
-                ));
-
-                // TODO
-                // Call change coordinate mode to move elements accordingly
-                // (an object origin keeps the workpiece where it is on the canvas)
-                const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
-                if (workpiece.shape === WorkpieceShape.Rectangle) {
-                    dispatch(editorActions.changeCoordinateMode(
-                        HEAD_CNC,
-                        isObjectOrigin ? coordinateMode : targetOption.mode,
-                        {
-                            x: (workpiece.size as RectangleWorkpieceSize).x,
-                            y: (workpiece.size as RectangleWorkpieceSize).y,
-                            z: (workpiece.size as RectangleWorkpieceSize).z,
-                        }
-                    ));
-                } else if (workpiece.shape === WorkpieceShape.Cylinder) {
-                    dispatch(editorActions.changeCoordinateMode(
-                        HEAD_CNC,
-                        targetOption.mode,
-                        {
-                            x: (workpiece.size as CylinderWorkpieceSize).diameter * Math.PI,
-                            y: (workpiece.size as CylinderWorkpieceSize).length,
-                        }
-                    ));
-                }
-
-                // locking block position
-                dispatch(editorActions.updateState(HEAD_CNC, {
-                    lockingBlockPosition: lockingBlockPosition,
-                }));
-
-                dispatch(editorActions.scaleCanvasToFit(HEAD_CNC));
+                dispatch(editorActions.applyJobSetup(HEAD_CNC, getSettings()));
             },
         };
     }, [
@@ -465,6 +461,23 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                             x: (workpiece.size as RectangleWorkpieceSize).x,
                                             y: value,
                                             z: (workpiece.size as RectangleWorkpieceSize).z,
+                                        });
+                                    }}
+                                />
+                            </div>
+                            <div className="sm-flex height-32 position-re margin-top-16">
+                                <span className="width-144 margin-right-8">{i18n._('key-CncLaser/JobSetup-Thickness (Z)')}</span>
+                                <Input
+                                    suffix="mm"
+                                    disabled={inProgress || settingSizeDisabled}
+                                    value={toFixed((workpiece.size as RectangleWorkpieceSize).z ?? 0, 1)}
+                                    max={maxZ}
+                                    min={0.1}
+                                    onChange={(value) => {
+                                        setWorkpieceSize({
+                                            x: (workpiece.size as RectangleWorkpieceSize).x,
+                                            y: (workpiece.size as RectangleWorkpieceSize).y,
+                                            z: value,
                                         });
                                     }}
                                 />
@@ -560,6 +573,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                 <Select
                                     backspaceRemoves={false}
                                     size="120px"
+                                    dropdownStyle={dropdownStyle}
                                     clearable={false}
                                     options={originTypeOptions}
                                     isGroup={false}
@@ -576,6 +590,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                         <Select
                                             backspaceRemoves={false}
                                             size="120px"
+                                            dropdownStyle={dropdownStyle}
                                             clearable={false}
                                             options={originReferenceOptions}
                                             isGroup={false}
@@ -605,6 +620,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                                         <span className="width-144 margin-right-8 text-overflow-ellipsis">{i18n._('key-CncLaser/JobSetup-Locking block position')}</span>
                                         <Select
                                             size="120px"
+                                            dropdownStyle={dropdownStyle}
                                             clearable={false}
                                             options={lockingBlockPositionOptions}
                                             value={lockingBlockPosition}
@@ -636,6 +652,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, {}>((_, ref) => {
                             <Select
                                 backspaceRemoves={false}
                                 size="120px"
+                                dropdownStyle={dropdownStyle}
                                 clearable={false}
                                 options={[
                                     {

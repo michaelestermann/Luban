@@ -12,6 +12,7 @@ import {
     COORDINATE_MODE_BOTTOM_CENTER,
     DATA_PREFIX,
     DISPLAYED_TYPE_MODEL,
+    HEAD_CNC,
     HEAD_LASER,
     MAX_LASER_CNC_CANVAS_SCALE,
     MIN_LASER_CNC_CANVAS_SCALE,
@@ -24,6 +25,7 @@ import {
 import {
     CylinderWorkpieceSize,
     JobOffsetMode,
+    JobSetupSettings,
     Materials,
     ObjectReference,
     Origin,
@@ -2909,6 +2911,34 @@ export const actions = {
                     showSimulation: false,
                 })
             );
+        };
+    },
+
+    /**
+     * Job Setup (and the new project dialog): workpiece, work origin, canvas reference, job offset mode
+     * (laser) and locking block position (CNC), then the canvas is fitted.
+     */
+    applyJobSetup: (headType: HeadType, settings: JobSetupSettings) => {
+        return (dispatch) => {
+            const { workpiece, origin, coordinateMode } = settings;
+            dispatch(actions.setWorkpiece(headType, workpiece.shape, workpiece.size));
+            dispatch(actions.updateWorkpieceObject(headType));
+            dispatch(actions.setOrigin(headType, origin));
+            if (headType === HEAD_LASER && settings.jobOffsetMode !== undefined) {
+                dispatch(actions.setJobOffsetMode(settings.jobOffsetMode));
+            }
+            // the elements move with the reference (an origin on objects keeps the canvas reference)
+            if (workpiece.shape === WorkpieceShape.Rectangle) {
+                const size = workpiece.size as RectangleWorkpieceSize;
+                dispatch(actions.changeCoordinateMode(headType, coordinateMode, { x: size.x, y: size.y, z: size.z }));
+            } else {
+                const size = workpiece.size as CylinderWorkpieceSize;
+                dispatch(actions.changeCoordinateMode(headType, coordinateMode, { x: size.diameter * Math.PI, y: size.length }));
+            }
+            if (headType === HEAD_CNC && settings.lockingBlockPosition !== undefined) {
+                dispatch(actions.updateState(headType, { lockingBlockPosition: settings.lockingBlockPosition }));
+            }
+            dispatch(actions.scaleCanvasToFit(headType));
         };
     },
 

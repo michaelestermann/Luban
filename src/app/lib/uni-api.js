@@ -239,11 +239,12 @@ const File = {
      * @param tmpFile - temporary file path, e.g. "/Tmp/xxx.stl"
      */
     // export file for project file
-    saveAs(targetFile, tmpFile, callback = undefined) {
+    // suggestedName (4.17 tabs): the file name the dialog proposes (the project name of an untitled project)
+    saveAs(targetFile, tmpFile, callback = undefined, suggestedName = null) {
         if (isElectron()) {
             const fs = window.require('fs');
             const { app } = window.require('@electron/remote');
-            const defaultPath = path.resolve(app.getPath('downloads'), path.basename(tmpFile));
+            const defaultPath = path.resolve(app.getPath('downloads'), suggestedName || path.basename(tmpFile));
             tmpFile = app.getPath('userData') + tmpFile;
             // eslint-disable-next-line no-use-before-define
             Dialog.showSaveDialog({

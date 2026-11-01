@@ -2691,7 +2691,7 @@
     "key-Tabs/Blank project, 4-axis": "Leeres Projekt, 4-Achsen",
     "key-Tabs/Open file…": "Datei öffnen…",
     "key-Tabs/Open any file…": "Beliebige Datei öffnen…",
-    "key-Tabs/Case library": "Fall-Bibliothek",
+    "key-Tabs/Case library": "Beispielbibliothek",
     "key-Tabs/Recent": "Zuletzt verwendet",
     "key-Tabs/open": "offen",
     "key-Tabs/No recent projects of this mode": "Keine zuletzt verwendeten Projekte dieser Art",
@@ -2746,5 +2746,15 @@
     "key-Tabs/All tabs": "Alle Tabs",
     "key-Tabs/Search {{count}} open projects": "{{count}} offene Projekte durchsuchen",
     "key-Tabs/No open project matches.": "Kein offenes Projekt passt.",
-    "key-Tabs/This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.": "Dieses Projekt hat Änderungen, die nicht gespeichert sind. Wenn Sie ohne Speichern beenden, bleiben sie als automatische Sicherung erhalten und der Tab ist beim nächsten Start wieder da. Der Rückgängig-Verlauf bleibt nicht erhalten."
+    "key-Tabs/This project has changes that are not saved. If you quit without saving, they are kept as autosave and the tab comes back on next start. Undo history is not kept.": "Dieses Projekt hat Änderungen, die nicht gespeichert sind. Wenn Sie ohne Speichern beenden, bleiben sie als automatische Sicherung erhalten und der Tab ist beim nächsten Start wieder da. Der Rückgängig-Verlauf bleibt nicht erhalten.",
+    "key-Tabs/Project name": "Projektname",
+    "key-Tabs/Tab title; Save proposes {{file}}": "Titel des Tabs; Speichern schlägt {{file}} vor",
+    "key-Tabs/Tab title and file name on the first save": "Titel des Tabs und Dateiname beim ersten Speichern",
+    "key-Tabs/Printer, nozzles and materials are set in the project, as for every 3D printing project.": "Drucker, Düsen und Materialien werden im Projekt eingestellt, wie bei jedem 3D-Druck-Projekt.",
+    "key-Tabs/Drop a project file here": "Projektdatei hier ablegen",
+    "key-Tabs/{{ext}} files of this mode, or any other Luban project": "{{ext}}-Dateien dieses Modus oder ein anderes Luban-Projekt",
+    "key-Tabs/Choose file…": "Datei auswählen…",
+    "key-Tabs/This is not a Luban project file.": "Das ist keine Luban-Projektdatei.",
+    "key-Tabs/Create project": "Projekt erstellen",
+    "key-CncLaser/JobSetup-Thickness (Z)": "Dicke (Z)"
 }
