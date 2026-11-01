@@ -8,6 +8,7 @@
  *
  * Pure functions only: no redux, three.js or DOM imports.
  */
+import { STEP_STAGE } from '../../lib/manager/ProgressManager';
 import { DocumentStatus, EditorHeadType, HOME_TAB, TabsState, WORKSPACE_TAB } from './tabs-model';
 
 const EDITOR_2D_MODE_KEYS = [
@@ -237,12 +238,26 @@ export function routeAutosaveResult(activeId: string | undefined, docId: string 
     return activeId === docId ? 'slice' : 'parked';
 }
 
-// STEP_STAGE.PRINTING_PREVIEWING
-const PRINTING_PREVIEWING_STAGE = 30;
+// STEP_STAGE names of finished printing steps ("… succeeded / complete / failed", or no step at all)
+const FINISHED_STAGE_NAME = /^EMPTY$|_(SUCCEED|SUCCESS|SUCCESSED|COMPLETE|FAILED)$/;
+const FINISHED_PRINTING_STAGES: ReadonlySet<number> = new Set(
+    Object.entries(STEP_STAGE)
+        .filter(([name]) => FINISHED_STAGE_NAME.test(name))
+        .map(([, value]) => value),
+);
 
-// STEP_STAGE values (lib/manager/ProgressManager) of running printing tasks: loading models, slicing,
-// G-code preview, rotate analysis, support, arrange, auto rotate, scale to fit, simplify, repair, split, mesh coloring
-export const PRINTING_BUSY_STAGES: readonly number[] = [23, 26, 27, 30, 33, 37, 38, 42, 43, 45, 48, 51, 10150, 10160];
+/**
+ * Whether a printing operation (load, slice, preview, arrange, auto rotate, place on face, scale to fit,
+ * support, simplify, repair, split, mesh colouring, …) is running: its step is not a finished one and its
+ * progress has not reached 1. Several 4.16 operations end by writing their running step with progress 1
+ * and never set a finished step, so the progress decides.
+ */
+export function isPrintingOperationRunning(stage: number | undefined, progress: number | undefined): boolean {
+    if (typeof stage !== 'number' || FINISHED_PRINTING_STAGES.has(stage)) {
+        return false;
+    }
+    return (progress ?? 0) < 1;
+}
 
 interface BusySliceLike {
     stage?: number;
@@ -274,12 +289,8 @@ export function isHeadBusy(
     }
     if (headType === 'printing') {
         // the printing progress manager is started by every project load (also laser/cnc) and not always
-        // finished, so the step stage tells whether a printing task runs. After slicing the stage stays
-        // "previewing" (30) with progress 1 when the preview is done (4.16 behaviour): that is idle.
-        if (slice.stage === PRINTING_PREVIEWING_STAGE && (slice.progress ?? 0) >= 1) {
-            return false;
-        }
-        return PRINTING_BUSY_STAGES.includes(slice.stage as number);
+        // finished, so the step and its progress tell whether a printing operation runs
+        return isPrintingOperationRunning(slice.stage, slice.progress);
     }
     if (typeof slice.progressStatesManager?.inProgress === 'function' && slice.progressStatesManager.inProgress()) {
         return true;

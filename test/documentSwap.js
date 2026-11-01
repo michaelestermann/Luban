@@ -285,6 +285,25 @@ test('isHeadBusy: progress, G-code generation, running toolpath, project opening
     t.end();
 });
 
+test('isHeadBusy: a printing operation that finished at progress 1 is idle, whatever its stage (final review I-1)', (t) => {
+    const printing = (stage, progress) => ({
+        printing: { stage, progress, inProgress: false, progressStatesManager: { inProgress: () => true } },
+        project: { general: {} },
+    });
+    // arrange, auto rotate, rotate analyze (place on face), scale to fit, mesh colouring, simplify, repair, split, support
+    for (const stage of [42, 43, 33, 45, 10160, 48, 51, 10150, 37, 38, 23, 26, 27]) {
+        t.equal(isHeadBusy(printing(stage, 1), 'printing'), false, `stage ${stage} at progress 1 is idle`);
+        t.equal(isHeadBusy(printing(stage, 0.4), 'printing'), true, `stage ${stage} at progress 0.4 is busy`);
+    }
+    t.equal(isHeadBusy(printing(42, 0), 'printing'), true, 'an operation that just started (progress 0) is busy');
+    // finished stages are idle whatever progress they were left with
+    for (const stage of [0, 24, 25, 28, 29, 31, 32, 39, 40, 41, 44, 46, 47, 49, 50]) {
+        t.equal(isHeadBusy(printing(stage, 0.5), 'printing'), false, `finished stage ${stage} is idle`);
+    }
+    t.equal(isHeadBusy(printing(undefined, undefined), 'printing'), false, 'no stage yet');
+    t.end();
+});
+
 test('closedDocumentReset: the slice of a closed last document forgets its G-code', (t) => {
     const initial = {
         modelGroup: { name: 'initial mg' },
