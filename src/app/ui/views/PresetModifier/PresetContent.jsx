@@ -133,7 +133,7 @@ const PresetContent = (
             const level = getQualityPresetLevelForRightExtruder();
             setOptionConfigGroup(level);
         }
-    }, [selectedStackId, selectedPresetId]);
+    }, [selectedStackId, selectedPresetId, qualityPresetModels, printingProfileLevel]);
 
     // Filters
     const [selectParamsType, setSelectParamsType] = useState(printingStore.get('preset-filter:grade', 'basic'));
@@ -163,7 +163,7 @@ const PresetContent = (
         }
 
         dispatch(machineActions.updatePrintingCustomConfigsWithCategory(newCustomConfig[category], category));
-    }, [customConfigs]);
+    }, [customConfigs, dispatch]);
 
 
     const onChangePresetValue = (key, value) => {

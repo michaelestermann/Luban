@@ -267,7 +267,7 @@ const StarterGuide: React.FC<StarterGuideProps> = (props) => {
         }
     }, [
         dispatch, history,
-        machineIdentifer, isRotate,
+        machineIdentifer, toolHeadIdentifier, isRotate,
     ]);
 
     const onExit = useCallback(() => {
