@@ -65,38 +65,18 @@
         cursor: not-allowed;
         pointer-events: none;
     }
-}
 
-.text-button {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    height: 36px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 8px;
-    background: #e8eefc;
-    color: #1d4ed8;
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-        background: #dbe4fb;
+    // the dialog or menu of the button is open (actions are not toggles: no other highlight)
+    &.open {
+        background: #e8eefc;
+        color: #1d4ed8;
     }
 
-    &:disabled {
-        background: transparent;
-        color: #9aa1b0;
-        cursor: not-allowed;
-    }
-
-    // the bar is too narrow for the labels: icon only, the label is in the tooltip
-    &.icon-only {
-        width: 36px;
-        padding: 0;
-        justify-content: center;
+    // Combine ▾: icon and caret
+    &.with-caret {
+        width: auto;
+        gap: 2px;
+        padding: 0 6px 0 8px;
     }
 }
 

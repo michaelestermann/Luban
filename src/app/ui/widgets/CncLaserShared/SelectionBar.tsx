@@ -41,7 +41,7 @@ const BAR_MARGIN = 104;
 // the object name is cut off before it gets wider
 const LABEL_MAX_WIDTH = 180;
 
-// icons of the labelled actions
+// icons of the shape actions (label and key in the tooltip)
 const ACTION_ICONS = {
     decompose: (
         <svg {...stroke}>
@@ -53,13 +53,20 @@ const ACTION_ICONS = {
     ),
     'round-corners': <svg {...stroke}><path d="M4 20V10a6 6 0 016-6h10" /><path d="M4 4h2M4 4v2" strokeDasharray="1 2" /></svg>,
     offset: <svg {...stroke}><rect x="7" y="7" width="10" height="10" rx="1" /><rect x="3" y="3" width="18" height="18" rx="4" strokeDasharray="3 2" /></svg>,
-    array: <svg {...stroke}><rect x="2" y="8" width="6" height="8" rx="1" /><rect x="9" y="8" width="6" height="8" rx="1" /><rect x="16" y="8" width="6" height="8" rx="1" /></svg>,
+    array: (
+        <svg {...stroke}>
+            <rect x="2" y="9" width="5.5" height="5.5" rx="1" />
+            <rect x="9.25" y="9" width="5.5" height="5.5" rx="1" />
+            <rect x="16.5" y="9" width="5.5" height="5.5" rx="1" />
+            <path d="M4.75 18.5v1.5h14.5v-1.5" />
+        </svg>
+    ),
 };
 
 const withKeyHint = (action: ShapeAction) => (action.keyHint ? `${action.label()} (${action.keyHint})` : action.label());
 
 /** Width of the bar as rendered: the children as they are, the name at its full width. */
-function labelledWidth(bar: HTMLElement): number {
+function naturalWidth(bar: HTMLElement): number {
     const children = Array.from(bar.children) as HTMLElement[];
     const width = children.reduce((sum, child) => sum + (child.dataset.barLabel
         ? Math.min(child.scrollWidth, LABEL_MAX_WIDTH)
@@ -99,7 +106,7 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const [alignOpen, setAlignOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState<string | null>(null);
     const store = useStore();
-    // labelled buttons, or the overflow "⋯" when they do not fit on the canvas
+    // icon buttons, or the overflow "⋯" when they do not fit on the canvas
     const barRef = useRef<HTMLDivElement>(null);
     const [fit, setFit] = useState<BarFit | null>(null);
     const [, setRoom] = useState(0);
@@ -111,7 +118,7 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
         if (!bar || !bar.parentElement) {
             return;
         }
-        const next = nextBarFit(fit, fitKey.current, labelledWidth(bar), bar.parentElement.clientWidth - BAR_MARGIN);
+        const next = nextBarFit(fit, fitKey.current, naturalWidth(bar), bar.parentElement.clientWidth - BAR_MARGIN);
         if (next !== fit) {
             setFit(next);
         }
@@ -171,8 +178,8 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const combineActions = fittingActions(COMBINE_ACTIONS, store.getState(), headType);
     // rectangles (or editable paths with sharp corners) in the selection
     const canRoundCorners = ROUND_CORNERS_ACTION.fits(store.getState(), headType);
-    // labelled actions: in the bar, in the overflow "⋯" only when the bar does not fit
-    const labelledActions: ShapeAction[] = [
+    // one-shot shape actions: icon buttons in the bar, in the overflow "⋯" only when the bar does not fit
+    const shapeActions: ShapeAction[] = [
         ...(canDecomposeSelected ? [{
             id: 'decompose',
             label: () => i18n._('key-CncLaser/MainToolBar-Decompose'),
@@ -186,11 +193,10 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const canSetOrigin = canSetOriginOnSelection(store.getState(), headType);
     fitKey.current = [
         ...selectedModels.map(model => model.modelID), label, openPath.open, canGroup, canUngroup, canAlign, canSetOrigin,
-        ...combineActions.map(action => action.id), ...labelledActions.map(action => action.id),
+        ...combineActions.map(action => action.id), ...shapeActions.map(action => action.id),
     ].join('|');
-    // 0: labelled buttons, 1: icons only, 2: overflow "⋯" (the bar wraps if even that does not fit)
-    const level = fit && fit.key === fitKey.current ? fit.level : 0;
-    const overflow = level === 2;
+    // 0: icon buttons, 1: overflow "⋯" (the bar wraps if even that does not fit)
+    const overflow = !!fit && fit.key === fitKey.current && fit.level === 1;
 
     const onGroup = () => {
         if (canUngroup) {
@@ -200,15 +206,23 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
         }
     };
 
-    const renderIconButton = (title: string, disabled: boolean, onClick: () => void, icon: React.ReactNode) => (
-        <Tooltip title={title}>
+    // a plain icon button (actions are not toggles: highlighted only while their dialog / menu is open)
+    const renderIconButton = (
+        title: string,
+        disabled: boolean,
+        onClick: (event: React.MouseEvent<HTMLButtonElement>) => void,
+        icon: React.ReactNode,
+        options: { tooltip?: string; open?: boolean; data?: Record<string, string> } = {},
+    ) => (
+        <Tooltip title={options.open ? '' : (options.tooltip ?? title)}>
             <span className={styles['tip-wrapper']}>
                 <button
                     type="button"
-                    className={styles['icon-button']}
+                    className={classNames(styles['icon-button'], { [styles.open]: options.open })}
                     aria-label={title}
                     disabled={disabled}
                     onClick={onClick}
+                    {...options.data}
                 >
                     {icon}
                 </button>
@@ -280,33 +294,22 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
             {openPath.open && (
                 <>
                     <span className={styles['open-label']}>{i18n._('key-CncLaser/SelectionBar-Open path')}</span>
-                    <Tooltip title={i18n._('key-CncLaser/SelectionBar-Close every open end with a straight line')}>
-                        <button
-                            type="button"
-                            className={styles['mode-button']}
-                            onClick={() => dispatch(editorActions.closeSelectedPath(headType, 'close'))}
-                        >
-                            <svg {...stroke}><path d="M5 18V7l7-3 7 3v11" /><path d="M5 18h14" strokeDasharray="2 2" /></svg>
-                            {i18n._('key-CncLaser/SelectionBar-Close path')}
-                        </button>
-                    </Tooltip>
-                    <Tooltip
-                        title={openPath.canJoin
+                    {renderIconButton(i18n._('key-CncLaser/SelectionBar-Close path'), false, () => {
+                        dispatch(editorActions.closeSelectedPath(headType, 'close'));
+                    }, (
+                        <svg {...stroke}><path d="M5 18V7l7-3 7 3v11" /><path d="M5 18h14" strokeDasharray="2 2" /></svg>
+                    ), {
+                        tooltip: `${i18n._('key-CncLaser/SelectionBar-Close path')}: ${i18n._('key-CncLaser/SelectionBar-Close every open end with a straight line')}`,
+                    })}
+                    {renderIconButton(i18n._('key-CncLaser/SelectionBar-Join ends'), !openPath.canJoin, () => {
+                        dispatch(editorActions.closeSelectedPath(headType, 'join'));
+                    }, (
+                        <svg {...stroke}><path d="M4 16c2-8 6-10 8-4s6 4 8-4" /><circle cx="12" cy="12" r="1.5" /></svg>
+                    ), {
+                        tooltip: `${i18n._('key-CncLaser/SelectionBar-Join ends')}: ${openPath.canJoin
                             ? i18n._('key-CncLaser/SelectionBar-Join ends that are less than 1 mm apart')
-                            : i18n._('key-CncLaser/SelectionBar-No open ends are less than 1 mm apart')}
-                    >
-                        <span className={styles['tip-wrapper']}>
-                            <button
-                                type="button"
-                                className={styles['mode-button']}
-                                disabled={!openPath.canJoin}
-                                onClick={() => dispatch(editorActions.closeSelectedPath(headType, 'join'))}
-                            >
-                                <svg {...stroke}><path d="M4 16c2-8 6-10 8-4s6 4 8-4" /><circle cx="12" cy="12" r="1.5" /></svg>
-                                {i18n._('key-CncLaser/SelectionBar-Join ends')}
-                            </button>
-                        </span>
-                    </Tooltip>
+                            : i18n._('key-CncLaser/SelectionBar-No open ends are less than 1 mm apart')}`,
+                    })}
                 </>
             )}
             {/* only the buttons that fit the selection are shown */}
@@ -317,38 +320,31 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     <svg {...stroke}><rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" /><path d="M11 7h4v6" /></svg>
                 )
             ))}
-            {!overflow && labelledActions.map(action => (
-                <Tooltip
-                    key={action.id}
-                    title={(action.id === ROUND_CORNERS_ACTION.id && roundCornersOpen) ? '' : withKeyHint(action)}
-                >
-                    <button
-                        type="button"
-                        className={classNames(styles['text-button'], { [styles['icon-only']]: level === 1 })}
-                        aria-label={action.label()}
-                        data-round-corners={action.id === ROUND_CORNERS_ACTION.id ? 'true' : undefined}
-                        data-bar-action={action.id}
-                        onClick={(event) => {
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            action.run(dispatch, headType, { x: rect.left + rect.width / 2, y: rect.bottom + 6 });
-                        }}
-                    >
-                        {ACTION_ICONS[action.id]}
-                        {level === 0 && action.label()}
-                    </button>
-                </Tooltip>
+            {!overflow && shapeActions.map(action => (
+                <React.Fragment key={action.id}>
+                    {renderIconButton(action.label(), false, (event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        action.run(dispatch, headType, { x: rect.left + rect.width / 2, y: rect.bottom + 6 });
+                    }, ACTION_ICONS[action.id], {
+                        tooltip: withKeyHint(action),
+                        open: action.id === ROUND_CORNERS_ACTION.id && roundCornersOpen,
+                        data: {
+                            'data-bar-action': action.id,
+                            ...(action.id === ROUND_CORNERS_ACTION.id ? { 'data-round-corners': 'true' } : {}),
+                        },
+                    })}
+                </React.Fragment>
             ))}
             {combineActions.length > 0 && renderActionMenu('combine', combineActions, (
                 <span className={styles['tip-wrapper']}>
                     <button
                         type="button"
-                        className={styles['mode-button']}
-                        title={i18n._('key-CncLaser/Combine-Weld, subtract or intersect the shapes')}
+                        className={classNames(styles['icon-button'], styles['with-caret'], { [styles.open]: menuOpen === 'combine' })}
+                        title={`${i18n._('key-CncLaser/Combine-Combine')}: ${i18n._('key-CncLaser/Combine-Weld, subtract or intersect the shapes')}`}
                         aria-label={i18n._('key-CncLaser/Combine-Combine')}
                         data-bar-combine="true"
                     >
                         <svg {...stroke}><circle cx="9" cy="12" r="5.5" /><circle cx="15" cy="12" r="5.5" /></svg>
-                        {level === 0 && i18n._('key-CncLaser/Combine-Combine')}
                         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
                     </button>
                 </span>
@@ -362,17 +358,17 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     onVisibleChange={setAlignOpen}
                 >
                     <span className={styles['tip-wrapper']}>
-                        <button type="button" className={styles['icon-button']} aria-label={alignTitle} title={alignTitle}>
+                        <button type="button" className={classNames(styles['icon-button'], { [styles.open]: alignOpen })} aria-label={alignTitle} title={alignTitle}>
                             <svg {...stroke}><path d="M4 4v16M8 7h12M8 12h8M8 17h10" /></svg>
                         </button>
                     </span>
                 </Popover>
             )}
-            {overflow && labelledActions.length > 0 && renderActionMenu('more', labelledActions, (
+            {overflow && shapeActions.length > 0 && renderActionMenu('more', shapeActions, (
                 <span className={styles['tip-wrapper']}>
                     <button
                         type="button"
-                        className={styles['icon-button']}
+                        className={classNames(styles['icon-button'], { [styles.open]: menuOpen === 'more' })}
                         aria-label={i18n._('key-CncLaser/SelectionBar-More actions')}
                         title={i18n._('key-CncLaser/SelectionBar-More actions')}
                         data-bar-more="true"
@@ -402,7 +398,7 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     <span className={styles['tip-wrapper']}>
                         <button
                             type="button"
-                            className={styles['icon-button']}
+                            className={classNames(styles['icon-button'], { [styles.open]: menuOpen === 'origin' })}
                             aria-label={setOriginLabel()}
                             title={setOriginLabel()}
                             data-bar-origin="true"
