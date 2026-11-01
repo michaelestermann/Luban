@@ -626,8 +626,8 @@ export function restoreEntryPoint(s: TabsState): { state: TabsState; activate: s
 }
 
 /**
- * A document whose load failed stays as a tab: not loaded (a click loads it again), with its source and
- * unsaved flag from before the load (so its auto-save keeps being used and is never removed) and marked
+ * A document whose load failed stays as a tab: not loaded (a click loads it again), with its file name,
+ * source and unsaved flag from before the load (so its auto-save keeps being used and is never removed) and marked
  * `loadFailed`. It is no longer the live document of its mode; when it is still the active tab, Home is shown.
  */
 export function keepFailedDocument(s: TabsState, id: string, before: DocumentMeta): TabsState {
@@ -649,7 +649,16 @@ export function keepFailedDocument(s: TabsState, id: string, before: DocumentMet
         activeDocByHead,
         documents: {
             ...s.documents,
-            [id]: { ...meta, loaded: false, source, unSaved: !!before.unSaved, loadFailed: true },
+            [id]: {
+                ...meta,
+                // the file name of before: the emptied live project meta may have been synced into the tab
+                openedFile: before.openedFile ? { ...before.openedFile } : null,
+                untitledIndex: before.untitledIndex,
+                loaded: false,
+                source,
+                unSaved: !!before.unSaved,
+                loadFailed: true,
+            },
         },
     };
 }

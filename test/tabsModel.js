@@ -736,6 +736,13 @@ test('keepFailedDocument: a failed load keeps the tab and its auto-save (final r
     t.deepEqual(next.state.order, ['a', 'u2'].filter((id) => next.state.documents[id]), 'kept in the session');
     t.ok(next.state.documents.u2, 'restored from its auto-save on the next start');
     t.equal(next.state.documents.u2.loadFailed, undefined, 'the failure mark is not stored');
+    // the live project meta was emptied (and synced into the tab) before: the file name comes back
+    const file = { name: 'p1.snap3dp', path: 'C:/x/p1.snap3dp' };
+    const withFile = doc('p1', 'printing', { openedFile: file, unSaved: true, loaded: false, source: 'env' });
+    let synced = updateDocument(activateTab(withDocs(withFile), 'p1', 1), 'p1', { loaded: true, source: 'live', openedFile: null, untitledIndex: 1 });
+    synced = keepFailedDocument(synced, 'p1', withFile);
+    t.deepEqual(synced.documents.p1.openedFile, file, 'its file name is kept');
+    t.equal(synced.documents.p1.untitledIndex, 0, 'no untitled number');
     // a later successful load clears the mark
     t.equal(updateDocument(s, 'u2', { loaded: true, source: 'live', loadFailed: false }).documents.u2.loadFailed, false);
     t.end();

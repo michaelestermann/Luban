@@ -869,7 +869,7 @@ const loadDocument = (docId: string, history: HistoryLike) => async (dispatch, g
         }
         ok = await dispatch(loadDocumentContent(meta));
     } catch (e) {
-        log.error(`tabs: could not load ${docId}: ${e}`);
+        log.error(`tabs: could not load ${docId}: ${e instanceof Error ? e.stack : JSON.stringify(e)?.slice(0, 500)}`);
         ok = false;
     } finally {
         documentStore.setLoading(head, false);
