@@ -215,8 +215,8 @@ const CaseResource = (props) => {
         // eslint-disable-next-line consistent-return
         return () => {
             uniApi.DownloadManager.off('new-download-item', newDownloadItem);
-            uniApi.DownloadManager.off('new-download-item', downloadItemUpdate);
-            uniApi.DownloadManager.off('new-download-item', downloadItemDone);
+            uniApi.DownloadManager.off('download-item-updated', downloadItemUpdate);
+            uniApi.DownloadManager.off('download-item-done', downloadItemDone);
         };
     };
 
