@@ -26,6 +26,24 @@ export interface OriginPickState {
     source: OriginPickSource;
     /** the active point (keyboard), null: none */
     reference: ObjectReference | null;
+    /** 'selection': the 9 points of the selection; 'all': keyboard grab over every target (nothing selected) */
+    scope: 'selection' | 'all';
+}
+
+export interface OriginPickOptions {
+    reference?: ObjectReference | null;
+    scope?: 'selection' | 'all';
+}
+
+export interface OriginPickResult {
+    origin: Origin;
+    removedOffset?: OriginOffset | null;
+    label?: string;
+}
+
+/** Interim (phase 1) "Origin…" detail: the point picker popover of the selection bar. */
+export interface OriginDialogState {
+    source: 'button' | 'key';
 }
 
 /** The editor actions the origin thunks call (bound by flux/editor/index.ts, which spreads these actions). */
@@ -122,6 +140,43 @@ export const originActions = {
         const { origin: next, removedOffset } = originAfterDrop(origin, target);
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         return dispatch(originActions.applyOrigin(headType, next, { source, removedOffset }));
+    },
+
+    /** Pick mode: the 9 points of the selection on the canvas (or, with nothing selected, every target by keyboard). */
+    startOriginPick: (headType: HeadType, source: OriginPickSource, options: OriginPickOptions = {}) => (dispatch) => {
+        const pick: OriginPickState = { source, reference: options.reference ?? null, scope: options.scope || 'selection' };
+        dispatch(baseActions.updateState(headType, { originPick: pick, originPreview: null }));
+    },
+
+    /** Ends pick mode; with `result` the origin is set (one undo step), else nothing changes. */
+    endOriginPick: (headType: HeadType, result: OriginPickResult | null = null) => (dispatch, getState) => {
+        if (!getState()[headType]?.originPick && !result) {
+            return;
+        }
+        dispatch(baseActions.updateState(headType, { originPick: null, originPreview: null }));
+        if (result) {
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            dispatch(originActions.applyOrigin(headType, result.origin, { source: 'pick', removedOffset: result.removedOffset, label: result.label }));
+        }
+    },
+
+    /** The active point of pick / keyboard mode. */
+    setOriginPickReference: (headType: HeadType, reference: ObjectReference | null) => (dispatch, getState) => {
+        const pick: OriginPickState | null = getState()[headType]?.originPick;
+        if (pick && pick.reference !== reference) {
+            dispatch(baseActions.updateState(headType, { originPick: { ...pick, reference } }));
+        }
+    },
+
+    /** "Origin…" (phase 1: the point picker popover of the selection bar). */
+    openOriginDialog: (headType: HeadType, source: 'button' | 'key') => (dispatch) => {
+        dispatch(baseActions.updateState(headType, { originDialog: { source } as OriginDialogState, originPick: null, originPreview: null }));
+    },
+
+    closeOriginDialog: (headType: HeadType) => (dispatch, getState) => {
+        if (getState()[headType]?.originDialog) {
+            dispatch(baseActions.updateState(headType, { originDialog: null, originPreview: null }));
+        }
     },
 
     /** Shows an origin on the canvas without setting it (hover, drag, pick, dialog); never history. */

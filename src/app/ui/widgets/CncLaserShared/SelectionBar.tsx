@@ -11,7 +11,10 @@ import SvgIcon from '../../components/SvgIcon';
 import PointEditBar from './PointEditBar';
 import MeasureBar from './MeasureBar';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
-import { canSetOriginOnSelection, COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, ROUND_CORNERS_ACTION, setOriginLabel, ShapeAction } from './shape-actions';
+import {
+    canSetOriginOnSelection, COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, originDialogLabel, originDialogTitle, pickOriginLabel, ROUND_CORNERS_ACTION,
+    setOriginLabel, ShapeAction,
+} from './shape-actions';
 import OriginPointPicker from './OriginPointPicker';
 import { BarFit, nextBarFit } from './selection-bar-fit';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
@@ -105,6 +108,10 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const roundCornersOpen = useSelector(state => !!state[headType]?.roundCornersSession);
     const [alignOpen, setAlignOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState<string | null>(null);
+    // work origin: pick mode runs / the details are asked for (Shift+O)
+    const originPickActive = useSelector(state => !!state[headType]?.originPick);
+    const originDialogAsked = useSelector(state => !!state[headType]?.originDialog);
+    const originDetailsOpen = menuOpen === 'origin' || originDialogAsked;
     const store = useStore();
     // icon buttons, or the overflow "⋯" when they do not fit on the canvas
     const barRef = useRef<HTMLDivElement>(null);
@@ -378,39 +385,65 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                 </span>
             ))}
             {canSetOrigin && (
-                <Popover
-                    content={(
-                        <div className={styles['origin-section']} data-set-origin="true">
-                            <div className={styles['origin-title']}>{setOriginLabel()}</div>
-                            <OriginPointPicker
-                                onPick={(reference) => {
-                                    setMenuOpen(null);
-                                    dispatch(editorActions.setOriginOnSelection(headType, reference));
-                                }}
-                            />
-                        </div>
-                    )}
-                    trigger="click"
-                    placement="bottom"
-                    visible={menuOpen === 'origin'}
-                    onVisibleChange={(visible) => setMenuOpen(visible ? 'origin' : null)}
-                >
-                    <span className={styles['tip-wrapper']}>
-                        <button
-                            type="button"
-                            className={classNames(styles['icon-button'], { [styles.open]: menuOpen === 'origin' })}
-                            aria-label={setOriginLabel()}
-                            title={setOriginLabel()}
-                            data-bar-origin="true"
-                        >
-                            <svg {...stroke}>
-                                <circle cx="12" cy="12" r="6.5" />
-                                <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
-                                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-                            </svg>
-                        </button>
-                    </span>
-                </Popover>
+                // split button [⊕ | Origin…]: pick on the canvas, or the details (phase 1: the point picker)
+                <span className={styles['origin-split']} data-bar-origin="true">
+                    <button
+                        type="button"
+                        className={classNames(styles['icon-button'], styles['split-left'], { [styles.open]: originPickActive })}
+                        aria-label={pickOriginLabel()}
+                        title={pickOriginLabel()}
+                        data-bar-origin-pick="true"
+                        onClick={() => {
+                            setMenuOpen(null);
+                            dispatch(editorActions.closeOriginDialog(headType));
+                            if (originPickActive) {
+                                dispatch(editorActions.endOriginPick(headType));
+                            } else {
+                                dispatch(editorActions.startOriginPick(headType, 'button'));
+                            }
+                        }}
+                    >
+                        <svg {...stroke}>
+                            <circle cx="12" cy="12" r="6.5" />
+                            <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                        </svg>
+                    </button>
+                    <Popover
+                        content={(
+                            <div className={styles['origin-section']} data-set-origin="true">
+                                <div className={styles['origin-title']}>{setOriginLabel()}</div>
+                                <OriginPointPicker
+                                    onPick={(reference) => {
+                                        setMenuOpen(null);
+                                        dispatch(editorActions.closeOriginDialog(headType));
+                                        dispatch(editorActions.setOriginOnSelection(headType, reference, 'dialog'));
+                                    }}
+                                />
+                            </div>
+                        )}
+                        trigger="click"
+                        placement="bottom"
+                        visible={originDetailsOpen}
+                        onVisibleChange={(visible) => {
+                            setMenuOpen(visible ? 'origin' : null);
+                            if (!visible) {
+                                dispatch(editorActions.closeOriginDialog(headType));
+                            }
+                        }}
+                    >
+                        <span className={styles['tip-wrapper']}>
+                            <button
+                                type="button"
+                                className={classNames(styles['text-button'], styles['split-right'], { [styles.open]: originDetailsOpen })}
+                                title={originDialogTitle()}
+                                data-bar-origin-dialog="true"
+                            >
+                                {originDialogLabel()}
+                            </button>
+                        </span>
+                    </Popover>
+                </span>
             )}
             {renderIconButton(i18n._('key-App/Menu-Duplicate'), !canDuplicate, () => {
                 dispatch(editorActions.duplicateSelectedModel(headType));

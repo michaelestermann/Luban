@@ -118,6 +118,14 @@ export const canSetOriginOnSelection = (state, headType: HeadType): boolean => {
 
 export const setOriginLabel = () => i18n._('key-CncLaser/Origin-Set origin here');
 
+/** Split button, left part: pick mode on the canvas (key 0). */
+export const pickOriginLabel = () => i18n._('key-CncLaser/Origin-Pick origin point on the canvas (0)');
+
+/** Split button, right part: the details. */
+export const originDialogLabel = () => i18n._('key-CncLaser/Origin-Origin…');
+
+export const originDialogTitle = () => i18n._('key-CncLaser/Origin-Origin… (Shift+O)');
+
 export const fittingActions = (actions: ShapeAction[], state: unknown, headType: HeadType) => actions.filter(a => a.fits(state, headType));
 
 export interface ContextMenuItem {
