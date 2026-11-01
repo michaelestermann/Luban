@@ -1198,10 +1198,11 @@ export const actions = {
 
             // Start init
             initPromise = dispatch(actions.initSize(keepPresetIds));
-            initPromise
-                .then(() => {
-                    initPromise = null;
-                });
+            // cleared also after a failure: a rejected init must not be handed to every later init
+            const clear = () => {
+                initPromise = null;
+            };
+            initPromise.then(clear, clear);
 
             return initPromise;
         };
