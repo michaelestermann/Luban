@@ -36,6 +36,7 @@ import {
     scrollOffsetToReveal,
     droppedFilesToOpen,
     tabKeyAction,
+    sessionPersistAllowed,
 } from '../src/app/flux/project/tabs-model';
 
 const doc = (id, headType = 'laser', extra = {}) => ({
@@ -699,5 +700,13 @@ test('tabKeyAction: Delete / Backspace on a focused tab never close it (final re
     t.equal(tabKeyAction('Enter'), 'activate', 'Enter activates');
     t.equal(tabKeyAction(' '), 'activate', 'Space activates');
     t.equal(tabKeyAction('a'), null, 'other keys do nothing');
+    t.end();
+});
+
+test('sessionPersistAllowed: a start that could not read the auto-save list never stores the session (final review I-6)', (t) => {
+    t.equal(sessionPersistAllowed('restored'), true, 'restored (or nothing to restore): stored on every change');
+    t.equal(sessionPersistAllowed('kept-open'), true, 'documents were open already: their session is stored');
+    t.equal(sessionPersistAllowed('unreadable'), false, 'auto-save list unreadable: the stored session is kept as it is');
+    t.equal(sessionPersistAllowed('failed'), false, 'restore threw: the stored session is kept as it is');
     t.end();
 });

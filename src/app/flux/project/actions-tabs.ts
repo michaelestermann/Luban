@@ -49,6 +49,7 @@ import {
     isEditorHeadType,
     needsMachineSwitch,
     nextTabAfterClose,
+    RestoreOutcome,
     RestorePlan,
     nextUntitledIndex,
     parseSession,
@@ -59,6 +60,7 @@ import {
     removeDocument,
     restoreEntryPoint,
     serializeSession,
+    sessionPersistAllowed,
     tabIdForPath,
     unloadedMeta,
     updateDocument,
@@ -1064,20 +1066,21 @@ const confirmQuit = (history: HistoryLike) => async (dispatch, getState): Promis
  * with a toast. Without a manifest, the 4.16 auto-saves of the modes become tabs (migration). Auto-save
  * folders that no restored tab uses are removed. Runs once at start, before files given to the app open.
  */
-const restoreSessionNow = (history: HistoryLike) => async (dispatch, getState): Promise<void> => {
+const restoreSessionNow = (history: HistoryLike) => async (dispatch, getState): Promise<RestoreOutcome> => {
     const current = getTabsState(getState());
     // a dev reload on an editor route registers an empty untitled doc for the route: it gives way
     if (current.order.some((id) => !isPristine(getState(), id))) {
         log.warn('tabs: documents are open already, the last session is not restored');
-        return;
+        return 'kept-open';
     }
     let envIds: string[];
     try {
         envIds = await listEnvDocIds();
     } catch (e) {
-        // without the list an auto-save could be taken for an orphan: restore nothing, remove nothing
+        // without the list an auto-save could be taken for an orphan: restore nothing, remove nothing, and
+        // the stored session is not overwritten in this run (see sessionPersistAllowed)
         log.warn(`tabs: could not list the auto-saves: ${e}`);
-        return;
+        return 'unreadable';
     }
     let raw: unknown = null;
     try {
@@ -1145,6 +1148,7 @@ const restoreSessionNow = (history: HistoryLike) => async (dispatch, getState): 
     for (const d of plan?.dropped || []) {
         toast(makeSceneToast('warning', i18n._('key-Tabs/{{name}} could not be found and was not reopened.', { name: displayName(d) })));
     }
+    return 'restored';
 };
 
 /**
@@ -1188,13 +1192,17 @@ const restoreSession = (history: HistoryLike) => async (dispatch): Promise<void>
         return restoreRun;
     }
     const job = openQueue.then(async () => {
+        let outcome: RestoreOutcome = 'failed';
         try {
-            await dispatch(restoreSessionNow(history));
+            outcome = await dispatch(restoreSessionNow(history));
         } catch (e) {
             log.error(`tabs: session restore failed: ${e}`);
-        } finally {
+        }
+        if (sessionPersistAllowed(outcome)) {
             sessionRestored = true;
             await dispatch(persistSession());
+        } else {
+            log.warn(`tabs: the session is not stored in this run (restore: ${outcome})`);
         }
     });
     openQueue = job.catch(() => undefined);

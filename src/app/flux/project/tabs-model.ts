@@ -598,6 +598,21 @@ export function planLegacyMigration(migrated: ReadonlyArray<{ headType: string; 
 }
 
 /**
+ * How the start-up restore ended: `restored` (also: nothing to restore), `kept-open` (documents were open
+ * already), `unreadable` (the auto-save list could not be read), `failed` (the restore threw).
+ */
+export type RestoreOutcome = 'restored' | 'kept-open' | 'unreadable' | 'failed';
+
+/**
+ * Whether the session may be stored after the restore. Not after `unreadable` / `failed`: the stored
+ * session was not checked against the auto-saves, and storing the (empty) current one would make the
+ * next start remove every auto-save as an orphan.
+ */
+export function sessionPersistAllowed(outcome: RestoreOutcome): boolean {
+    return outcome === 'restored' || outcome === 'kept-open';
+}
+
+/**
  * The restored registry starts on Home with no live document (nothing is loaded yet); `activate` is the
  * tab to activate next (that loads it).
  */
