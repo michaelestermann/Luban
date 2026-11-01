@@ -8,6 +8,7 @@ import { message } from 'antd';
 import { pathWithRandomSuffix } from '../../../../shared/lib/random-utils';
 import { actions as workspaceActions } from '../../../flux/workspace';
 import gcodeActions from '../../../flux/workspace/actions-gcode';
+import { GCodeFileMetadata } from '../../../flux/workspace/types';
 import i18n from '../../../lib/i18n';
 import { normalizeNameDisplay } from '../../../lib/normalize-range';
 import SvgIcon from '../../components/SvgIcon';
@@ -17,8 +18,16 @@ import styles from './styles.styl';
 
 const suffixLength = 7;
 
+/** A file of the workspace list; 4.17 tags it with the project (tab) it was generated from. */
+type GcodeListFile = Partial<GCodeFileMetadata> & {
+    renderGcodeFileName?: string;
+    isRenaming?: boolean;
+    sourceName?: string;
+    sourceDocId?: string;
+};
+
 declare interface GcodePreviewItemProps {
-    gcodeFile: { [key: string]: any };
+    gcodeFile: GcodeListFile;
     index: number;
     selected: boolean;
     onSelectFile: (_selectFileName: string, event: MouseEvent, needToUnselect?: boolean) => void;
