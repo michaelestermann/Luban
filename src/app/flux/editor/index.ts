@@ -63,6 +63,7 @@ import { frontmostAt } from '../../models/z-order';
 import { machineStore } from '../../store/local-storage';
 import ToolPath from '../../toolpaths/ToolPath';
 import ToolPathGroup from '../../toolpaths/ToolPathGroup';
+import { renderRunFailed } from '../../toolpaths/render-outcome';
 import { NS } from '../../ui/SVGEditor/lib/namespaces';
 import ModelLoader from '../../ui/widgets/PrintingVisualizer/ModelLoader';
 import AddOperation2D from '../operation-history/AddOperation2D';
@@ -625,15 +626,7 @@ export const actions = {
                                         break;
                                     }
                                     case 'err': {
-                                        log.info('Rendering tool path... failed.');
-                                        progressStatesManager.finishProgress(false);
-                                        dispatch(
-                                            baseActions.updateState(headType, {
-                                                stage: STEP_STAGE.CNC_LASER_GENERATE_TOOLPATH_FAILED,
-                                                progress: 1,
-                                                ...stateAfterGcodeFailure(getState()[headType]),
-                                            })
-                                        );
+                                        log.warn(`Rendering tool path... failed: ${value}`);
                                         resolve(false);
                                         break;
                                     }
@@ -649,7 +642,22 @@ export const actions = {
                     }
                 });
 
-                await Promise.allSettled(toolPathRenderPromises);
+                const rendered = await Promise.all(toolPathRenderPromises);
+
+                // nothing moves the progress on after this: end it unless G-code generation started
+                const ready = !!toolPathGroup._getCheckAndSuccessToolPaths();
+                if (renderRunFailed(rendered, ready)) {
+                    log.warn(`Rendering tool paths failed (rendered: ${rendered.join(',')}, ready: ${ready})`);
+                    toast(makeSceneToast('warning', i18n._('key-Progress/LaserCNC-Failed to generate toolpath and preview.')));
+                    progressStatesManager.finishProgress(false);
+                    dispatch(
+                        baseActions.updateState(headType, {
+                            stage: STEP_STAGE.CNC_LASER_GENERATE_TOOLPATH_FAILED,
+                            progress: 1,
+                            ...stateAfterGcodeFailure(getState()[headType]),
+                        })
+                    );
+                }
             });
 
             controller.on('taskCompleted:generateGcode', taskResult => {

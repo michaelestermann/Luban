@@ -56,6 +56,20 @@ export const processActions = {
             activeMachine?.identifier
         );
 
+        if (toolPathTasks.length === 0) {
+            // nothing to generate (e.g. all objects of the toolpaths hidden): no result would end the progress
+            toast(makeSceneToast('warning', i18n._('key-Progress/LaserCNC-Failed to generate toolpath and preview.')));
+            progressStatesManager.finishProgress(false);
+            dispatch(
+                baseActions.updateState(headType, {
+                    stage: STEP_STAGE.CNC_LASER_GENERATE_TOOLPATH_FAILED,
+                    progress: 1,
+                    ...stateAfterGcodeFailure(getState()[headType]),
+                })
+            );
+            return;
+        }
+
         controller.commitToolPathTaskArray(toolPathTasks);
     },
 
