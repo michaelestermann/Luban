@@ -6,6 +6,7 @@ import { PAGE_EDITOR } from '../../../../constants';
 import { actions as editorActions } from '../../../../flux/editor';
 import { ShortcutHandlerPriority, ShortcutManager } from '../../../../lib/shortcut';
 import { renameTargetID } from '../../../../models/object-name';
+import { listClickMode, selectionRange } from './list-selection';
 import i18n from '../../../../lib/i18n';
 import { getModelOperationColors } from '../../../../toolpaths/operations-panel';
 import modal from '../../../../lib/modal';
@@ -40,21 +41,40 @@ const ObjectListBox: React.FC<ObjectListBoxProps> = ({ headType, fill = false })
 
     const dispatch = useDispatch();
 
+    // the row (object or group) a Shift click selects from: the last plainly or Ctrl-clicked row
+    const anchorID = useRef<string | null>(null);
+
     // member: the object belongs to a group and is selected on its own (not the whole group)
     const onSelectItem = useCallback((model, event, member = false) => {
-        let isMultiSelect = event.shiftKey;
+        const mode = listClickMode(event);
+        // the top-level row of the click: the object, or the group it belongs to
+        const rows = (models || []).filter(entity => !entity.supportTag).slice().reverse();
+        const row = rows.find(entity => entity === model || entity.children?.includes(model));
 
-        // TODO: Add comment here
+        if (mode === 'range' && !member && row) {
+            const anchor = rows.find(entity => entity.modelID === anchorID.current) || null;
+            // hidden rows are skipped: hidden and visible objects are never selected together
+            const range = selectionRange(rows, anchor, row).filter(entity => entity.visible !== false || entity === row);
+            // a group is selected through one of its objects (the click expands to the group)
+            const target = (entity) => (entity.type === '2d-group' ? entity.children[0] : entity);
+            range.forEach((entity, i) => {
+                dispatch(editorActions.selectTargetModel(headType, target(entity), i > 0));
+            });
+            return;
+        }
+
+        // hidden objects are selected on their own, never together with others
+        let isMultiSelect = mode === 'toggle';
         if (selectedModelArray.length === 1 && selectedModelArray[0].visible === false) {
             isMultiSelect = false;
         }
-        // TODO: Add comment here
         if (selectedModelArray.length > 0 && model.visible === false) {
             isMultiSelect = false;
         }
+        anchorID.current = row ? row.modelID : null;
 
         dispatch(editorActions.selectTargetModel(headType, model, isMultiSelect && !member, member));
-    }, [dispatch, headType, selectedModelArray]);
+    }, [dispatch, headType, selectedModelArray, models]);
     const onSelectMember = useCallback((model, event) => onSelectItem(model, event, true), [onSelectItem]);
 
     const actions = {
