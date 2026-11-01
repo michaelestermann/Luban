@@ -453,11 +453,13 @@ class ToolPath {
             this.status = WARNING;
         }
 
-        if (!taskInfos || taskInfos.length === 0) {
+        if (this.modelMap.size === 0) {
             log.error('The models of tool path is empty');
             this.status = FAILED;
-        } else if (!taskInfos.find((v) => v.visible)) {
+        } else if (!taskInfos || taskInfos.length === 0 || !taskInfos.find((v) => v.visible)) {
+            // all its objects are hidden: the toolpath is skipped (no task, not in the G-code), not failed
             this.status = WARNING;
+            return;
         }
 
         const types = getToolPathType(taskInfos);
