@@ -8,6 +8,8 @@ import {
     Object3D,
     OrthographicCamera,
     PerspectiveCamera,
+    RingGeometry,
+    Shape,
     ShapeGeometry,
     Sprite,
     SpriteMaterial,
@@ -68,8 +70,33 @@ function keepScreenSize(object: Object3D, resize: (worldPerPx: number) => void) 
 }
 
 
+// work origin axes of the preview (screen px): red X, green Y, like the editor marker
+const AXIS_PX = 34;
+const RING_PX = 6;
+
+/** An arrow along +X from (0, 0), in px (scaled to world units before each render). */
+function arrowShapes(): Shape[] {
+    const shaft = new Shape();
+    shaft.moveTo(0, -1);
+    shaft.lineTo(AXIS_PX - 7, -1);
+    shaft.lineTo(AXIS_PX - 7, 1);
+    shaft.lineTo(0, 1);
+    shaft.closePath();
+    const head = new Shape();
+    head.moveTo(AXIS_PX - 8, -4);
+    head.lineTo(AXIS_PX, 0);
+    head.lineTo(AXIS_PX - 8, 4);
+    head.closePath();
+    return [shaft, head];
+}
+
 class PrintablePlate extends Object3D {
     private coordinateSystem: Group = null;
+
+    // red X / green Y at the work origin, and a grey ring at the workpiece zero when the origin is elsewhere
+    private originAxes: Mesh[] = [];
+
+    private zeroRing: Mesh = null;
 
     private workpiece: Workpiece
     private origin: Origin;
@@ -217,6 +244,35 @@ class PrintablePlate extends Object3D {
         });
         this.add(this.targetPoint);
 
+        // work origin axes (red X, green Y) at the target point, constant on-screen size
+        const arrowGeometry = new ShapeGeometry(arrowShapes());
+        this.originAxes = [0xD92D20, 0x16803C].map((color, i) => {
+            const mesh = new Mesh(arrowGeometry, new MeshBasicMaterial({ color, side: DoubleSide, depthTest: false, transparent: true }));
+            mesh.name = i === 0 ? 'WorkOriginX' : 'WorkOriginY';
+            mesh.rotation.z = i === 0 ? 0 : Math.PI / 2;
+            mesh.renderOrder = 10;
+            keepScreenSize(mesh, (wpp) => {
+                const k = wpp > 0 ? wpp : 1;
+                mesh.scale.set(k, k, 1);
+            });
+            this.add(mesh);
+            return mesh;
+        });
+        // the workpiece zero (grey ring), shown when the work origin is moved away from it
+        this.zeroRing = new Mesh(
+            new RingGeometry(RING_PX - 1.5, RING_PX, 32),
+            new MeshBasicMaterial({ color: 0x8a909c, side: DoubleSide, depthTest: false, transparent: true }),
+        );
+        this.zeroRing.name = 'WorkpieceZeroRing';
+        this.zeroRing.visible = false;
+        this.zeroRing.renderOrder = 10;
+        const ring = this.zeroRing;
+        keepScreenSize(ring, (wpp) => {
+            const k = wpp > 0 ? wpp : 1;
+            ring.scale.set(k, k, 1);
+        });
+        this.add(this.zeroRing);
+
         // Draw locking block if we have one
         if (this.origin.type === OriginType.CNCLockingBlock) {
             new SVGLoader().load(`${DEFAULT_LUBAN_HOST}/resources/images/cnc/locking-block-red.svg`, (data) => {
@@ -340,6 +396,9 @@ class PrintablePlate extends Object3D {
             this.targetPoint.position.setX(point ? point.x : 0);
             this.targetPoint.position.setY(point ? point.y : 0);
         }
+        for (const axis of this.originAxes) {
+            axis.position.set(point ? point.x : 0, point ? point.y : 0, 0.1);
+        }
         const old = this.originPoint;
         const same = (!old && !point) || (old && point && Math.abs(old.x - point.x) < 1e-6 && Math.abs(old.y - point.y) < 1e-6);
         if (same) {
@@ -350,6 +409,20 @@ class PrintablePlate extends Object3D {
             this.coordinateSystem.remove(this.axisLabels);
             this.axisLabels = this._createAxisLabels();
             this.coordinateSystem.add(this.axisLabels);
+        }
+    }
+
+    /**
+     * A grey ring at the workpiece zero (model 0, 0) while the work origin is somewhere else (an object point,
+     * an offset); null hides it.
+     */
+    public setWorkpieceZeroRing(point: { x: number; y: number } | null) {
+        if (!this.zeroRing) {
+            return;
+        }
+        this.zeroRing.visible = !!point;
+        if (point) {
+            this.zeroRing.position.set(point.x, point.y, 0.1);
         }
     }
 

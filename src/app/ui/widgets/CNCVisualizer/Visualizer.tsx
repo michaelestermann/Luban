@@ -40,6 +40,7 @@ import { plateOrigin } from '../../../lib/object-origin';
 import VisualizerBottomLeft from '../CncLaserShared/VisualizerBottomLeft';
 import SelectionBar from '../CncLaserShared/SelectionBar';
 import { ContextMenuItem, shapeContextMenuItems } from '../CncLaserShared/shape-actions';
+import OriginInfoBox from '../CncLaserShared/OriginInfoBox';
 import VisualizerTopRight from '../CncLaserTopRight/VisualizerTopRight';
 import styles from './styles.styl';
 import { isFirstView } from '../CncLaserShared/view-memory';
@@ -471,6 +472,8 @@ class Visualizer extends React.Component<VisualizerProps> {
         this.printableArea = new PrintablePlate(workpiece, plateOrigin(origin, props.coordinateMode?.value));
         const originPoint = props.toolPathGroup?.getWorkOriginPoint?.(origin) || null;
         this.printableArea.setTargetPoint(originPoint);
+        // the workpiece zero as a grey ring when the work origin is elsewhere
+        this.printableArea.setWorkpieceZeroRing(originPoint && Math.hypot(originPoint.x, originPoint.y) > 1e-3 ? { x: 0, y: 0 } : null);
         props.toolPathGroup?.setPreviewOrigin?.(originPoint);
         this.state = {
             limitPicModalShow: false,
@@ -545,6 +548,8 @@ class Visualizer extends React.Component<VisualizerProps> {
         // the red origin point of the preview follows an object origin
         const originPoint = nextProps.toolPathGroup?.getWorkOriginPoint?.(nextProps.origin) || null;
         this.printableArea.setTargetPoint(originPoint);
+        // the workpiece zero as a grey ring when the work origin is elsewhere
+        this.printableArea.setWorkpieceZeroRing(originPoint && Math.hypot(originPoint.x, originPoint.y) > 1e-3 ? { x: 0, y: 0 } : null);
         // the tool paths (G-code coordinates) go to the origin point of the workpiece
         nextProps.toolPathGroup?.setPreviewOrigin?.(originPoint);
 
@@ -718,6 +723,7 @@ class Visualizer extends React.Component<VisualizerProps> {
                         transformSourceType="2D"
                     />
                 </div>
+                <OriginInfoBox headType="cnc" />
                 <SelectionBar headType="cnc" />
                 <div className="position-absolute left-68 bottom-16">
                     <VisualizerBottomLeft
