@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 
-import { Origin, OriginType } from '../../../constants/coordinate';
+import { Origin } from '../../../constants/coordinate';
 import { originActions, t } from '../../../flux/editor/actions-origin';
 import { Point } from '../../../lib/object-origin';
 import { originAfterDrop } from '../../../lib/work-origin';
@@ -9,6 +9,7 @@ import { CURSOR_SIZE, placeLabel } from '../label-placement';
 import { OriginTarget, targetOrigin } from '../snap/origin-targets';
 import { OriginSnap } from '../snap/snap-session';
 import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
+import { originMarkerShown } from './origin-marker-shown';
 import { targetLabel } from './origin-labels';
 import styles from './origin.styl';
 
@@ -100,7 +101,7 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         return () => window.removeEventListener('resize', onResize);
     }, []);
 
-    const shown = isActive && page === 'editor' && !!origin && origin.type !== OriginType.CNCLockingBlock;
+    const shown = isActive && originMarkerShown(page, origin?.type);
     const disabled = locked || isRotate;
     const at: Point = originPoint || { x: 0, y: 0 };
 

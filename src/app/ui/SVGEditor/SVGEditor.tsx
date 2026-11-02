@@ -1,12 +1,13 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
+import { useSelector } from 'react-redux';
 
 import { PREDEFINED_SHORTCUT_ACTIONS, ShortcutHandlerPriority, ShortcutManager } from '../../lib/shortcut';
 import styles from './styles.styl';
 import { SVG_EVENT_CONTEXTMENU } from './constants';
 import SVGCanvas from './SVGCanvas';
 import SVGLeftBar from './SVGLeftBar';
-import { Materials, Origin, OriginType, Workpiece } from '../../constants/coordinate';
+import { Materials, Origin, Workpiece } from '../../constants/coordinate';
 import type ModelGroup from '../../models/ModelGroup';
 import { library } from './lib/ext-shapes';
 import Modal from '../components/Modal/tileModal';
@@ -18,6 +19,7 @@ import SnapOverlay from './snap/SnapOverlay';
 import OriginMarker from './origin/OriginMarker';
 import OriginPickOverlay from './origin/OriginPickOverlay';
 import OriginKeys from './origin/OriginKeys';
+import { originMarkerShown } from './origin/origin-marker-shown';
 import SmallObjectMarkers from './small-objects/SmallObjectMarkers';
 import ShapeActionKeys from './combine/ShapeActionKeys';
 import RoundCorners from './combine/RoundCorners';
@@ -104,6 +106,8 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
     const canvas = useRef(null);
     // the red origin dot and the rulers follow an object origin
     const originPoint = useObjectOriginPoint(props.headType);
+    // the marker (Design step) or, in the other steps, the canvas dot shows the origin
+    const editorPage = useSelector(state => state[props.headType]?.page);
     const leftBarRef = useRef(null);
     const extRef = useRef(props.SVGCanvasExt);
     extRef.current = props.SVGCanvasExt;
@@ -425,7 +429,7 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             workpiece={props.workpiece}
                             origin={props.origin}
                             originPoint={originPoint}
-                            originDotHidden={props.origin?.type !== OriginType.CNCLockingBlock}
+                            originDotHidden={originMarkerShown(editorPage, props.origin?.type)}
                             ref={canvas}
                             onCreateElement={props.onCreateElement}
                             onSelectElements={props.onSelectElements}
