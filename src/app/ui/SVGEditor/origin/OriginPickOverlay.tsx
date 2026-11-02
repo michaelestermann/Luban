@@ -10,6 +10,7 @@ import { OriginTarget, buildOriginTargets, selectionTargets, targetOrigin } from
 import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
 import { ArrowKey, announceTarget, groupTargetsByOwner, nextTargetGroupIndex, stepReference } from './origin-keyboard';
 import { targetLabel } from './origin-labels';
+import { useOverlayLayout } from './use-overlay-layout';
 import styles from './origin.styl';
 
 type Matrix = DOMMatrix | SVGMatrix;
@@ -45,6 +46,7 @@ const OriginPickOverlay: React.FC<OriginPickOverlayProps> = ({ headType, isActiv
     const [, forceRender] = useState(0);
 
     const active = !!pick && isActive && page === 'editor';
+    useOverlayLayout(rootRef, getScreenCTM, active);
 
     // the owners whose 9 points can be picked: the selection, or (keyboard, nothing selected) every owner
     const owners: OriginTarget[][] = useMemo(() => {

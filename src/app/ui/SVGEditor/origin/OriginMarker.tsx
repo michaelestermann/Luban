@@ -10,6 +10,7 @@ import { OriginTarget, targetOrigin } from '../snap/origin-targets';
 import { OriginSnap } from '../snap/snap-session';
 import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
 import { originMarkerShown } from './origin-marker-shown';
+import { useOverlayLayout } from './use-overlay-layout';
 import { targetLabel } from './origin-labels';
 import styles from './origin.styl';
 
@@ -103,6 +104,7 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
 
     const shown = isActive && originMarkerShown(page, origin?.type);
     const disabled = locked || isRotate;
+    useOverlayLayout(rootRef, getScreenCTM, shown);
     const at: Point = originPoint || { x: 0, y: 0 };
 
     const snapRef = useRef<OriginSnap | null>(null);
