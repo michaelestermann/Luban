@@ -1,6 +1,6 @@
 import { Popover, Tooltip } from 'antd';
 import classNames from 'classnames';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 
 import { HEAD_LASER, PAGE_EDITOR } from '../../../constants';
@@ -158,6 +158,35 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const barShown = pointEditShown || measureShown || (barAllowed && !drawing && selectedModels.length > 0);
     // a bar on the canvas: toasts open below it, not over its buttons
     useLayoutEffect(() => (barShown ? toastClearance.claim() : undefined), [barShown]);
+    // the origin details (Shift+O) close with Esc before the editor sees it (the selection stays), and they
+    // never stay asked for while the bar is gone (they would pop up with the next selection)
+    useEffect(() => {
+        if (!originDetailsOpen) {
+            return undefined;
+        }
+        if (!barShown) {
+            setMenuOpen(null);
+            dispatch(editorActions.closeOriginDialog(headType));
+            return undefined;
+        }
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (event.type === 'keydown') {
+                setMenuOpen(null);
+                dispatch(editorActions.closeOriginDialog(headType));
+            }
+        };
+        window.addEventListener('keydown', onKey, true);
+        window.addEventListener('keyup', onKey, true);
+        return () => {
+            window.removeEventListener('keydown', onKey, true);
+            window.removeEventListener('keyup', onKey, true);
+        };
+    }, [originDetailsOpen, barShown, dispatch, headType]);
     if (pointEditShown) {
         return <PointEditBar drawGroup={drawGroup} SVGActions={SVGActions} />;
     }
