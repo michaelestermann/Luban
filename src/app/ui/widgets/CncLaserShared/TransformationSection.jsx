@@ -6,10 +6,14 @@ import path from 'path';
 import { includes } from 'lodash';
 
 import i18n from '../../../lib/i18n';
-import { toFixed, toFixedNumber, convertSVGPointToLogicalPoint } from '../../../lib/numeric-utils';
+import { toFixed, toFixedNumber } from '../../../lib/numeric-utils';
 import TipTrigger from '../../components/TipTrigger';
 import { NumberInput as Input } from '../../components/Input';
-import { anchorOffset, DEFAULT_ANCHOR } from '../../../lib/anchor';
+import { DEFAULT_ANCHOR } from '../../../lib/anchor';
+import { unionBox } from '../../../lib/object-origin';
+import { formatReadout, moveDeltaForValue, originCarriedBySelection, originRelativePosition } from '../../../lib/origin-readout';
+import { liveElementBox } from '../../SVGEditor/origin/live-box';
+import { useWorkOriginPoint } from '../../SVGEditor/origin/use-object-origin-point';
 import FramePicker from './FramePicker';
 import GeometryRow from './GeometryRow';
 import CornersSection from './CornersSection';
@@ -32,6 +36,31 @@ const getElemHref = (model) => {
         return undefined;
     }
     return elem.getAttribute('href') || elem.getAttribute('xlink:href') || undefined;
+};
+
+/** The leaf objects of a selection (the members of a selected group). */
+const leafModels = (models) => models.flatMap(model => (
+    Array.isArray(model?.children) && model.children.length ? leafModels(model.children) : [model]
+));
+
+/** Model box of an object as the canvas draws it now, else its model box (hidden objects). */
+const modelBox = (model, contentGroup, canvasSize) => {
+    const live = model.visible !== false ? liveElementBox(model.elem, contentGroup, canvasSize) : null;
+    if (live) {
+        return live;
+    }
+    if (typeof model.computeBoundingBox === 'function') {
+        model.computeBoundingBox();
+    }
+    return model.boundingBox || null;
+};
+
+// why X / Y cannot be set while the selection carries the work origin
+const CARRY_REASONS = {
+    self: () => i18n._('key-CncLaser/Origin-The work origin is set on this object, so its position is always measured from itself. Move the origin or the object on the canvas.'),
+    group: () => i18n._('key-CncLaser/Origin-The work origin is set on the group containing this object, so its position is always measured from the group. Move the origin or the group on the canvas.'),
+    frame: () => i18n._('key-CncLaser/Origin-The work origin is set on a frame of several objects that includes this one, so its position is always measured from that frame. Move the origin or the objects on the canvas.'),
+    part: () => i18n._('key-CncLaser/Origin-The work origin is set on objects of this selection, so its position is always measured from them. Move the origin or the objects on the canvas.')
 };
 
 const getPickerImage = (models) => {
@@ -81,11 +110,26 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
     const [minSize, setMinSize] = useState(0.1);
     const [anchor, setAnchor] = useState(DEFAULT_ANCHOR);
 
-    // calculate logical transformation
-    // TODO: convert positions in flux
-    const { x: logicalX, y: logicalY } = convertSVGPointToLogicalPoint({ x, y }, size);
+    // X / Y: the anchor of the selection's axis-aligned frame, measured from the work origin (= its G-code X / Y)
+    const workOrigin = useWorkOriginPoint(headType);
+    const zero = isRotate ? null : workOrigin;
+    const origin = useSelector(state => state[headType]?.origin);
+    const toolPathGroup = useSelector(state => state[headType]?.toolPathGroup);
+    const leafs = leafModels(selectedModelArray);
+    const frame = unionBox(leafs.map(model => modelBox(model, SVGActions?.svgContentGroup?.group, SVGActions?.size || size)));
     const logicalWidth = width * Math.abs(scaleX);
     const logicalHeight = height * Math.abs(scaleY);
+    // the anchor handles sit on the axis-aligned frame (rotated objects: the frame around them)
+    const frameSize = frame ? { width: frame.max.x - frame.min.x, height: frame.max.y - frame.min.y } : { width: logicalWidth, height: logicalHeight };
+    const carry = isRotate ? null : originCarriedBySelection(origin, leafs.map(model => model.modelID), {
+        getGroupMemberIds: (groupID) => {
+            const group = modelGroup.getModel?.(groupID);
+            return group && Array.isArray(group.children) ? group.children.map(child => child.modelID) : null;
+        },
+        jobModelIds: () => (toolPathGroup?.toolPaths || [])
+            .filter(toolPath => toolPath.visible)
+            .flatMap(toolPath => toolPath.visibleModelIDs || [])
+    });
     const logicalAngle = -angle;
     const canResize = ((isTextVector ? config?.text?.length > 0 : true) && selectedModelArray.length === 1 && !selectedModelArray[0].isStraightLine());
     const canRotate = selectedModelArray.length === 1;
@@ -110,13 +154,7 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
         // eslint-disable-next-line react-hooks/exhaustive-deps -- minSize only skips redundant updates
     }, [selectedModelArray]);
 
-    // anchor offset from the selection centre (logical, Y up)
-    const { dx: anchorDx, dy: anchorDy } = anchorOffset(anchor, { width, height });
-
-    const transform = {
-        x: () => (Number(toFixed(logicalX, 1)) + anchorDx).toFixed(1),
-        y: () => (Number(toFixed(logicalY, 1)) + anchorDy).toFixed(1)
-    };
+    const shown = originRelativePosition(frame, anchor, zero) || { x: 0, y: 0 };
 
     // picture(s) of the selected object(s) for the anchor picker
     const pickerImage = getPickerImage(selectedModelArray);
@@ -126,18 +164,15 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
             setAnchor(newAnchor);
         },
 
-        onChangeLogicalX: (newLogicalX) => {
-            const elements = selectedElements;
-            const newX = newLogicalX + size.x - anchorDx;
-
-            dispatch(editorActions.moveElementsImmediately(headType, elements, { newX }));
+        // move the selection so that its anchor lands on the typed coordinate (canvas y is down)
+        onChangeLogicalX: (value) => {
+            const newX = x + moveDeltaForValue(shown.x, value);
+            dispatch(editorActions.moveElementsImmediately(headType, selectedElements, { newX }));
         },
 
-        onChangeLogicalY: (newLogicalY) => {
-            const elements = selectedElements;
-            const newY = -newLogicalY + size.y + anchorDy;
-
-            dispatch(editorActions.moveElementsImmediately(headType, elements, { newY }));
+        onChangeLogicalY: (value) => {
+            const newY = y - moveDeltaForValue(shown.y, value);
+            dispatch(editorActions.moveElementsImmediately(headType, selectedElements, { newY }));
         },
 
         onChangeWidth: (newWidth) => {
@@ -190,6 +225,9 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
     };
 
     const moveDisabled = disabled || !selectedNotHide || drawing;
+    // the work origin moves with the selection: its X / Y from the origin never change
+    const positionLocked = !moveDisabled && !!carry;
+    const positionDisabled = moveDisabled || positionLocked;
     const sizeDisabled = disabled || !selectedNotHide || canResize === false || drawing;
     const rotateDisabled = disabled || !selectedNotHide || !canRotate || drawing || isCNC4AxisImage3d;
 
@@ -213,34 +251,39 @@ const TransformationSection = ({ headType, updateSelectedModelUniformScalingStat
                     items={pickerImage.items}
                     rotation={canRotate ? logicalAngle : 0}
                     flip={{ horizontal: scaleX < 0, vertical: scaleY < 0 }}
-                    aspect={logicalWidth / logicalHeight}
+                    aspect={frameSize.width / frameSize.height}
+                    content={canRotate && frameSize.width > 0 && frameSize.height > 0
+                        ? { width: logicalWidth / frameSize.width, height: logicalHeight / frameSize.height } : undefined}
                     disabled={moveDisabled}
                 />
             </TipTrigger>
             <TipTrigger
                 title={i18n._('key-CncLaser/TransformationSection-Move')}
-                content={i18n._('key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.')}
+                content={positionLocked
+                    ? CARRY_REASONS[carry]()
+                    : i18n._('key-CncLaser/TransformationSection-Set the coordinate of the selected object. You can also drag the object directly. The object should not be moved beyond work area.')}
             >
-                <div className={ps.grid2}>
-                    {renderField('X', moveDisabled, (
+                {/* a disabled input gets no mouse events (pointer-events none in the styles): the grid takes the hover */}
+                <div className={classNames(ps.grid2, { [ps['position-locked']]: positionLocked })} data-position-locked={positionLocked ? carry : undefined}>
+                    {renderField('X', positionDisabled, (
                         <Input
                             suffix="mm"
-                            disabled={moveDisabled}
-                            value={transform.x(logicalX)}
+                            disabled={positionDisabled}
+                            value={formatReadout(shown.x)}
                             size="small"
-                            min={-size.x}
-                            max={size.x}
+                            min={-2 * size.x}
+                            max={2 * size.x}
                             onChange={(value) => actions.onChangeLogicalX(value)}
                         />
                     ))}
-                    {renderField('Y', moveDisabled, (
+                    {renderField('Y', positionDisabled, (
                         <Input
                             suffix="mm"
-                            disabled={moveDisabled}
-                            value={transform.y(logicalY)}
+                            disabled={positionDisabled}
+                            value={formatReadout(shown.y)}
                             size="small"
-                            min={-size.y}
-                            max={size.y}
+                            min={-2 * size.y}
+                            max={2 * size.y}
                             onChange={(value) => actions.onChangeLogicalY(value)}
                         />
                     ))}

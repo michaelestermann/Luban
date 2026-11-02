@@ -18,6 +18,8 @@ interface PointEditOverlayProps {
     isActive: boolean;
     // leaves point editing (same as Done)
     onExit: () => void;
+    // the work origin (G-code zero, model mm): X / Y count from it like the Position fields; null: the canvas zero
+    originPoint?: { x: number, y: number } | null;
 }
 
 // space between the point and the card, screen pixels
@@ -43,7 +45,7 @@ let lastRoundRadius = 2;
  * Point editing on the canvas: the point card next to the selected end point (follows zoom and pan,
  * never covers the point) and the keys of the mode (Tab, Shift+Tab, Enter, Del, Esc).
  */
-const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScreenCTM, isActive, onExit }) => {
+const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScreenCTM, isActive, onExit, originPoint = null }) => {
     const state = usePointEditState(drawGroup);
     const size = useSelector((s: { machine: { size: { x: number, y: number } } }) => s?.machine?.size);
     const rootRef = useRef<HTMLDivElement>(null);
@@ -154,6 +156,7 @@ const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScree
     }
 
     const logical = toLogical(selected, size);
+    const zero = originPoint || { x: 0, y: 0 };
     const key = `${selected.subpathIndex}-${selected.nodeIndex}`;
 
     const typeButton = (type: 'corner' | 'smooth', label: string, title: string, icon: React.ReactNode) => (
@@ -198,8 +201,8 @@ const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScree
                             key={`x-${key}`}
                             suffix="mm"
                             size="small"
-                            value={round(logical.x)}
-                            onChange={(value: number) => drawGroup.setSelectedPointPosition(value + size.x, selected.y)}
+                            value={round(logical.x - zero.x)}
+                            onChange={(value: number) => drawGroup.setSelectedPointPosition(value + zero.x + size.x, selected.y)}
                         />
                     </div>
                     <div className={styles.field}>
@@ -208,8 +211,8 @@ const PointEditOverlay: React.FC<PointEditOverlayProps> = ({ drawGroup, getScree
                             key={`y-${key}`}
                             suffix="mm"
                             size="small"
-                            value={round(logical.y)}
-                            onChange={(value: number) => drawGroup.setSelectedPointPosition(selected.x, size.y - value)}
+                            value={round(logical.y - zero.y)}
+                            onChange={(value: number) => drawGroup.setSelectedPointPosition(selected.x, size.y - (value + zero.y))}
                         />
                     </div>
                 </div>
