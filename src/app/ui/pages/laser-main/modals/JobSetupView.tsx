@@ -29,6 +29,7 @@ import { NumberInput as Input } from '../../../components/Input';
 import Select from '../../../components/Select';
 import TipTrigger from '../../../components/TipTrigger';
 import { getSupportedRunBoundaryModeOptions } from '../../../../constants/machines';
+import { originImage } from '../../../../lib/origin-image';
 
 
 export type JobSetupViewHandle = {
@@ -230,7 +231,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
     // FIXME: Add image to origin options
     let imgOF3axisCoordinateMode = '';
     if (workpiece.shape === WorkpieceShape.Rectangle) { // TODO
-        imgOF3axisCoordinateMode = `/resources/images/cnc-laser/working-origin-3-${selectedOrigin.reference}.png`;
+        imgOF3axisCoordinateMode = originImage(selectedOrigin.reference);
     }
 
     const [settingSizeDisabled, setSettingSizeDisabled] = useState(false);

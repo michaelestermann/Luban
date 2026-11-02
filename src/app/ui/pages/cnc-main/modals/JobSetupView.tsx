@@ -33,6 +33,7 @@ import OriginPointPicker from '../../../widgets/CncLaserShared/OriginPointPicker
 import { localizedAnchorName } from '../../../widgets/CncLaserShared/FramePicker';
 import { boundModelIds, createObjectOrigin, isObjectReference, referenceAnchor } from '../../../../lib/object-origin';
 import { lockingBlockWorkpieceSize } from '../../../../flux/project/new-project';
+import { originImage } from '../../../../lib/origin-image';
 
 
 type OriginTypeOption = {
@@ -372,7 +373,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
     // FIXME: Add image to origin options
     let imgOF3axisCoordinateMode = '';
     if (workpiece.shape === WorkpieceShape.Rectangle) { // TODO
-        imgOF3axisCoordinateMode = `/resources/images/cnc-laser/working-origin-3-${selectedOrigin.reference}.png`;
+        imgOF3axisCoordinateMode = originImage(selectedOrigin.reference);
     }
 
     let settingSizeDisabled = false;
