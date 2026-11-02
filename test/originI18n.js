@@ -65,6 +65,12 @@ const PHASE2 = [
     'Set work origin… (Shift+O)', 'At X {{x}} · Y {{y}} mm on the workpiece', 'Offset {{offset}} mm · follows the object',
     'Offset {{offset}} mm · fixed', 'Edit…', 'Work origin: {{label}}', 'Change in Design', 'Extent X {{x}} · Y {{y}}', 'Offset {{offset}} mm',
     'Shift+O', 'Close', 'Preview zoom', '{{count}} objects',
+    // X / Y locked while the selection carries the work origin
+    'The work origin is set on this object, so its position is always measured from itself. Move the origin or the object on the canvas.',
+    'The work origin is set on the group containing this object, so its position is always measured from the group. Move the origin or the group on the canvas.',
+    'The work origin is set on a frame of several objects that includes this one, so its position is always measured from that frame. '
+        + 'Move the origin or the objects on the canvas.',
+    'The work origin is set on objects of this selection, so its position is always measured from them. Move the origin or the objects on the canvas.',
 ].map(s => `${PREFIX}-${s}`);
 
 test('originKeysOf: literals and K templates', (t) => {

@@ -460,6 +460,7 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             drawGroup={drawGroup}
                             getScreenCTM={getCanvasScreenCTM}
                             isActive={props.isActive}
+                            originPoint={originPoint}
                             onExit={() => onStopDraw(true)}
                         />
                         <SnapOverlay

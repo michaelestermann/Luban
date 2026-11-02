@@ -491,3 +491,20 @@
     font-weight: 600;
     cursor: pointer;
 }
+
+// X / Y locked while the selection carries the work origin: the grid shows the reason on hover, and a
+// disabled input would swallow the mouse events
+.position-locked {
+    cursor: not-allowed;
+
+    .field,
+    :global(.ant-input-affix-wrapper),
+    :global(.ant-input) {
+        cursor: not-allowed;
+    }
+
+    :global(.ant-input-affix-wrapper),
+    :global(.ant-input) {
+        pointer-events: none;
+    }
+}

@@ -23,6 +23,8 @@ interface FramePickerProps {
     aspect: number;
     // images of several selected objects in their relative positions
     items?: FramePickerItem[];
+    // size of the (unrotated) object as a fraction of the frame; the frame is the axis-aligned box around it
+    content?: { width: number; height: number };
     disabled?: boolean;
 }
 
@@ -64,8 +66,9 @@ const Neutral: React.FC = () => (
 );
 
 const FramePicker: React.FC<FramePickerProps> = ({
-    anchor, onChange, imageHref, rotation = 0, flip, aspect, items, disabled
+    anchor, onChange, imageHref, rotation = 0, flip, aspect, items, content, disabled
 }) => {
+    const fit = content && content.width > 0 && content.height > 0 && Number.isFinite(content.width) && Number.isFinite(content.height);
     const safeAspect = aspect > 0 && Number.isFinite(aspect) ? aspect : 1;
     let w = MAX_W;
     let h = w / safeAspect;
@@ -126,7 +129,16 @@ const FramePicker: React.FC<FramePickerProps> = ({
                             ))}
                         </div>
                     ) : (
-                        <div style={{ position: 'absolute', inset: 0, transform: imageTransform }}>
+                        <div
+                            style={fit ? {
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                width: `${content.width * 100}%`,
+                                height: `${content.height * 100}%`,
+                                transform: `translate(-50%, -50%) ${imageTransform}`
+                            } : { position: 'absolute', inset: 0, transform: imageTransform }}
+                        >
                             {imageHref ? (
                                 <img
                                     src={imageHref}
