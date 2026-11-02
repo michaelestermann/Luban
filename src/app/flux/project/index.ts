@@ -496,7 +496,8 @@ export const actions = {
         }
         if (toolpaths && toolpaths.length) {
             for (let k = 0; k < toolpaths.length; k++) {
-                toolPathGroup.saveToolPath(toolpaths[k], { materials, origin }, false);
+                // the normalised origin of the project (set above), not the raw stored one
+                toolPathGroup.saveToolPath(toolpaths[k], { materials, origin: getState()[envHeadType].origin || origin }, false);
             }
             toolPathGroup.selectToolPathById(null);
         }

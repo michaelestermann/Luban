@@ -11,7 +11,7 @@ import { OriginSnap } from '../snap/snap-session';
 import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
 import { originMarkerShown } from './origin-marker-shown';
 import { useOverlayLayout } from './use-overlay-layout';
-import { liveOriginPoint, useTransformTick } from './use-live-origin';
+import { liveWorkOriginPoint, useTransformTick } from './use-live-origin';
 import { targetLabel } from './origin-labels';
 import styles from './origin.styl';
 
@@ -76,10 +76,10 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
     useSelector(state => state[headType]?.scale);
     useSelector(state => state[headType]?.target);
     const renderingTimestamp = useSelector(state => state[headType]?.renderingTimestamp);
-    // the bound objects as drawn now: the marker stays on their point while they are moved, resized or rotated
+    // the work origin (offset included) of the bound objects as drawn now: the marker stays on it while they are moved, resized or rotated
     useTransformTick(headType);
     const originPoint: Point | null = useSelector(
-        state => liveOriginPoint(state[headType], state[headType]?.origin),
+        state => liveWorkOriginPoint(state[headType], state[headType]?.origin),
         (a: Point | null, b: Point | null) => (!a && !b) || (!!a && !!b && a.x === b.x && a.y === b.y),
     );
     // an origin shown without being set (pick-mode hover, dialog): its point, as ghost axes
@@ -89,7 +89,7 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         if (!preview) {
             return null;
         }
-        return liveOriginPoint(editor, preview) || { x: 0, y: 0 };
+        return liveWorkOriginPoint(editor, preview) || { x: 0, y: 0 };
     }, (a: Point | null, b: Point | null) => (!a && !b) || (!!a && !!b && a.x === b.x && a.y === b.y));
     const [drag, setDrag] = useState<DragState | null>(null);
     const dragRef = useRef<DragState | null>(null);

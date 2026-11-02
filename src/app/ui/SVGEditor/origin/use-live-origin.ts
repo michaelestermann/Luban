@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { Origin } from '../../../constants/coordinate';
 import { BoxLike, Point, referencePoint } from '../../../lib/object-origin';
-import { OriginContext, resolveReferenceBox } from '../../../lib/work-origin';
+import { OriginContext, originShift, resolveReferenceBox } from '../../../lib/work-origin';
 import { liveElementBox } from './live-box';
 
 interface ModelLike { modelID: string; visible?: boolean; elem?: SVGGraphicsElement }
@@ -44,6 +44,15 @@ export function liveOriginPoint(editor: EditorLike | null | undefined, origin: O
     }
     const ctx = liveOriginContext(editor);
     return ctx ? referencePoint(resolveReferenceBox(origin, ctx), origin.reference) : null;
+}
+
+/** The work origin (G-code zero, offset included, model mm) as the canvas shows it now; null: the canvas zero. */
+export function liveWorkOriginPoint(editor: EditorLike | null | undefined, origin: Origin | null | undefined): Point | null {
+    if (!origin) {
+        return null;
+    }
+    const ctx = liveOriginContext(editor);
+    return ctx ? originShift(origin, ctx) : null;
 }
 
 /**

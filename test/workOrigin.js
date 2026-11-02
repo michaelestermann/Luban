@@ -17,6 +17,9 @@ import {
     workpieceOrigin,
     boundGroupId,
     isWorkpieceFrameOrigin,
+    gcodeOriginHeader,
+    freezeOrigin,
+    jobSetupOrigin,
 } from '../src/app/lib/work-origin';
 import { createObjectOrigin } from '../src/app/lib/object-origin';
 
@@ -149,5 +152,51 @@ test('isOutsideWorkpiece: edges are inside', (t) => {
 test('extentFromOrigin', (t) => {
     t.deepEqual(extentFromOrigin(logo, { x: 75, y: 140 }), { minX: -5, maxX: 95, minY: 0, maxY: 100 });
     t.equal(extentFromOrigin(null, { x: 0, y: 0 }), null);
+    t.end();
+});
+
+test('gcodeOriginHeader: origin name and offset for the G-code header', (t) => {
+    const logoBL = createObjectOrigin('bottom-left', ['logo']);
+    t.deepEqual(gcodeOriginHeader(logoBL, { x: 70, y: 140 }, 'bottom-left', 1), { origin: 'object-bottom-left', offset: null });
+    t.deepEqual(gcodeOriginHeader(withOffset(logoBL, { x: 5, y: 0 }), { x: 75, y: 140 }, 'bottom-left', 1), { origin: 'object-bottom-left', offset: '5.0,0.0' });
+    t.deepEqual(gcodeOriginHeader(createWorkpieceFrameOrigin('top-right'), { x: 400, y: 300 }, 'bottom-left', 1), { origin: 'workpiece-top-right', offset: null });
+    t.deepEqual(gcodeOriginHeader(createFreeOrigin('bottom-left', { x: 12.5, y: -3 }), { x: 12.5, y: -3 }, 'bottom-left', 1), { origin: 'bottom-left', offset: '12.5,-3.0' });
+    t.deepEqual(gcodeOriginHeader({ type: 2, reference: 'center', referenceMetadata: {} }, null, 'bottom-left', 1), { origin: 'position1', offset: null });
+    t.deepEqual(gcodeOriginHeader(withOffset(createObjectOrigin('bottom-left', ['gone']), { x: 5, y: 0 }), null, 'center', 1), { origin: 'center', offset: null });
+    t.end();
+});
+
+test('normalizeOrigin round trip keeps the new fields', (t) => {
+    const o = { type: 1, reference: 'top-right', referenceMetadata: { groupID: 'g', modelIDs: ['a', 'b'], offset: { x: 5, y: 0 } } };
+    t.deepEqual(normalizeOrigin(JSON.parse(JSON.stringify(o)), fallback), o);
+    t.end();
+});
+
+test('freezeOrigin keeps the point', (t) => {
+    const o = withOffset(createObjectOrigin('bottom-left', ['logo']), { x: 5, y: 0 });
+    const frozen = freezeOrigin(o, { x: 75, y: 140 }, 'bottom-left');
+    t.deepEqual(frozen, { type: 0, reference: 'bottom-left', referenceMetadata: { offset: { x: 75, y: 140 } } });
+    t.deepEqual(originShift(frozen, ctx()), { x: 75, y: 140 });
+    t.end();
+});
+
+test('createFreeOrigin with a zero offset is the workpiece origin', (t) => {
+    t.deepEqual(createFreeOrigin('bottom-left', { x: 0, y: 0 }), workpieceOrigin('bottom-left'));
+    t.end();
+});
+
+test('jobSetupOrigin: OK without changes keeps the origin, a change keeps the offset (not on the locking block)', (t) => {
+    const group = withOffset(createGroupOrigin('top-right', 'g', ['a', 'b']), { x: 5, y: 0 });
+    // unchanged type + point: the stored origin (group, ids, offset) even if the dialog rebuilt it from the selection
+    t.equal(jobSetupOrigin(group, createObjectOrigin('top-right', ['sel'])), group);
+    const frame = createWorkpieceFrameOrigin('center');
+    t.equal(jobSetupOrigin(frame, { type: 1, reference: 'center', referenceMetadata: {} }), frame);
+    // another point: rebuilt, offset kept
+    t.deepEqual(jobSetupOrigin(group, createObjectOrigin('bottom-left', ['a'])),
+        { type: 1, reference: 'bottom-left', referenceMetadata: { modelIDs: ['a'], offset: { x: 5, y: 0 } } });
+    // workpiece origin with offset, other reference: offset kept
+    t.deepEqual(jobSetupOrigin(createFreeOrigin('bottom-left', { x: 2, y: 3 }), workpieceOrigin('center')), createFreeOrigin('center', { x: 2, y: 3 }));
+    // locking block: no offset
+    t.deepEqual(jobSetupOrigin(group, { type: 2, reference: 'center', referenceMetadata: {} }), { type: 2, reference: 'center', referenceMetadata: {} });
     t.end();
 });

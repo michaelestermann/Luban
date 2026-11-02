@@ -5,11 +5,12 @@ import { v4 as uuid } from 'uuid';
 import { timestamp } from '../../../shared/lib/random-utils';
 import api from '../../api';
 import { DISPLAYED_TYPE_MODEL, DISPLAYED_TYPE_TOOLPATH, HEAD_CNC, HEAD_LASER, MotorPowerMode, SELECTEVENT, SetupCoordinateMethod } from '../../constants';
-import { JobOffsetMode, Origin, OriginType } from '../../constants/coordinate';
+import { JobOffsetMode, Origin } from '../../constants/coordinate';
 import CompoundOperation from '../../core/CompoundOperation';
 import { controller } from '../../communication/socket-communication';
 import { logSvgSlice } from '../../lib/gaEvent';
 import { stockBoundary } from '../../lib/object-origin';
+import { gcodeOriginHeader } from '../../lib/work-origin';
 import i18n from '../../lib/i18n';
 import { PROCESS_STAGE, STEP_STAGE } from '../../lib/manager/ProgressManager';
 import ToolPathGroup from '../../toolpaths/ToolPathGroup';
@@ -465,11 +466,8 @@ export const processActions = {
                 motorMode = (setupCoordinateMethod === SetupCoordinateMethod.Manually || !isConnected) ? MotorPowerMode.SHUTAll : MotorPowerMode.STAYPOWER;
             }
 
-            // G-code header: locking block, object origin point or the workpiece reference
-            let headerOrigin = toolPathGroup.getObjectOriginPoint(origin) ? `object-${origin.reference}` : coordinateMode.value;
-            if (origin.type === OriginType.CNCLockingBlock) {
-                headerOrigin = `position${lockingBlockPosition}`;
-            }
+            // G-code header: locking block, object / workpiece-frame point or the workpiece reference, and the offset
+            const header = gcodeOriginHeader(origin, toolPathGroup.getWorkOriginPoint(origin), coordinateMode.value, lockingBlockPosition);
             controller.commitGcodeTask({
                 taskId: uuid(),
                 headType: headType,
@@ -477,7 +475,8 @@ export const processActions = {
                     toolPaths,
                     size,
                     toolHead: currentToolHead,
-                    origin: headerOrigin,
+                    origin: header.origin,
+                    originOffset: header.offset,
                     jobOffsetMode,
                     series: activeMachine?.identifier,
                     metadata: activeMachine?.metadata,
@@ -609,8 +608,8 @@ export const processActions = {
             return;
         }
         const { viewPathFile } = taskResult;
-        // the stock is drawn with the view paths (G-code coordinates: relative to an object origin point)
-        const originPoint = toolPathGroup.getObjectOriginPoint?.(getState()[headType].origin) || null;
+        // the stock is drawn with the view paths (G-code coordinates: relative to the work origin incl. its offset)
+        const originPoint = toolPathGroup.getWorkOriginPoint?.(getState()[headType].origin) || null;
         const boundarySize = stockBoundary(size, coordinateMode.setting.sizeMultiplyFactor, originPoint);
         await toolPathGroup.onGenerateViewPath(viewPathFile, isRotate ? materials : boundarySize);
 

@@ -7,7 +7,7 @@ import { ViewPathRenderer } from '../lib/renderer/ViewPathRenderer';
 import { generateModelDefaultConfigs } from '../models/ModelInfoUtils';
 import ThreeModel from '../models/ThreeModel';
 import { BoxLike, Point, referencePoint } from '../lib/object-origin';
-import { OriginContext, resolveReferenceBox } from '../lib/work-origin';
+import { OriginContext, originShift, resolveReferenceBox } from '../lib/work-origin';
 import ToolPath from './ToolPath';
 import { moveItem } from './reorder';
 import { SUCCESS, createToolPathNameByType, getModelsByToolPathType, getToolPathType } from './utils';
@@ -487,6 +487,11 @@ class ToolPathGroup {
     public setWorkpieceBox(box: BoxLike | null): void {
         this.workpieceBox = box;
         this.computeReferenceBox();
+    }
+
+    /** The work origin (G-code zero, offset included) in model coordinates; null: the canvas zero of the coordinate mode. */
+    public getWorkOriginPoint(origin: Origin = this.origin): Point | null {
+        return originShift(origin, this.getOriginContext());
     }
 
     /** The point (model coordinates) of an object origin, null when the workpiece origin applies. */

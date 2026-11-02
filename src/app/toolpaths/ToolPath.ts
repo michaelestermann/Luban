@@ -4,7 +4,8 @@ import { v4 as uuid } from 'uuid';
 import { Box2, Group } from 'three';
 
 import { Origin, OriginType, RectangleWorkpieceReference } from '../constants/coordinate';
-import { referencePoint } from '../lib/object-origin';
+import { Point, referencePoint } from '../lib/object-origin';
+import { originOffset } from '../lib/work-origin';
 import { MINIMUM_WIDTH_AND_HEIGHT } from '../constants';
 import log from '../lib/log';
 import ModelGroup from '../models/ModelGroup';
@@ -330,16 +331,32 @@ class ToolPath {
         return modelInfos;
     }
 
+    /** The work origin (G-code zero) in model coordinates, as `originShift` of lib/work-origin; null: the canvas zero. */
+    public getOriginShift(): Point | null {
+        if (!this.origin) {
+            return null;
+        }
+        const offset = originOffset(this.origin);
+        if (this.origin.type === OriginType.Object) {
+            const point = referencePoint(this.referenceBox, this.origin.reference);
+            return point ? { x: point.x + offset.x, y: point.y + offset.y } : null;
+        }
+        if (this.origin.type === OriginType.Workpiece && (offset.x !== 0 || offset.y !== 0)) {
+            return offset;
+        }
+        return null;
+    }
+
     public getSelectModelsAndToolPathInfo() {
         const modelInfos = this._getModelTaskInfos();
 
-        // Deal with origin, if origin type is object, we add offsets to the model transformation here
-        // (the point of the reference box; no box: the workpiece origin)
-        const point = this.origin.type === OriginType.Object ? referencePoint(this.referenceBox, this.origin.reference) : null;
-        if (point) {
+        // The tool paths are relative to the work origin: the point of the reference box of an object
+        // origin plus its offset, or the offset of a workpiece origin (none: the canvas zero)
+        const shift = this.getOriginShift();
+        if (shift) {
             for (const modelInfo of modelInfos) {
-                modelInfo.transformation.positionX -= point.x;
-                modelInfo.transformation.positionY -= point.y;
+                modelInfo.transformation.positionX -= shift.x;
+                modelInfo.transformation.positionY -= shift.y;
             }
         }
 

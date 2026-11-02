@@ -25,7 +25,7 @@ import ShapeActionKeys from './combine/ShapeActionKeys';
 import RoundCorners from './combine/RoundCorners';
 import OffsetPreview from './combine/OffsetPreview';
 import ArrayPreview from './combine/ArrayPreview';
-import { useObjectOriginPoint } from './origin/use-object-origin-point';
+import { useWorkOriginPoint } from './origin/use-object-origin-point';
 
 
 export type SVGEditorHandle = {
@@ -104,8 +104,8 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
     const [drawGroup, setDrawGroup] = useState(null);
 
     const canvas = useRef(null);
-    // the red origin dot and the rulers follow an object origin
-    const originPoint = useObjectOriginPoint(props.headType);
+    // the red origin dot and the rulers count from the work origin (G-code zero, offset included)
+    const originPoint = useWorkOriginPoint(props.headType);
     // the marker (Design step) or, in the other steps, the canvas dot shows the origin
     const editorPage = useSelector(state => state[props.headType]?.page);
     const leftBarRef = useRef(null);

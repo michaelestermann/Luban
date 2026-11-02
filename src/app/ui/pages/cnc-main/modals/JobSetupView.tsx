@@ -34,6 +34,7 @@ import { localizedAnchorName } from '../../../widgets/CncLaserShared/FramePicker
 import { boundModelIds, createObjectOrigin, isObjectReference, referenceAnchor } from '../../../../lib/object-origin';
 import { lockingBlockWorkpieceSize } from '../../../../flux/project/new-project';
 import { originImage } from '../../../../lib/origin-image';
+import { jobSetupOrigin } from '../../../../lib/work-origin';
 
 
 type OriginTypeOption = {
@@ -389,7 +390,10 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
             const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
             return {
                 workpiece: { shape: workpiece.shape, size: { ...workpiece.size } },
-                origin: isObjectOrigin ? createObjectOrigin(selectedOrigin.reference, objectIds) : { ...selectedOrigin, referenceMetadata: {} },
+                // OK without changing type or point keeps the project's origin (binding, offset)
+                origin: jobSetupOrigin(origin, isObjectOrigin
+                    ? createObjectOrigin(selectedOrigin.reference, objectIds)
+                    : { ...selectedOrigin, referenceMetadata: {} }),
                 coordinateMode: isObjectOrigin ? coordinateMode : (targetOption?.mode || null),
                 lockingBlockPosition,
             };
@@ -409,7 +413,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
 
         selectedOrigin,
         lockingBlockPosition,
-        coordinateMode, objectIds,
+        coordinateMode, objectIds, origin,
     ]);
 
     return (

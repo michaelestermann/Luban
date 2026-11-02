@@ -13,6 +13,7 @@ import {
     Materials,
     Origin,
     OriginReference,
+    OriginType,
     OriginTypeOption,
     RectangleWorkpieceSize,
     Workpiece,
@@ -30,6 +31,7 @@ import Select from '../../../components/Select';
 import TipTrigger from '../../../components/TipTrigger';
 import { getSupportedRunBoundaryModeOptions } from '../../../../constants/machines';
 import { originImage } from '../../../../lib/origin-image';
+import { jobSetupOrigin } from '../../../../lib/work-origin';
 
 
 export type JobSetupViewHandle = {
@@ -182,13 +184,14 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
     // In case default reference is not an option, select an available one as reference
     useEffect(() => {
         const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
-        if (!targetOption && originReferenceOptions.length > 0) {
+        // an origin on objects may sit on any of the nine points (set in the editor): it is kept
+        if (!targetOption && originReferenceOptions.length > 0 && selectedOrigin.type !== OriginType.Object) {
             const firstOption = originReferenceOptions[0];
             setOriginReference(firstOption.mode.value as OriginReference);
         }
     }, [
         setOriginReference,
-        originReferenceOptions, selectedOrigin.reference,
+        originReferenceOptions, selectedOrigin.reference, selectedOrigin.type,
     ]);
 
     /**
@@ -247,8 +250,10 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
             const targetOption = originReferenceOptions.find(option => option.value === selectedOrigin.reference);
             return {
                 workpiece: { shape: workpiece.shape, size: { ...workpiece.size } },
-                origin: { ...selectedOrigin },
-                coordinateMode: targetOption?.mode || null,
+                // OK without changing type or point keeps the project's origin (binding, offset)
+                origin: jobSetupOrigin(origin, { ...selectedOrigin }),
+                // an origin on objects keeps the canvas reference
+                coordinateMode: selectedOrigin.type === OriginType.Object ? null : (targetOption?.mode || null),
                 jobOffsetMode: selectedJobOffsetMode,
             };
         };
@@ -260,6 +265,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
         };
     }, [
         dispatch,
+        origin,
         originReferenceOptions,
 
         workpiece.shape,

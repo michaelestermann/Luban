@@ -7,6 +7,7 @@ import { isNull } from '../../../../shared/lib/utils';
 import { GcodeGenerator } from '../../../lib/GcodeGenerator';
 import logger from '../../../lib/logger';
 import sendMessage from '../utils/sendMessage';
+import { originHeaderLines } from '../../../lib/gcode-origin-header';
 import { splitToolPathsByTool } from '../../../../shared/lib/gcode-runs';
 import settings from '../../../config/settings';
 import { JobOffsetMode } from '../../../../app/constants/coordinate';
@@ -89,7 +90,7 @@ const checkoutBoundingBoxIsNull = (boundingBox) => {
  */
 export const writeGcodeFile = (
     toolPaths,
-    { size, toolHead, origin, jobOffsetMode, series, metadata, motorMode, headType, thumbnail, onProgress = () => {} }
+    { size, toolHead, origin, originOffset, jobOffsetMode, series, metadata, motorMode, headType, thumbnail, onProgress = () => {} }
 ) => {
     const suffix = headType === 'laser' ? '.nc' : '.cnc';
 
@@ -219,7 +220,7 @@ export const writeGcodeFile = (
         + `;power(%): ${power}\n`
         + `;work_size_x: ${size.x}\n`
         + `;work_size_y: ${size.y}\n`
-        + `;origin: ${origin}\n`;
+        + `${originHeaderLines({ origin, originOffset })}`;
 
     // thumbnail
     if (hasThumbnail) {

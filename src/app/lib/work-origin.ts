@@ -227,3 +227,46 @@ export function extentFromOrigin(jobBox: BoxLike | null, zero: Point): { minX: n
         maxY: jobBox.max.y - zero.y,
     };
 }
+
+const formatOffsetMm = (v: number): string => (Math.abs(v) < 0.05 ? '0.0' : v.toFixed(1));
+
+/**
+ * The `;origin:` (and `;origin_offset(mm):`) values of the G-code header. `shift` is the resolved work
+ * origin (originShift); an object origin whose objects are gone falls back to the coordinate mode.
+ */
+export function gcodeOriginHeader(origin: Origin, shift: Point | null, coordinateModeValue: string,
+    lockingBlockPosition: string | number): { origin: string; offset: string | null } {
+    if (!origin || origin.type === OriginType.CNCLockingBlock) {
+        return { origin: origin ? `position${lockingBlockPosition}` : coordinateModeValue, offset: null };
+    }
+    const offset = originOffset(origin);
+    const offsetText = isZero(offset) ? null : `${formatOffsetMm(offset.x)},${formatOffsetMm(offset.y)}`;
+    if (origin.type === OriginType.Object) {
+        if (!shift) {
+            return { origin: coordinateModeValue, offset: null };
+        }
+        return { origin: `${isWorkpieceFrameOrigin(origin) ? 'workpiece' : 'object'}-${origin.reference}`, offset: offsetText };
+    }
+    return { origin: coordinateModeValue, offset: offsetText };
+}
+
+/** An origin that stays where it is now and no longer follows objects: the workpiece origin moved to `point`. */
+export function freezeOrigin(origin: Origin, point: Point, coordinateModeValue: string): Origin {
+    // the zero of the coordinate mode is (0, 0) in model coordinates
+    return createFreeOrigin(coordinateModeValue, { x: point.x, y: point.y });
+}
+
+/**
+ * The origin Job Setup applies: OK without changing the type or the point keeps the project's origin as it is
+ * (its group / workpiece-frame binding, ids and offset); a changed type or point takes `next` and keeps the
+ * offset, except on the CNC locking block.
+ */
+export function jobSetupOrigin(before: Origin | null | undefined, next: Origin): Origin {
+    if (before && before.type === next.type && before.reference === next.reference) {
+        return before;
+    }
+    if (next.type === OriginType.CNCLockingBlock) {
+        return withOffset(next, null);
+    }
+    return withOffset(next, before ? originOffset(before) : null);
+}
