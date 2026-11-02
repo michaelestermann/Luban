@@ -101,7 +101,8 @@ export function bindEditorActions(actions: EditorActionsLike): void {
     editor = actions;
 }
 
-export const t: Translate = (key, options) => i18n._(key, options);
+/** Origin texts: the interpolated labels and numbers are plain text (React escapes), so i18next must not ("5.0 &#x2F; 0.0"). */
+export const t: Translate = (key, options) => i18n._(key, options ? { ...options, interpolation: { escapeValue: false } } : options);
 
 /** Sets an origin for an undo step (state, tool paths, process reset, render). */
 export function originApplier(dispatch, headType: HeadType): (origin: Origin) => void {

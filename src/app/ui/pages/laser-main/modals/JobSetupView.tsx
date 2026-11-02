@@ -357,7 +357,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
                     workpiece.shape === WorkpieceShape.Rectangle && !isDraft && origin && !isPlainWorkpieceOrigin(origin) && (
                         <div className="margin-top-16 sm-flex align-center" data-job-setup-work-origin>
                             <span className="margin-right-8">
-                                {i18n._('key-CncLaser/Origin-Work origin: {{label}}', { label: workOriginLine(origin, projectModelGroup) })}
+                                {originT('key-CncLaser/Origin-Work origin: {{label}}', { label: workOriginLine(origin, projectModelGroup) })}
                             </span>
                             {onEditOrigin && (
                                 <button

@@ -254,12 +254,16 @@ export function previewBoxes(zoom: PreviewZoom, p: { workpiece: BoxLike | null; 
 
 /**
  * "Pick on the canvas" from the dialog: the picked point becomes the dialog's reference and point (the
- * offset stays). A point of the selection (or its group) is the selection row, another object or group a
+ * offset stays unless the pick changes between the workpiece and objects). A point of the selection (or its
+ * group) is the selection row, another object or group a
  * bound row, a workpiece point the workpiece row.
  */
 export function dialogStateFromTarget(state: OriginDialogState, target: OriginTarget, ctx: DialogContext): OriginDialogState {
-    const base = { point: target.reference, offset: { ...state.offset } };
     const src = target.source;
+    // the offset stays within its kind of reference (workpiece: a position, objects: a shift);
+    // across the two kinds it starts at 0
+    const crossing = (src.kind === 'workpiece') !== (state.reference === 'workpiece');
+    const base = { point: target.reference, offset: crossing ? { x: 0, y: 0 } : { ...state.offset } };
     if (src.kind === 'workpiece') {
         return { reference: 'workpiece', ...base, follow: false };
     }

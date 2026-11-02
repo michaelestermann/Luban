@@ -147,8 +147,12 @@ test('dialogStateFromTarget: an unselected object becomes a bound row', (tt) => 
     // the selected object itself: the selection row
     const own = dialogStateFromTarget(state, { ...target, reference: 'top-left', source: { kind: 'object', modelID: 'logo', selected: true }, name: 'Logo' }, c);
     tt.equal(own.reference, 'selection');
-    // a workpiece point: the workpiece row, follow off
+    // a workpiece point: the workpiece row, follow off, the object offset does not carry over
     const wpT = dialogStateFromTarget(state, { point: { x: 400, y: 300 }, reference: 'top-right', source: { kind: 'workpiece' }, rank: 4, name: '' }, c);
-    tt.deepEqual(wpT, { reference: 'workpiece', point: 'top-right', offset: { x: 5, y: 0 }, follow: false });
+    tt.deepEqual(wpT, { reference: 'workpiece', point: 'top-right', offset: { x: 0, y: 0 }, follow: false });
+    // from a free origin (workpiece row) onto an object: the position offset does not become a shift
+    const fromFree = dialogStateFromTarget({ reference: 'workpiece', point: 'bottom-left', offset: { x: 70, y: 140 }, follow: false }, target, c);
+    tt.deepEqual(fromFree.offset, { x: 0, y: 0 });
+    tt.equal(fromFree.follow, true);
     tt.end();
 });

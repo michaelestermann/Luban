@@ -104,8 +104,11 @@ const OriginDialogBody: React.FC<BodyProps> = ({ headType, dialog }) => {
 
     const rows: DialogReferenceRow[] = useMemo(() => (ctx ? dialogReferences(origin, ctx) : []), [ctx, origin]);
     // after a pick the chosen bound row may not be one of the rows of the current origin: add it
+    const sameBound = (row: DialogReferenceRow, f: OriginDialogState): boolean => row.kind === 'bound'
+        && (row.groupID || null) === (f.groupID || null)
+        && (row.modelIDs || []).slice().sort().join() === (f.referenceIDs || []).slice().sort().join();
     const shownRows = useMemo(() => {
-        if (form.reference !== 'bound' || rows.some(r => r.kind === 'bound')) {
+        if (form.reference !== 'bound' || rows.some(r => sameBound(r, form))) {
             return rows;
         }
         const ids = form.referenceIDs || [];
@@ -125,7 +128,7 @@ const OriginDialogBody: React.FC<BodyProps> = ({ headType, dialog }) => {
         };
         const all = rows.findIndex(r => r.kind === 'all');
         return [...rows.slice(0, all), extra, ...rows.slice(all)];
-    }, [rows, form, ctx]);
+    }, [rows, form, ctx]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const next = useMemo(() => (ctx ? dialogToOrigin(form, ctx) : null), [form, ctx]);
     const preview = useMemo(() => (ctx ? dialogPreviewOrigin(form, ctx) : null), [form, ctx]);
@@ -180,7 +183,14 @@ const OriginDialogBody: React.FC<BodyProps> = ({ headType, dialog }) => {
         setForm((f) => {
             // the workpiece never follows; leaving it for objects follows them again
             const follow = row.kind !== 'workpiece' && (f.reference === 'workpiece' || f.follow);
-            const state: OriginDialogState = { reference: row.kind, point: f.point, offset: f.offset, follow };
+            // an offset belongs to its kind of reference: on the workpiece it is a position (free origin), on objects
+            // a shift from their point; between the two kinds it starts at 0
+            const crossing = (row.kind === 'workpiece') !== (f.reference === 'workpiece');
+            const offset = crossing ? { x: 0, y: 0 } : f.offset;
+            if (crossing) {
+                setOffsetText({ x: formatOffset(0), y: formatOffset(0) });
+            }
+            const state: OriginDialogState = { reference: row.kind, point: f.point, offset, follow };
             if (row.kind === 'bound') {
                 state.referenceIDs = (row.modelIDs || []).slice();
                 if (row.groupID) {
@@ -287,8 +297,7 @@ const OriginDialogBody: React.FC<BodyProps> = ({ headType, dialog }) => {
                         <span className={styles.lbl} id="origin-dialog-reference">{t(`${K}Reference`)}</span>
                         <div ref={rowsRef} role="radiogroup" aria-labelledby="origin-dialog-reference" className={styles.rows}>
                             {shownRows.map((row) => {
-                                const on = form.reference === row.kind
-                                    && (row.kind !== 'bound' || (row.groupID || null) === (form.groupID || null));
+                                const on = form.reference === row.kind && (row.kind !== 'bound' || sameBound(row, form));
                                 return (
                                     <button
                                         type="button"
@@ -366,6 +375,8 @@ const OriginDialogBody: React.FC<BodyProps> = ({ headType, dialog }) => {
                                         aria-label={`${t(`${K}Offset`)} ${axis.toUpperCase()}`}
                                         data-origin-offset={axis}
                                         onChange={event => setOffset(axis, event.target.value)}
+                                        // a click into the field selects the number: typing replaces it
+                                        onFocus={event => event.target.select()}
                                         onBlur={() => setOffsetText(o => ({ ...o, [axis]: formatOffset(form.offset[axis]) }))}
                                         onKeyDown={(event) => {
                                             if (event.key === 'Enter') {
