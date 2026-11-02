@@ -27,6 +27,8 @@ import OriginPreview from './OriginPreview';
 import styles from './origin.styl';
 
 const K = 'key-CncLaser/Origin-';
+
+type ProjectStateLike = { project?: Record<string, { openedFile?: { name?: string } }> };
 const ARROWS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
 /** The dialog context from the editor state: model boxes, selection, groups, workpiece, names. */
@@ -88,7 +90,7 @@ const OriginDialogBody: React.FC<BodyProps> = ({ headType, dialog }) => {
     // the editor objects change (move, resize): the context is built again
     const renderingTimestamp = useSelector(state => state[headType]?.renderingTimestamp);
     const origin = useSelector(state => state[headType]?.origin);
-    const fileName: string | null = useSelector(state => state.project?.[headType]?.openedFile?.name || null);
+    const fileName: string | null = useSelector((state: ProjectStateLike) => state.project?.[headType]?.openedFile?.name || null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const ctx = useMemo(() => buildDialogContext(store.getState()[headType]), [store, headType, renderingTimestamp]);
 

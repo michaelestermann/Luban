@@ -163,7 +163,7 @@ export function initialDialogState(origin: Origin, ctx: DialogContext): OriginDi
     }
     const rows = dialogReferences(origin, ctx);
     const current = rows.find(r => r.current && r.kind !== 'workpiece');
-    const state: OriginDialogState = { reference: current ? current.kind : 'all', point: origin.reference, offset, follow: true };
+    const state: OriginDialogState = { reference: current ? current.kind : 'all', point: origin.reference as ObjectReference, offset, follow: true };
     if (current?.kind === 'bound') {
         state.referenceIDs = current.modelIDs.slice();
         if (current.groupID) {
