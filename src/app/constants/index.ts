@@ -612,6 +612,18 @@ export const CNC_DEFAULT_GCODE_PARAMETERS_DEFINITION = {
         description:
             'Set the speed at which the tool is driven down into the material.'
     },
+    // drilling: the speed the tool leaves the hole with (no value: the jog speed)
+    retractSpeed: {
+        default_value: 1500,
+        type: 'float',
+        min: 1,
+        max: 36000,
+        step: 0.01,
+        label: 'Retract Speed',
+        unit: 'mm/min',
+        description:
+            'Set the speed at which the tool is pulled out of the material when drilling.'
+    },
     jogSpeed: {
         default_value: 1500,
         type: 'float',

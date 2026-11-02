@@ -1,0 +1,24 @@
+{
+    "cnc": {
+        "toolpathFiles": [
+            "028b4f9e3e0d025994fc6d3b5334c45595b0faaf7c404f31e56bbbfbd839d873",
+            "229cda056aa8aef1975648fd37b026343ef65e7ba9f11b1327d6b49c4dcdfec4",
+            "ecfb098b99de44298a7ebb74a74e5f196343fa336d130f370b254307ee052a36",
+            "1799d1d1521dd80d1f0d89656f595bf18954ce11417552af0e6d992d4b3a6f30",
+            "7d8966016180a8e9b1ee97660a70b81f6bfc28f21110e43e001f96a8f7f2bcde"
+        ],
+        "gcode": [
+            "5420ac52d3e7d3ae634853b5bd70aa477fcc1b80b8ab1b82f228a813fd4af003",
+            "b40f1bd07bda5c37aeafb6a6f0dcacd4390883c935c6808112dd1ce1531e6dc1"
+        ]
+    },
+    "laser": {
+        "toolpathFiles": [
+            "8195a5d81a2f4531d6c9b37cddba204d6b406d209f84f8bca85f3a3a861a9907",
+            "cc1d47e6d86babf3c3db5a894658d1b75c02f4330f44931fa413bd74c97a3f43"
+        ],
+        "gcode": [
+            "c9f30d3f11a13598a0186f492a3e310e2bbb906036c87ba80651dc8ef0e54cbb"
+        ]
+    }
+}

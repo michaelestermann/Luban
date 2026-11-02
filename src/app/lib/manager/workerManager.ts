@@ -3,10 +3,12 @@ import { isUndefined } from 'lodash';
 import { Pool, Thread, Worker as ThreadsWorker, spawn } from 'threads';
 
 import { machineStore } from '../../store/local-storage';
+import log from '../log';
 import { LoadModelOptions } from '../../workers/loadModel';
 import CalculateSectionPoints, { IMessage as TCalculateSectionPointsMessage } from './ClippingPoolManager.worker';
 import './Pool.worker';
 import './clipperPool.worker';
+import { isWorkerStartFailure, runWorkerTask, WORKER_START_TIMEOUT } from './worker-task';
 
 type TListener = [string, (res: unknown) => void]
 
@@ -44,7 +46,7 @@ class WorkerManager extends EventEmitter {
     public initPool(): void {
         if (!this.pool) {
             this.pool = Pool(
-                async () => spawn(new ThreadsWorker('./worker/Pool.worker.js')),
+                async () => spawn(new ThreadsWorker('./worker/Pool.worker.js'), { timeout: WORKER_START_TIMEOUT }),
                 {
                     size: 2,
                 },
@@ -89,7 +91,9 @@ class WorkerManager extends EventEmitter {
     }
 
     public toolpathRenderer<T>(data: unknown, onMessage: (data: T) => void, onComplete?: () => void) {
-        this.exec('toolpathRenderer', data, onMessage, onComplete);
+        // a crashed render job reports like a failed render
+        const onError = (err: unknown) => onMessage({ status: 'err', value: err instanceof Error ? err.message : String(err) } as unknown as T);
+        this.exec('toolpathRenderer', data, onMessage, onComplete, onError);
     }
 
     public generatePlateAdhesion<T>(data: unknown, onMessage: (data: T) => void, onComplete?: () => void) {
@@ -163,23 +167,38 @@ class WorkerManager extends EventEmitter {
         });
     }
 
-    private exec<T>(method: string, data: unknown, onMessage?: (payload: T) => void, onComplete?: () => void) {
-        let task = this.getPool().queue(async (worker) => {
-            return new Promise<void>((resolve) => {
-                const subscribe = worker[method](data).subscribe({
-                    next: (payload: T) => {
-                        if (onMessage) {
-                            onMessage(payload);
-                        }
-                    },
-                    complete() {
-                        task = null;
-                        subscribe.unsubscribe();
-                        onComplete && onComplete();
-                        resolve();
-                    }
-                });
+    private exec<T>(method: string, data: unknown, onMessage?: (payload: T) => void, onComplete?: () => void, onError?: (err: unknown) => void) {
+        let started = false;
+        const pool = this.getPool();
+        let task = pool.queue(async (worker) => {
+            started = true;
+            // a failing job must end too, or it keeps its pool slot forever
+            return runWorkerTask<T>(worker[method](data), {
+                onMessage,
+                onError,
+                onComplete: () => {
+                    task = null;
+                    onComplete && onComplete();
+                }
             });
+        });
+        // the job never ran (its worker did not start): report the failure, or the caller waits forever
+        task.then(undefined, (err: unknown) => {
+            if (isWorkerStartFailure(err) && this.pool === pool) {
+                // a worker that missed its start stays broken: the next job gets a new pool
+                this.pool = null;
+                pool.terminate(true).catch(() => undefined);
+            }
+            if (started) {
+                return;
+            }
+            task = null;
+            if (onError) {
+                onError(err);
+            } else {
+                log.error(`Worker job ${method} failed`, err);
+            }
+            onComplete && onComplete();
         });
         return {
             terminate: () => {

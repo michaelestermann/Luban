@@ -42,10 +42,56 @@
     }
 }
 
+// a step is as wide as its widest form (check + bold text); its content is centred in that space
+.step-cell {
+    display: inline-grid;
+}
+
+.step-ghost,
+.step-content {
+    grid-row: 1;
+    grid-column: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.step-ghost {
+    visibility: hidden;
+    font-weight: 600;
+}
+
+.step-content {
+    justify-self: center;
+}
+
 .actions {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+// all states of the action group share one grid cell: the slot is as wide as the widest state,
+// so the steps left of it never move when the step changes
+.actions-slot {
+    display: grid;
+}
+
+.actions-slot > .actions {
+    grid-row: 1;
+    grid-column: 1;
+    justify-content: flex-end;
+}
+
+.sizer {
+    visibility: hidden;
+    pointer-events: none;
+
+    .secondary,
+    .primary {
+        display: inline-flex;
+        align-items: center;
+    }
 }
 
 .secondary,

@@ -34,7 +34,7 @@ const TASK_TYPE_RUNNER_MAP = {
     [TASK_TYPE_CLIPPING_SVG]: 'svgClipping',
 };
 
-class TaskManager {
+export class TaskManager {
     private workerManager: IWorkerManager = workerManager;
 
     private tasks: Task[] = [];
@@ -155,8 +155,15 @@ class TaskManager {
         */
     }
 
+    private removeTask(task: Task) {
+        const index = this.tasks.indexOf(task);
+        if (index !== -1) {
+            this.tasks.splice(index, 1);
+        }
+    }
+
     public async addTask(task: Task) {
-        // an older run of the same task sends no result any more; it leaves the list when its worker ends
+        // a re-submitted task outdates the running one: only the newest reports
         this.tasks.forEach((t) => {
             if (t.equal(task)) {
                 t.taskStatus = TASK_STATUS_DEPRECATED;
@@ -165,13 +172,6 @@ class TaskManager {
         this.tasks.push(task);
 
         this.taskHandle(task);
-    }
-
-    private removeTask(task: Task) {
-        const index = this.tasks.indexOf(task);
-        if (index >= 0) {
-            this.tasks.splice(index, 1);
-        }
     }
 
     public cancelTask(taskId: string) {

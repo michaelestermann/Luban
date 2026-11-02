@@ -82,7 +82,7 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
  * Feeds are gcodeConfig keys, substituted by GcodeGenerator.parseAsCNC.
  */
 export function buildDrillMoves(points, gcodeConfig) {
-    const { targetDepth, stepDown, safetyHeight, stopHeight } = gcodeConfig;
+    const { targetDepth, stepDown, safetyHeight, stopHeight, retractSpeed } = gcodeConfig;
     const depthTarget = round3(targetDepth);
     // Pecks below the 0.001 mm rounding step would never advance the depth
     const peck = stepDown >= 0.001 ? stepDown : depthTarget;
@@ -90,6 +90,8 @@ export function buildDrillMoves(points, gcodeConfig) {
     // travel to the first hole (coming from the previous toolpath at stop height) and back
     // happens at the top, never just above the material
     const topZ = Math.max(safetyHeight, stopHeight);
+    // out of the hole: the retract speed; projects from before it was added use the jog speed
+    const outSpeed = retractSpeed > 0 ? 'retractSpeed' : 'jogSpeed';
 
     const data = [
         { C: '; G-code for CNC drilling' },
@@ -107,7 +109,7 @@ export function buildDrillMoves(points, gcodeConfig) {
         while (depth < depthTarget) {
             depth = round3(Math.min(depth + peck, depthTarget));
             data.push({ G: 1, Z: -depth, F: 'plungeSpeed' });
-            data.push({ G: 0, Z: retractZ });
+            data.push({ G: 0, Z: retractZ, F: outSpeed });
         }
         data.push({ G: 0, Z: safetyHeight });
     }

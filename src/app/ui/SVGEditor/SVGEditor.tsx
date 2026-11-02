@@ -18,6 +18,7 @@ import SnapOverlay from './snap/SnapOverlay';
 import OriginMarker from './origin/OriginMarker';
 import OriginPickOverlay from './origin/OriginPickOverlay';
 import OriginKeys from './origin/OriginKeys';
+import SmallObjectMarkers from './small-objects/SmallObjectMarkers';
 import ShapeActionKeys from './combine/ShapeActionKeys';
 import RoundCorners from './combine/RoundCorners';
 import OffsetPreview from './combine/OffsetPreview';
@@ -444,6 +445,11 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             setMode={changeCanvasMode}
                             editorActions={props.editorActions}
                             modelGroup={props.modelGroup}
+                        />
+                        <SmallObjectMarkers
+                            headType={props.headType}
+                            isActive={props.isActive}
+                            getScreenCTM={getCanvasScreenCTM}
                         />
                         <PointEditOverlay
                             drawGroup={drawGroup}

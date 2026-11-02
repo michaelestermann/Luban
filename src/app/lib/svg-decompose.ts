@@ -166,9 +166,28 @@ export function splitOneLevel(svgText: string, deps?: DomDeps): { parts: string[
     return { parts, canSplit: parts.length >= 2 };
 }
 
+const ABSOLUTE_LENGTH = /^\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*(px|pt|pc|mm|cm|in)?\s*$/i;
+
+/**
+ * Size attribute of a part `size` user units wide, in the unit of the source
+ * root: a 66.5mm wide source with a viewBox 66.5 wide makes 0.2 units
+ * "0.2mm". Plain user units when the source size cannot scale them (no
+ * viewBox, a relative or missing size).
+ */
+function partSize(sourceSize: string | null, viewBoxSize: number, size: number): string {
+    const match = ABSOLUTE_LENGTH.exec(sourceSize || '');
+    const sourceValue = match ? parseFloat(match[1]) : NaN;
+    if (!(sourceValue > 0) || !(viewBoxSize > 0)) {
+        return `${size}`;
+    }
+    return `${Number((size * sourceValue / viewBoxSize).toPrecision(12))}${match[2] || ''}`;
+}
+
 /**
  * Give a part a tight frame: its viewBox becomes its own bounding box (in
- * the source's user units) and it is stretched exactly onto that frame.
+ * the source's user units) and it is stretched exactly onto that frame. Its
+ * size keeps the source's unit per user unit (the canvas draws non-scaling
+ * strokes relative to it: tiny parts sized in px instead of mm vanished).
  */
 export function reframePart(svgText: string, bbox: BBox, deps?: DomDeps): string {
     const { parser, serializer } = resolveDeps(deps);
@@ -176,9 +195,11 @@ export function reframePart(svgText: string, bbox: BBox, deps?: DomDeps): string
     if (!root) {
         return svgText;
     }
+    const viewBox = (root.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(parseFloat);
+    const hasViewBox = viewBox.length === 4 && viewBox.every(Number.isFinite);
+    root.setAttribute('width', partSize(root.getAttribute('width'), hasViewBox ? viewBox[2] : NaN, bbox.width));
+    root.setAttribute('height', partSize(root.getAttribute('height'), hasViewBox ? viewBox[3] : NaN, bbox.height));
     root.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
-    root.setAttribute('width', `${bbox.width}`);
-    root.setAttribute('height', `${bbox.height}`);
     root.setAttribute('preserveAspectRatio', 'none');
     root.removeAttribute('x');
     root.removeAttribute('y');

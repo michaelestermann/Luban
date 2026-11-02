@@ -25,3 +25,29 @@ test('the status check sees the members as they are now, not as of the last getS
     t.deepEqual(errors, [], 'no "empty" error');
     t.end();
 });
+
+test('a toolpath whose objects are all hidden is skipped, not failed', (t) => {
+    const a = model('a');
+    a.visible = false;
+    const modelGroup = { getModels: () => [a] };
+    const toolPath = new ToolPath({ name: 'Op', headType: 'cnc', type: 'vector', modelMode: 'vector', visibleModelIDs: ['a'], modelGroup });
+    const error = console.error;
+    console.error = () => {};
+    toolPath.checkoutToolPathStatus();
+    console.error = error;
+    t.notEqual(toolPath.status, 'failed', 'hidden objects do not fail the toolpath');
+    t.equal(toolPath.getGenerateToolPathTask(), null, 'nothing to generate');
+    t.notOk(toolPath.hasVisibleModels(), 'left out of the "all toolpaths generated" check');
+    t.end();
+});
+
+test('a toolpath without any objects still fails', (t) => {
+    const modelGroup = { getModels: () => [] };
+    const toolPath = new ToolPath({ name: 'Op', headType: 'cnc', type: 'vector', modelMode: 'vector', visibleModelIDs: [], modelGroup });
+    const error = console.error;
+    console.error = () => {};
+    toolPath.checkoutToolPathStatus();
+    console.error = error;
+    t.equal(toolPath.status, 'failed');
+    t.end();
+});
