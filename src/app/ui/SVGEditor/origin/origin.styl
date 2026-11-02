@@ -24,7 +24,7 @@
 
 .label {
     position: absolute;
-    height: 22px;
+    min-height: 22px;
     padding: 0 8px;
     border-radius: 4px;
     background: #d93025;
@@ -33,6 +33,28 @@
     font-weight: 600;
     line-height: 22px;
     white-space: pre; // keeps the two spaces before "X …" (no wrap)
+    pointer-events: none;
+    &.amber {
+        background: #b45309;
+    }
+}
+
+// second line of a label: "Frame of the rotated object (20°)"
+.note {
+    display: block;
+    font-weight: 500;
+}
+
+.outside-label {
+    position: absolute;
+    padding: 2px 8px;
+    border: 1px solid #f5c37a;
+    border-radius: 4px;
+    background: #fff4e5;
+    color: #7a4100;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
     pointer-events: none;
 }
 
@@ -106,4 +128,431 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+}
+
+// "Set work origin" dialog (board OriginAB, dialog A): 820 px EN / 880 px DE
+.dialog-backdrop {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, .32);
+    font-size: 13px;
+    color: #1f2430;
+}
+
+.dialog {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .3);
+    display: flex;
+    flex-direction: column;
+    outline: none;
+    h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+}
+
+.dialog-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e3e6ec;
+}
+
+.dialog-icon {
+    display: flex;
+    color: #d92d20;
+}
+
+.dialog-close {
+    margin-left: auto;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #2f3441;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    &:hover {
+        background: #f3f5f8;
+    }
+}
+
+.muted {
+    color: #5b6170;
+    font-size: 12px;
+}
+
+.dialog-body {
+    display: grid;
+    grid-template-columns: 440px 1fr;
+    gap: 20px;
+    padding: 18px 20px;
+}
+
+.dialog-left,
+.dialog-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.dialog-right {
+    gap: 12px;
+}
+
+.preview-box {
+    position: relative;
+    border: 1px solid #e3e6ec;
+    border-radius: 10px;
+    background: #f6f8fb;
+    overflow: hidden;
+    svg {
+        display: block;
+    }
+}
+
+.seg {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 190px;
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 8px;
+    background: #eef1f6;
+    button {
+        flex: 1;
+        height: 28px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #5b6170;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .on {
+        background: #ffffff;
+        color: #1f2430;
+        box-shadow: 0 1px 3px rgba(20, 30, 50, .15);
+    }
+}
+
+.legend {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    color: #5b6170;
+    font-size: 12px;
+    > span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    background: #d92d20;
+}
+
+.legend-frame {
+    width: 14px;
+    height: 10px;
+    border: 1.5px dashed #1d4ed8;
+}
+
+.x-axis {
+    color: #d92d20;
+}
+
+.y-axis {
+    color: #16803c;
+}
+
+.info-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+    padding: 10px 12px;
+    border: 1px solid #e3e6ec;
+    border-radius: 12px;
+    background: #ffffff;
+    font-size: 12.5px;
+    b {
+        white-space: nowrap;
+    }
+}
+
+.warn {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid #f5c37a;
+    border-radius: 8px;
+    background: #fff4e5;
+    color: #7a4100;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.lbl {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #5b6170;
+}
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.radio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #e3e6ec;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1f2430;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    &.on {
+        border-color: #1d4ed8;
+        background: #f3f6fe;
+        box-shadow: 0 0 0 1px #1d4ed8 inset;
+    }
+    &.off {
+        color: #8a909c;
+        background: #f8f9fb;
+        cursor: not-allowed;
+    }
+    &:focus-visible {
+        outline: 2px solid #1d4ed8;
+        outline-offset: 1px;
+    }
+}
+
+.rd {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #9aa1b0;
+    border-radius: 8px;
+    background: #ffffff;
+    box-sizing: border-box;
+    .on & {
+        border: 5px solid #1d4ed8;
+    }
+}
+
+.row-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 10px;
+    background: #fdecea;
+    color: #d92d20;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.row-size {
+    margin-left: auto;
+    color: #5b6170;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.point-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.point-picker {
+    margin: 2px;
+}
+
+.point-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    b {
+        font-size: 13px;
+    }
+}
+
+.sm {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid #d9dde6;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #2f3441;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    &:hover {
+        background: #f3f5f8;
+    }
+}
+
+.offset-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.fld {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #d9dde6;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 13px;
+    > span {
+        color: #5b6170;
+    }
+    input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: none;
+        font: inherit;
+        color: #1f2430;
+        background: transparent;
+    }
+    em {
+        font-style: normal;
+        font-size: 12px;
+        color: #5b6170;
+    }
+    &:focus-within {
+        border-color: #1d4ed8;
+        box-shadow: 0 0 0 3px #dbe6fd;
+    }
+}
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    input {
+        width: 16px;
+        height: 16px;
+        accent-color: #1d4ed8;
+    }
+    &.off {
+        color: #8a909c;
+        cursor: not-allowed;
+    }
+}
+
+.dialog-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid #e3e6ec;
+}
+
+.foot-hint {
+    margin-left: auto;
+}
+
+.link,
+.sec,
+.pri {
+    height: 36px;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.link {
+    padding: 0 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #1d4ed8;
+}
+
+.sec {
+    padding: 0 16px;
+    border: 1px solid #d9dde6;
+    background: #ffffff;
+    color: #1f2430;
+    &:hover {
+        background: #f3f5f8;
+    }
+}
+
+.pri {
+    padding: 0 18px;
+    border: 1px solid #1d4ed8;
+    background: #1d4ed8;
+    color: #ffffff;
+    &:hover {
+        background: #1e40af;
+    }
+}
+
+.link:focus-visible,
+.sec:focus-visible,
+.pri:focus-visible,
+.sm:focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 2px;
 }

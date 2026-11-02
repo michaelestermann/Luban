@@ -11,6 +11,9 @@ interface OriginPointPickerProps {
     value?: ObjectReference | string | null;
     onPick: (reference: ObjectReference) => void;
     disabled?: boolean;
+    /** frame size (px); the menus use 72 x 52 */
+    width?: number;
+    height?: number;
 }
 
 const ALIGN = { left: 'start', center: 'center', right: 'end', top: 'start', middle: 'center', bottom: 'end' };
@@ -20,7 +23,7 @@ const ACCENT = '#1d4ed8';
  * Compact 3x3 point picker for the work origin on an object: corners, edge middles and centre of
  * the object's frame. Used in the context menu, the selection bar "⋯" menu and the Job Setup.
  */
-const OriginPointPicker: React.FC<OriginPointPickerProps> = ({ value, onPick, disabled }) => (
+const OriginPointPicker: React.FC<OriginPointPickerProps> = ({ value, onPick, disabled, width = 72, height = 52 }) => (
     <div
         role="presentation"
         data-origin-picker="true"
@@ -29,7 +32,7 @@ const OriginPointPicker: React.FC<OriginPointPickerProps> = ({ value, onPick, di
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
     >
-        <div role="radiogroup" aria-label={i18n._('key-CncLaser/Origin-Origin point')} style={{ position: 'relative', width: 72, height: 52 }}>
+        <div role="radiogroup" aria-label={i18n._('key-CncLaser/Origin-Origin point')} style={{ position: 'relative', width, height }}>
             <div
                 style={{
                     position: 'absolute',
@@ -62,6 +65,7 @@ const OriginPointPicker: React.FC<OriginPointPickerProps> = ({ value, onPick, di
                             aria-label={name}
                             title={name}
                             data-origin-reference={reference}
+                            tabIndex={on || (!value && reference === 'center') ? 0 : -1}
                             disabled={disabled}
                             onClick={() => onPick(reference)}
                             style={{

@@ -3962,6 +3962,7 @@ bindEditorActions({
     resetProcessState: (headType) => actions.resetProcessState(headType),
     undo: (headType) => actions.undo(headType),
     setOperations: (headType, operations) => operationHistoryActions.setOperations(headType, operations),
+    switchToPage: (headType, page) => actions.switchToPage(headType, page),
 });
 
 export default function reducer(state = DEFAULT_STATE, action) {

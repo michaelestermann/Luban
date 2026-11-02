@@ -5,11 +5,11 @@ import { useDispatch, useSelector, useStore } from 'react-redux';
 import { ObjectReference } from '../../../constants/coordinate';
 import { originActions, OriginPickState, t } from '../../../flux/editor/actions-origin';
 import { Point } from '../../../lib/object-origin';
-import { originAfterDrop, sameOrigin } from '../../../lib/work-origin';
+import { isOutsideWorkpiece, originAfterDrop, sameOrigin, workpieceModelBox } from '../../../lib/work-origin';
 import { OriginTarget, buildOriginTargets, selectionTargets, targetOrigin } from '../snap/origin-targets';
 import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
 import { ArrowKey, announceTarget, groupTargetsByOwner, nextTargetGroupIndex, stepReference } from './origin-keyboard';
-import { targetLabel } from './origin-labels';
+import { rotatedFrameDegrees, targetLabel } from './origin-labels';
 import { useOverlayLayout } from './use-overlay-layout';
 import styles from './origin.styl';
 
@@ -56,12 +56,17 @@ const OriginPickOverlay: React.FC<OriginPickOverlayProps> = ({ headType, isActiv
         const state = store.getState()[headType];
         const input = buildOriginTargetInput(state.modelGroup as ModelGroupLike, coordinateSize, coordinateMode?.setting?.sizeMultiplyFactor, false);
         const all = buildOriginTargets(input);
+        if (pick.source === 'dialog') {
+            // "Pick on the canvas" of the dialog: every point at once (also unselected objects); the lower rank on top
+            return [all.slice().sort((a, b) => b.rank - a.rank)];
+        }
         if (pick.scope === 'all') {
             return groupTargetsByOwner(all);
         }
         const own = selectionTargets(all);
         return own.length ? [own] : [];
-    }, [active, pick?.scope, store, headType, coordinateSize, coordinateMode, selectedModelArray]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [active, pick?.scope, pick?.source, store, headType, coordinateSize, coordinateMode, selectedModelArray]);
     const [ownerIndex, setOwnerIndex] = useState(0);
     // keyboard: start on the owner of the current origin
     useEffect(() => {
@@ -80,8 +85,14 @@ const OriginPickOverlay: React.FC<OriginPickOverlayProps> = ({ headType, isActiv
     const keyboardRef = useRef({ activeTarget, ownerIndex, ownerCount: owners.length, reference: activeReference });
     keyboardRef.current = { activeTarget, ownerIndex, ownerCount: owners.length, reference: activeReference };
 
+    const fromDialog = pick?.source === 'dialog';
     const end = useCallback((target: OriginTarget | null) => {
         setHover(null);
+        if (fromDialog) {
+            // back to the dialog with the point (or unchanged); no history
+            dispatch(originActions.endDialogPick(headType, target));
+            return;
+        }
         if (!target) {
             dispatch(originActions.endOriginPick(headType));
             return;
@@ -89,7 +100,7 @@ const OriginPickOverlay: React.FC<OriginPickOverlayProps> = ({ headType, isActiv
         const before = store.getState()[headType].origin;
         const { origin, removedOffset } = originAfterDrop(before, targetOrigin(target, coordinateMode.value));
         dispatch(originActions.endOriginPick(headType, { origin, removedOffset, label: targetLabel(target, t, false) }));
-    }, [dispatch, headType, store, coordinateMode]);
+    }, [dispatch, headType, store, coordinateMode, fromDialog]);
 
     // a tool change, another selection or leaving the editor ends pick mode
     const startSelection = useRef(selectedModelArray);
@@ -185,6 +196,9 @@ const OriginPickOverlay: React.FC<OriginPickOverlayProps> = ({ headType, isActiv
     };
     const shownTarget = hover || activeTarget;
     const hoverAt = shownTarget ? toOverlay(shownTarget.point) : null;
+    const factor = coordinateMode?.setting?.sizeMultiplyFactor;
+    const shownOutside = !!shownTarget && isOutsideWorkpiece(shownTarget.point, factor ? workpieceModelBox(coordinateSize, factor) : null);
+    const shownDeg = shownTarget ? rotatedFrameDegrees(shownTarget.rotationZ) : null;
     const announcement = activeTarget ? announceTarget(activeTarget, targetLabel(activeTarget, t, false)) : '';
 
     return (
@@ -199,12 +213,14 @@ const OriginPickOverlay: React.FC<OriginPickOverlayProps> = ({ headType, isActiv
                     end(null);
                 }}
             />
-            {targets.map((target) => {
+            {targets.map((target, index) => {
                 const p = toOverlay(target.point);
                 return (
                     <button
                         type="button"
-                        key={target.reference}
+                        // dialog pick: several owners share a point name
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={`${index}-${target.reference}`}
                         className={classNames(styles['pick-point'], { [styles.active]: target === activeTarget })}
                         data-origin-pick-point={target.reference}
                         aria-label={targetLabel(target, t)}
@@ -225,8 +241,18 @@ const OriginPickOverlay: React.FC<OriginPickOverlayProps> = ({ headType, isActiv
                 );
             })}
             {shownTarget && hoverAt && (
-                <span className={styles.label} data-origin-label style={{ left: hoverAt.x + 14, top: hoverAt.y + 14 }}>
+                <span
+                    className={`${styles.label} ${shownOutside ? styles.amber : ''}`}
+                    data-origin-label
+                    data-outside={shownOutside || undefined}
+                    style={{ left: hoverAt.x + 14, top: hoverAt.y + 14 }}
+                >
                     {targetLabel(shownTarget, t)}
+                    {shownDeg !== null && (
+                        <span className={styles.note} data-origin-rotated>
+                            {t('key-CncLaser/Origin-Frame of the rotated object ({{deg}}°)', { deg: shownDeg })}
+                        </span>
+                    )}
                 </span>
             )}
             <div className={styles['sr-only']} aria-live="polite" data-origin-announce>{announcement}</div>

@@ -19,6 +19,7 @@ import SnapOverlay from './snap/SnapOverlay';
 import OriginMarker from './origin/OriginMarker';
 import OriginPickOverlay from './origin/OriginPickOverlay';
 import OriginKeys from './origin/OriginKeys';
+import OriginDialog from './origin/OriginDialog';
 import { originMarkerShown } from './origin/origin-marker-shown';
 import SmallObjectMarkers from './small-objects/SmallObjectMarkers';
 import ShapeActionKeys from './combine/ShapeActionKeys';
@@ -514,6 +515,10 @@ const SVGEditor = forwardRef<SVGEditorHandle, SVGEditorProps>((props, ref) => {
                             headType={props.headType as 'laser' | 'cnc'}
                             isActive={props.isActive}
                             getScreenCTM={getCanvasScreenCTM}
+                        />
+                        <OriginDialog
+                            headType={props.headType as 'laser' | 'cnc'}
+                            isActive={props.isActive}
                         />
                         <OriginKeys
                             headType={props.headType as 'laser' | 'cnc'}
