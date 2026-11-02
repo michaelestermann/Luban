@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import i18n from '../../../lib/i18n';
 import TextParameters from '../CncLaserShared/TextParameters';
 import TransformationSection from '../CncLaserShared/TransformationSection';
+import WorkOriginSection from '../CncLaserShared/WorkOriginSection';
 import OffsetPanel from '../CncLaserShared/OffsetPanel';
 import ArrayPanel from '../CncLaserShared/ArrayPanel';
 import { HEAD_LASER, PAGE_EDITOR, SOURCE_TYPE, SVG_NODE_NAME_IMAGE, SVG_NODE_NAME_TEXT } from '../../../constants';
@@ -57,6 +58,7 @@ const LaserParameters = ({ widgetActions }) => {
                     disabled={isOnABPosition || !hasSelectedModels}
                 />
             )}
+            {isEditor && <WorkOriginSection headType={HEAD_LASER} />}
             {isEditor && showImageProcessMode && (selectedModelArray.length === 1) && (
                 <ImageProcessMode
                     disabled={isOnABPosition || !selectedModelVisible}

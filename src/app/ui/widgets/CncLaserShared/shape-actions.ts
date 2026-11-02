@@ -3,15 +3,13 @@
  * right-click context menus. Each entry knows when it fits the selection, its key and how to run it.
  */
 import React from 'react';
-import { contextMenu } from 'react-contexify';
 
-import { ObjectReference } from '../../../constants/coordinate';
 import { actions as editorActions, roundCornerTargets } from '../../../flux/editor';
 import { canEditShapes, CombineKind } from '../../../flux/editor/actions-combine';
+import { canEditOrigin } from '../../../flux/editor/actions-origin';
 import i18n from '../../../lib/i18n';
 import { selectionActionState } from '../../SVGEditor/combine/selection-actions';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
-import OriginPointPicker from './OriginPointPicker';
 
 type HeadType = 'laser' | 'cnc';
 
@@ -116,7 +114,8 @@ export const canSetOriginOnSelection = (state, headType: HeadType): boolean => {
     return selected.some(model => model.visible !== false);
 };
 
-export const setOriginLabel = () => i18n._('key-CncLaser/Origin-Set origin here');
+/** Context menu: the work origin dialog. */
+export const setWorkOriginLabel = () => i18n._('key-CncLaser/Origin-Set work origin… (Shift+O)');
 
 /** Split button, left part: pick mode on the canvas (key 0). */
 export const pickOriginLabel = () => i18n._('key-CncLaser/Origin-Pick origin point on the canvas (0)');
@@ -179,19 +178,12 @@ export function shapeContextMenuItems(
     if (elem && state[headType]?.SVGCanvasMode === 'select' && points.canEditPoints(elem)) {
         items.push({ type: 'item', label: i18n._('key-CncLaser/ContextMenu-Edit points'), onClick: () => points.editPoints(elem) });
     }
-    if (canSetOriginOnSelection(state, headType)) {
+    // the work origin dialog (replaces 4.16's "Set origin here ▸"); also with nothing selected
+    if (canEditOrigin(state, headType)) {
         items.push({
-            type: 'subMenu',
-            label: setOriginLabel(),
-            items: [{
-                type: 'custom',
-                render: () => React.createElement(OriginPointPicker, {
-                    onPick: (reference: ObjectReference) => {
-                        contextMenu.hideAll();
-                        dispatch(editorActions.setOriginOnSelection(headType, reference));
-                    },
-                }),
-            }],
+            type: 'item',
+            label: setWorkOriginLabel(),
+            onClick: () => dispatch(editorActions.openOriginDialog(headType, 'point', 'menu')),
         });
     }
     return items.length > 0 ? [{ type: 'separator' }, ...items] : [];

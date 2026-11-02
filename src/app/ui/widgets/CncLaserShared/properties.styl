@@ -376,3 +376,118 @@
         flex: 0 0 auto !important;
     }
 }
+
+// "Work origin" section (Kombination A+B): what the origin is on, the zero on the workpiece, the offset
+.work-origin {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 16px;
+    padding: 10px 12px;
+    border: 1px solid #e3e6ec;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 12px;
+    color: #1f2430;
+}
+
+.work-origin-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #d92d20;
+}
+
+.work-origin-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    b {
+        font-size: 13px;
+    }
+
+    span {
+        color: #5b6170;
+    }
+}
+
+.work-origin-button {
+    align-self: flex-start;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid #d9dde6;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #1f2430;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #f3f5f8;
+    }
+
+    &:disabled {
+        color: #8a909c;
+        cursor: not-allowed;
+    }
+
+    kbd {
+        padding: 0 5px;
+        border: 1px solid #d9dde6;
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        font: inherit;
+        font-size: 11px;
+        color: #5b6170;
+    }
+}
+
+.work-origin-hint {
+    color: #5b6170;
+    line-height: 1.45;
+}
+
+// step 3: the work origin info box over the G-code preview (read-only)
+.origin-info {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 200px;
+    padding: 10px 12px;
+    border: 1px solid #e3e6ec;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 4px 16px rgba(20, 30, 50, .08);
+    font-size: 12px;
+    color: #1f2430;
+
+    b {
+        font-size: 13px;
+    }
+
+    span {
+        color: #5b6170;
+    }
+}
+
+.origin-info-link {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #1d4ed8;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}

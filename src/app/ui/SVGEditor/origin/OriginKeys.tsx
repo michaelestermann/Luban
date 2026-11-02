@@ -7,7 +7,6 @@ import { originActions } from '../../../flux/editor/actions-origin';
 import { ShortcutHandlerPriority, ShortcutManager } from '../../../lib/shortcut';
 import { sameOrigin } from '../../../lib/work-origin';
 import { buildOriginTargets, selectionTargets, targetOrigin } from '../snap/origin-targets';
-import { canSetOriginOnSelection } from '../../widgets/CncLaserShared/shape-actions';
 import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
 
 interface OriginKeysProps {
@@ -21,7 +20,7 @@ interface OriginKeysProps {
 /**
  * Keys of the work origin in step 1 (user ruling: Offset keeps O): 0 starts pick mode on the selection with
  * the keyboard (arrows walk the points, Enter sets, Esc cancels); with nothing selected it grabs the marker
- * over all targets (Tab: next owner). Shift+O opens the details ("Origin…").
+ * over all targets (Tab: next owner). Shift+O opens the work origin dialog.
  */
 const OriginKeys = ({ headType, mode, editing, isActive }: OriginKeysProps) => {
     const dispatch = useDispatch();
@@ -68,9 +67,9 @@ const OriginKeys = ({ headType, mode, editing, isActive }: OriginKeysProps) => {
                 'ORIGIN-DETAILS': {
                     keys: ['shift+o'],
                     callback: () => {
-                        // phase 1: the details are the point picker of the selection bar (needs a selection)
-                        if (usable() && canSetOriginOnSelection(store.getState(), headType)) {
-                            dispatch(originActions.openOriginDialog(headType, 'key'));
+                        // the dialog opens on the current origin, also with nothing selected
+                        if (usable()) {
+                            dispatch(originActions.openOriginDialog(headType, 'point', 'key'));
                         }
                     },
                 },

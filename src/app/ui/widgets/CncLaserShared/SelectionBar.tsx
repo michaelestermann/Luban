@@ -1,6 +1,6 @@
 import { Popover, Tooltip } from 'antd';
 import classNames from 'classnames';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 
 import { HEAD_LASER, PAGE_EDITOR } from '../../../constants';
@@ -14,9 +14,8 @@ import MeasureBar from './MeasureBar';
 import { openPathState } from '../../SVGEditor/path-edit/shape-to-path';
 import {
     canSetOriginOnSelection, COMBINE_ACTIONS, fittingActions, MORE_ACTIONS, originDialogLabel, originDialogTitle, pickOriginLabel, ROUND_CORNERS_ACTION,
-    setOriginLabel, ShapeAction,
+    ShapeAction,
 } from './shape-actions';
-import OriginPointPicker from './OriginPointPicker';
 import { BarFit, nextBarFit } from './selection-bar-fit';
 import { alignElementsHorizontal, alignElementsVertical, HORIZONTAL_ALIGN, VERTICAL_ALIGN } from './align-elements';
 import styles from './selection-bar.styl';
@@ -109,10 +108,9 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const roundCornersOpen = useSelector(state => !!state[headType]?.roundCornersSession);
     const [alignOpen, setAlignOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState<string | null>(null);
-    // work origin: pick mode runs / the details are asked for (Shift+O)
+    // work origin: pick mode runs / the dialog is open
     const originPickActive = useSelector(state => !!state[headType]?.originPick);
-    const originDialogAsked = useSelector(state => !!state[headType]?.originDialog);
-    const originDetailsOpen = menuOpen === 'origin' || originDialogAsked;
+    const originDialogOpen = useSelector(state => !!state[headType]?.originDialog);
     const store = useStore();
     // icon buttons, or the overflow "⋯" when they do not fit on the canvas
     const barRef = useRef<HTMLDivElement>(null);
@@ -158,35 +156,6 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const barShown = pointEditShown || measureShown || (barAllowed && !drawing && selectedModels.length > 0);
     // a bar on the canvas: toasts open below it, not over its buttons
     useLayoutEffect(() => (barShown ? toastClearance.claim() : undefined), [barShown]);
-    // the origin details (Shift+O) close with Esc before the editor sees it (the selection stays), and they
-    // never stay asked for while the bar is gone (they would pop up with the next selection)
-    useEffect(() => {
-        if (!originDetailsOpen) {
-            return undefined;
-        }
-        if (!barShown) {
-            setMenuOpen(null);
-            dispatch(editorActions.closeOriginDialog(headType));
-            return undefined;
-        }
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key !== 'Escape') {
-                return;
-            }
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            if (event.type === 'keydown') {
-                setMenuOpen(null);
-                dispatch(editorActions.closeOriginDialog(headType));
-            }
-        };
-        window.addEventListener('keydown', onKey, true);
-        window.addEventListener('keyup', onKey, true);
-        return () => {
-            window.removeEventListener('keydown', onKey, true);
-            window.removeEventListener('keyup', onKey, true);
-        };
-    }, [originDetailsOpen, barShown, dispatch, headType]);
     if (pointEditShown) {
         return <PointEditBar drawGroup={drawGroup} SVGActions={SVGActions} />;
     }
@@ -232,10 +201,14 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
         ...(canRoundCorners ? [ROUND_CORNERS_ACTION] : []),
         ...fittingActions(MORE_ACTIONS, store.getState(), headType),
     ];
-    // "Set origin here": its own button with the point picker
+    // work origin split button: shown for a selection; on a rotary workpiece disabled ("Only on flat workpieces")
     const canSetOrigin = canSetOriginOnSelection(store.getState(), headType);
+    const originRotaryOnly = isRotate && !drawing && SVGCanvasMode === 'select'
+        && selectedModels.some(model => model.visible !== false);
+    const showOrigin = canSetOrigin || originRotaryOnly;
+    const flatOnly = i18n._('key-CncLaser/Origin-Only on flat workpieces');
     fitKey.current = [
-        ...selectedModels.map(model => model.modelID), label, openPath.open, canGroup, canUngroup, canAlign, canSetOrigin,
+        ...selectedModels.map(model => model.modelID), label, openPath.open, canGroup, canUngroup, canAlign, showOrigin,
         ...combineActions.map(action => action.id), ...shapeActions.map(action => action.id),
     ].join('|');
     // 0: icon buttons, 1: overflow "⋯" (the bar wraps if even that does not fit)
@@ -420,18 +393,18 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                     </button>
                 </span>
             ))}
-            {canSetOrigin && (
-                // split button [⊕ | Origin…]: pick on the canvas, or the details (phase 1: the point picker)
-                <span className={styles['origin-split']} data-bar-origin="true">
+            {showOrigin && (
+                // split button [⊕ | Origin…]: pick on the canvas (quick path), or the work origin dialog (details)
+                <span className={styles['origin-split']} data-bar-origin="true" title={canSetOrigin ? undefined : flatOnly}>
                     <button
                         type="button"
                         className={classNames(styles['icon-button'], styles['split-left'], { [styles.open]: originPickActive })}
-                        aria-label={pickOriginLabel()}
-                        title={pickOriginLabel()}
+                        aria-label={canSetOrigin ? pickOriginLabel() : flatOnly}
+                        title={canSetOrigin ? pickOriginLabel() : undefined}
+                        disabled={!canSetOrigin}
                         data-bar-origin-pick="true"
                         onClick={() => {
                             setMenuOpen(null);
-                            dispatch(editorActions.closeOriginDialog(headType));
                             if (originPickActive) {
                                 dispatch(editorActions.endOriginPick(headType));
                             } else {
@@ -445,40 +418,21 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
                             <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
                         </svg>
                     </button>
-                    <Popover
-                        content={(
-                            <div className={styles['origin-section']} data-set-origin="true">
-                                <div className={styles['origin-title']}>{setOriginLabel()}</div>
-                                <OriginPointPicker
-                                    onPick={(reference) => {
-                                        setMenuOpen(null);
-                                        dispatch(editorActions.closeOriginDialog(headType));
-                                        dispatch(editorActions.setOriginOnSelection(headType, reference, 'dialog'));
-                                    }}
-                                />
-                            </div>
-                        )}
-                        trigger="click"
-                        placement="bottom"
-                        visible={originDetailsOpen}
-                        onVisibleChange={(visible) => {
-                            setMenuOpen(visible ? 'origin' : null);
-                            if (!visible) {
-                                dispatch(editorActions.closeOriginDialog(headType));
-                            }
-                        }}
-                    >
-                        <span className={styles['tip-wrapper']}>
-                            <button
-                                type="button"
-                                className={classNames(styles['text-button'], styles['split-right'], { [styles.open]: originDetailsOpen })}
-                                title={originDialogTitle()}
-                                data-bar-origin-dialog="true"
-                            >
-                                {originDialogLabel()}
-                            </button>
-                        </span>
-                    </Popover>
+                    <span className={styles['tip-wrapper']}>
+                        <button
+                            type="button"
+                            className={classNames(styles['text-button'], styles['split-right'], { [styles.open]: originDialogOpen })}
+                            title={canSetOrigin ? originDialogTitle() : undefined}
+                            disabled={!canSetOrigin}
+                            data-bar-origin-dialog="true"
+                            onClick={() => {
+                                setMenuOpen(null);
+                                dispatch(editorActions.openOriginDialog(headType, 'point', 'button'));
+                            }}
+                        >
+                            {originDialogLabel()}
+                        </button>
+                    </span>
                 </span>
             )}
             {renderIconButton(i18n._('key-App/Menu-Duplicate'), !canDuplicate, () => {

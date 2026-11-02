@@ -181,9 +181,11 @@ export type JobSetupViewProps = {
     initial?: JobSetupInitial;
     // z-index of the drop-down lists (the view in a dialog above the antd layers)
     popupZIndex?: number;
+    // "Edit…" next to an origin on objects: apply, close Job Setup and open the work origin dialog
+    onEditOrigin?: () => void;
 };
 
-const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ initial, popupZIndex }, ref) => {
+const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ initial, popupZIndex, onEditOrigin }, ref) => {
     const activeMachine = useSelector((state: RootState) => state.machine.activeMachine) as Machine;
     const isDraft = !!initial;
 
@@ -558,6 +560,16 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
                                     onPick={setOriginReference}
                                     disabled={inProgress || settingSizeDisabled}
                                 />
+                                {onEditOrigin && !isDraft && (
+                                    <button
+                                        type="button"
+                                        data-job-setup-edit-origin
+                                        onClick={onEditOrigin}
+                                        style={{ marginTop: 6, padding: 0, border: 0, background: 'none', color: '#1d4ed8', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                        {i18n._('key-CncLaser/Origin-Edit…')}
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <img

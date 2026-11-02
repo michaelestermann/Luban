@@ -73,14 +73,42 @@ export function offsetText(offset: OriginOffset): string {
     return `${formatOriginNumber(offset.x)} / ${formatOriginNumber(offset.y)}`;
 }
 
-/** "Origin set on Logo · bottom left" (+ " · Offset 5.0 / 0.0 removed"). `outside` is worded in a later task. */
+/** "Origin set on Logo · bottom left" (+ " · Offset 5.0 / 0.0 removed", + " · Origin outside the workpiece"). */
 export function originSetToast(label: string, removedOffset: OriginOffset | null, outside: boolean, t: Translate): string {
     let text = t('key-CncLaser/Origin-Origin set on {{label}}', { label });
     if (removedOffset) {
         text += ` · ${t('key-CncLaser/Origin-Offset {{offset}} removed', { offset: offsetText(removedOffset) })}`;
     }
+    if (outside) {
+        text += ` · ${t('key-CncLaser/Origin-Origin outside the workpiece')}`;
+    }
     return text;
 }
+
+/** "X −5.0 … 290.0 · Y −100.0 … 100.0": the job extent from the origin. */
+export function extentText(e: { minX: number; maxX: number; minY: number; maxY: number }): string {
+    const f = formatOriginNumber;
+    return `X ${f(e.minX)} … ${f(e.maxX)} · Y ${f(e.minY)} … ${f(e.maxY)}`;
+}
+
+/**
+ * The angle of a rotated object as the properties panel shows it (degrees, 0.1, in (−180, 180]); null when it
+ * is not rotated. `rotationZ` is the model's rotation in radians (the panel shows the same sign).
+ */
+export function rotatedFrameDegrees(rotationZ: number | undefined | null): number | null {
+    if (typeof rotationZ !== 'number' || !Number.isFinite(rotationZ)) {
+        return null;
+    }
+    let deg = Math.round(((rotationZ * 180) / Math.PI) * 10) / 10;
+    deg %= 360;
+    if (deg > 180) {
+        deg -= 360;
+    } else if (deg <= -180) {
+        deg += 360;
+    }
+    return Math.abs(deg) < 0.05 ? null : deg + 0;
+}
+
 
 /** Name, point name and label (without numbers) of an origin. */
 export function describeOrigin(origin: Origin, ctx: OriginDescribeContext, t: Translate): { name: string; pointName: string | null; label: string } {
@@ -117,4 +145,22 @@ export function targetLabel(target: OriginTarget, t: Translate, withNumbers = tr
     };
     const name = originTargetName(kindByTarget[target.source.kind], target.name || null, t);
     return originLabel(name, pointName(target.reference, t), withNumbers ? target.point : null);
+}
+
+/**
+ * The properties panel "Work origin" section: what it is bound to, where the zero is on the workpiece and the
+ * offset ("follows the object" for an origin on objects, "fixed" otherwise).
+ */
+export function workOriginSummary(origin: Origin, ctx: OriginDescribeContext, zero: Point | null, t: Translate): [string, string, string] {
+    const { label } = describeOrigin(origin, ctx, t);
+    const at = zero || { x: 0, y: 0 };
+    const follows = origin?.type === OriginType.Object && !isWorkpieceFrameOrigin(origin);
+    const offset = offsetText(originOffset(origin));
+    return [
+        label,
+        t('key-CncLaser/Origin-At X {{x}} · Y {{y}} mm on the workpiece', { x: formatOriginNumber(at.x), y: formatOriginNumber(at.y) }),
+        follows
+            ? t('key-CncLaser/Origin-Offset {{offset}} mm · follows the object', { offset })
+            : t('key-CncLaser/Origin-Offset {{offset}} mm · fixed', { offset }),
+    ];
 }

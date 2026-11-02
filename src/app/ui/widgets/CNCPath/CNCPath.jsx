@@ -11,6 +11,7 @@ import {
 import i18n from '../../../lib/i18n';
 import TextParameters from '../CncLaserShared/TextParameters';
 import TransformationSection from '../CncLaserShared/TransformationSection';
+import WorkOriginSection from '../CncLaserShared/WorkOriginSection';
 import OffsetPanel from '../CncLaserShared/OffsetPanel';
 import ArrayPanel from '../CncLaserShared/ArrayPanel';
 import Image3dParameters from './Image3dParameters';
@@ -66,6 +67,7 @@ const CNCPath = ({ widgetActions }) => {
                     }
                 />
             )}
+            {isEditor && <WorkOriginSection headType={HEAD_CNC} />}
             {selectedModelArray.length === 1 && (
                 <div>
                     {isEditor && showImageProcessMode && (selectedModelArray.length === 1) && (

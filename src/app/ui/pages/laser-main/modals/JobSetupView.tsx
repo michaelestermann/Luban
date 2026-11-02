@@ -31,7 +31,22 @@ import Select from '../../../components/Select';
 import TipTrigger from '../../../components/TipTrigger';
 import { getSupportedRunBoundaryModeOptions } from '../../../../constants/machines';
 import { originImage } from '../../../../lib/origin-image';
-import { jobSetupOrigin } from '../../../../lib/work-origin';
+import { jobSetupOrigin, originOffset } from '../../../../lib/work-origin';
+import { originNameContext, t as originT } from '../../../../flux/editor/actions-origin';
+import { describeOrigin, offsetText } from '../../../SVGEditor/origin/origin-labels';
+
+/** A workpiece origin without offset: Job Setup shows it fully. */
+const isPlainWorkpieceOrigin = (origin: Origin): boolean => {
+    const offset = originOffset(origin);
+    return origin.type !== OriginType.Object && offset.x === 0 && offset.y === 0;
+};
+
+/** "Logo · bottom left · Offset 5.0 / 0.0" */
+const workOriginLine = (origin: Origin, modelGroup): string => {
+    const offset = originOffset(origin);
+    const label = describeOrigin(origin, originNameContext(modelGroup), originT).label;
+    return offset.x || offset.y ? `${label} · ${originT('key-CncLaser/Origin-Offset')} ${offsetText(offset)}` : label;
+};
 
 
 export type JobSetupViewHandle = {
@@ -53,9 +68,11 @@ export type JobSetupViewProps = {
     popupZIndex?: number;
     // without the left margin of the Job Setup modal
     compact?: boolean;
+    // "Edit…" of a work origin that is not a plain workpiece origin: apply, close, open the work origin dialog
+    onEditOrigin?: () => void;
 };
 
-const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ initial, popupZIndex, compact }, ref) => {
+const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ initial, popupZIndex, compact, onEditOrigin }, ref) => {
     const activeMachine = useSelector((state: RootState) => state.machine.activeMachine) as Machine;
     const isDraft = !!initial;
     const dropdownStyle = popupZIndex ? { zIndex: popupZIndex } : undefined;
@@ -67,6 +84,7 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
 
     const projectMaterials = useSelector((state: RootState) => state[HEAD_LASER]?.materials, shallowEqual) as Materials;
     const projectOrigin = useSelector((state: RootState) => state[HEAD_LASER].origin, shallowEqual) as Origin;
+    const projectModelGroup = useSelector((state: RootState) => state[HEAD_LASER]?.modelGroup);
     const materials = initial ? initial.materials : projectMaterials;
     const origin = initial ? initial.origin : projectOrigin;
 
@@ -331,6 +349,26 @@ const JobSetupView = React.forwardRef<JobSetupViewHandle, JobSetupViewProps>(({ 
                                     />
                                 </div>
                             </div>
+                        </div>
+                    )
+                }
+                {
+                    // an origin set in the editor (on objects, a workpiece frame point, with an offset): read-only + Edit…
+                    workpiece.shape === WorkpieceShape.Rectangle && !isDraft && origin && !isPlainWorkpieceOrigin(origin) && (
+                        <div className="margin-top-16 sm-flex align-center" data-job-setup-work-origin>
+                            <span className="margin-right-8">
+                                {i18n._('key-CncLaser/Origin-Work origin: {{label}}', { label: workOriginLine(origin, projectModelGroup) })}
+                            </span>
+                            {onEditOrigin && (
+                                <button
+                                    type="button"
+                                    data-job-setup-edit-origin
+                                    onClick={onEditOrigin}
+                                    style={{ padding: 0, border: 0, background: 'none', color: '#1d4ed8', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                    {i18n._('key-CncLaser/Origin-Edit…')}
+                                </button>
+                            )}
                         </div>
                     )
                 }

@@ -8,9 +8,12 @@ import {
     originTargetName,
     pointName,
     targetLabel,
+    workOriginSummary,
+    extentText,
+    rotatedFrameDegrees,
 } from '../src/app/ui/SVGEditor/origin/origin-labels';
 import { createObjectOrigin } from '../src/app/lib/object-origin';
-import { createFreeOrigin, createGroupOrigin, createWorkpieceFrameOrigin, workpieceOrigin } from '../src/app/lib/work-origin';
+import { createFreeOrigin, createGroupOrigin, createWorkpieceFrameOrigin, withOffset, workpieceOrigin } from '../src/app/lib/work-origin';
 
 const interpolate = (s, o = {}) => s.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in o ? String(o[k]) : m));
 const t = (k, o) => interpolate(k.replace(/^key-[^-]+-/, ''), o);
@@ -74,5 +77,38 @@ test('targetLabel: names the kind of the target', (tt) => {
     tt.equal(targetLabel(target({ kind: 'selection', modelIDs: [] }, '', 'bottom-left', { x: 70, y: 140 }), t), 'Selection · bottom left  X 70.0 Y 140.0');
     tt.equal(targetLabel(target({ kind: 'group', groupID: 'g' }, 'Badge', 'top-right', { x: 300, y: 240 }), t, false), 'Group “Badge” · top right');
     tt.equal(targetLabel(target({ kind: 'workpiece' }, '', 'center', { x: 200, y: 150 }), t, false), 'Workpiece · centre');
+    tt.end();
+});
+
+test('workOriginSummary', (tt) => {
+    const o = withOffset(createObjectOrigin('bottom-left', ['logo']), { x: 5, y: 0 });
+    tt.deepEqual(workOriginSummary(o, ctx, { x: 75, y: 140 }, t),
+        ['Logo · bottom left', 'At X 75.0 · Y 140.0 mm on the workpiece', 'Offset 5.0 / 0.0 mm · follows the object']);
+    const free = workOriginSummary(createFreeOrigin('bottom-left', { x: 12.5, y: -3 }), ctx, { x: 12.5, y: -3 }, t);
+    tt.equal(free[0], 'Free');
+    tt.ok(free[2].endsWith('· fixed'), free[2]);
+    tt.deepEqual(workOriginSummary(workpieceOrigin('bottom-left'), ctx, null, t),
+        ['Workpiece · bottom left', 'At X 0.0 · Y 0.0 mm on the workpiece', 'Offset 0.0 / 0.0 mm · fixed']);
+    tt.end();
+});
+
+test('extentText', (tt) => {
+    tt.equal(extentText({ minX: -5, maxX: 290, minY: -100, maxY: 100 }), 'X −5.0 … 290.0 · Y −100.0 … 100.0');
+    tt.end();
+});
+
+test('originSetToast outside', (tt) => {
+    tt.equal(originSetToast('Logo · bottom left', null, true, t), 'Origin set on Logo · bottom left · Origin outside the workpiece');
+    tt.end();
+});
+
+test('rotatedFrameDegrees', (tt) => {
+    const rad = d => (d * Math.PI) / 180;
+    tt.equal(rotatedFrameDegrees(rad(20)), 20);
+    tt.equal(rotatedFrameDegrees(rad(-20)), -20);
+    tt.equal(rotatedFrameDegrees(rad(360)), null);
+    tt.equal(rotatedFrameDegrees(1e-9), null);
+    tt.equal(rotatedFrameDegrees(undefined), null);
+    tt.equal(rotatedFrameDegrees(rad(190)), -170);
     tt.end();
 });

@@ -4,7 +4,7 @@ import { useDispatch, useSelector, useStore } from 'react-redux';
 import { Origin } from '../../../constants/coordinate';
 import { originActions, t } from '../../../flux/editor/actions-origin';
 import { Point } from '../../../lib/object-origin';
-import { freeOriginAt, originAfterDrop } from '../../../lib/work-origin';
+import { freeOriginAt, isOutsideWorkpiece, originAfterDrop, workpieceModelBox } from '../../../lib/work-origin';
 import { CURSOR_SIZE, placeLabel } from '../label-placement';
 import { OriginTarget, targetOrigin } from '../snap/origin-targets';
 import { OriginSnap } from '../snap/snap-session';
@@ -12,7 +12,7 @@ import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
 import { originMarkerShown } from './origin-marker-shown';
 import { useOverlayLayout } from './use-overlay-layout';
 import { liveWorkOriginPoint, useTransformTick } from './use-live-origin';
-import { originLabel, originTargetName, targetLabel } from './origin-labels';
+import { originLabel, originTargetName, rotatedFrameDegrees, targetLabel } from './origin-labels';
 import styles from './origin.styl';
 
 type Matrix = DOMMatrix | SVGMatrix;
@@ -43,7 +43,12 @@ interface DragState {
     /** Alt held: a free point (model mm, 0.1 mm), no snapping */
     free: Point | null;
     cursor: Point;
+    /** where the button went down (screen px): a click (or the first click of a double-click) sets nothing */
+    start: Point;
 }
+
+// the pointer has to move this far (screen px) before a drop sets the origin
+const DRAG_PX = 3;
 
 const freePoint = (origin: Origin): Point => ({ x: origin.referenceMetadata?.offset?.x ?? 0, y: origin.referenceMetadata?.offset?.y ?? 0 });
 
@@ -141,7 +146,8 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         }
         ctrlRef.current = event.ctrlKey || event.metaKey;
         snapRef.current = OriginSnap.start({ input: buildInput(ctrlRef.current), ctm, size });
-        setDrag({ before: store.getState()[headType].origin, target: null, free: null, cursor: { x: event.clientX, y: event.clientY } });
+        const down = { x: event.clientX, y: event.clientY };
+        setDrag({ before: store.getState()[headType].origin, target: null, free: null, cursor: down, start: down });
     }, [disabled, getScreenCTM, buildInput, size, store, headType]);
 
     useEffect(() => {
@@ -186,6 +192,13 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         };
         const onMove = (event: MouseEvent) => pick(event);
         const onUp = (event: MouseEvent) => {
+            const begin = dragRef.current?.start;
+            const moved = !!begin && Math.hypot(event.clientX - begin.x, event.clientY - begin.y) >= DRAG_PX;
+            if (!moved) {
+                // a click on the marker (e.g. a double-click for the dialog) sets nothing
+                endDrag();
+                return;
+            }
             pick(event);
             const state = dragRef.current;
             endDrag();
@@ -261,25 +274,43 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
     const tip = isRotate ? t('key-CncLaser/Origin-Only on flat workpieces') : t('key-CncLaser/Origin-Drag to move · double-click for details');
     // drawing, measuring, point editing: the clicks at the origin belong to the tool (e.g. a rectangle drawn
     // from the zero point), so the marker lets them through; on a rotary workpiece it stays hoverable (tooltip)
+    const onDoubleClick = (event: React.MouseEvent) => {
+        // the dialog with the offset focused; the canvas must not enter a group or start point editing
+        event.preventDefault();
+        event.stopPropagation();
+        if (!disabled) {
+            dispatch(originActions.openOriginDialog(headType, 'offset', 'marker'));
+        }
+    };
     const grabProps = {
         onMouseDown,
+        onDoubleClick,
         'aria-disabled': disabled || undefined,
         style: { cursor: disabled ? 'not-allowed' : 'move', pointerEvents: locked ? 'none' as const : undefined },
     };
 
+    const factor = coordinateMode?.setting?.sizeMultiplyFactor;
+    const workpiece = factor ? workpieceModelBox(coordinateSize, factor) : null;
     let label = null;
     if ((drag?.target || drag?.free) && ghost) {
         const text = drag.free ? originLabel(originTargetName('free', null, t), null, drag.free) : targetLabel(drag.target, t);
-        const labelSize = { width: Math.max(60, text.length * 6.8 + 16), height: 22 };
+        const deg = drag.target ? rotatedFrameDegrees(drag.target.rotationZ) : null;
+        const note = deg !== null ? t('key-CncLaser/Origin-Frame of the rotated object ({{deg}}°)', { deg }) : null;
+        // amber: the point lies outside the workpiece (a warning, never a block)
+        const amber = isOutsideWorkpiece(drag.free || drag.target.point, workpiece);
+        const labelSize = { width: Math.max(60, Math.max(text.length, note ? note.length : 0) * 6.8 + 16), height: note ? 44 : 22 };
         const cursor = { x: drag.cursor.x - root.left, y: drag.cursor.y - root.top };
         const view = { x: 0, y: 0, width: root.width, height: root.height };
         const place = placeLabel({ cursor, avoid: [ghost], size: labelSize, view, cursorSize: CURSOR_SIZE });
         label = (
-            <span className={styles.label} data-origin-label style={{ left: place.x, top: place.y }}>
+            <span className={`${styles.label} ${amber ? styles.amber : ''}`} data-origin-label data-outside={amber || undefined} style={{ left: place.x, top: place.y }}>
                 {text}
+                {note && <span className={styles.note} data-origin-rotated>{note}</span>}
             </span>
         );
     }
+    // the marker's own warning when the work origin lies outside the workpiece
+    const outside = !drag && isOutsideWorkpiece(at, workpiece);
     const narrow = root.width < NARROW_PX;
 
     return (
@@ -324,6 +355,11 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
                 </g>
             </svg>
             {label}
+            {outside && (
+                <span className={styles['outside-label']} data-origin-outside style={{ left: p.x + 12, top: p.y + 10 }}>
+                    {t('key-CncLaser/Origin-Origin outside the workpiece')}
+                </span>
+            )}
             {drag && (
                 <div className={styles.hint} data-origin-hint>
                     {!narrow && <span>{t('key-CncLaser/Origin-Moving the work origin · snaps to frame points')}</span>}
