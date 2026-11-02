@@ -557,3 +557,10 @@
     outline: 2px solid #1d4ed8;
     outline-offset: 2px;
 }
+
+// around a dot covered by a resize handle: only the ring (not its inside) takes the mouse
+.ring {
+    fill: none;
+    stroke: transparent;
+    pointer-events: stroke;
+}

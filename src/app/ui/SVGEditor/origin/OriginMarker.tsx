@@ -9,7 +9,7 @@ import { CURSOR_SIZE, placeLabel } from '../label-placement';
 import { OriginTarget, targetOrigin } from '../snap/origin-targets';
 import { OriginSnap } from '../snap/snap-session';
 import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
-import { originMarkerShown } from './origin-marker-shown';
+import { originAxesShown, originMarkerShown } from './origin-marker-shown';
 import { useOverlayLayout } from './use-overlay-layout';
 import { liveWorkOriginPoint, useTransformTick } from './use-live-origin';
 import { originLabel, originTargetName, rotatedFrameDegrees, targetLabel } from './origin-labels';
@@ -30,6 +30,10 @@ interface OriginMarkerProps {
 }
 
 const ARROW_PX = 40;
+// the hover ring around a dot that gives way to a resize handle (screen px, stroke width)
+const RING_PX = 6;
+// the arrows stay this long after the pointer left the marker (ms), so it can travel from the dot to an arrow
+const HOVER_LEAVE_MS = 250;
 const GRAB_PX = 12;
 const DOT_PX = 6;
 // the dot gives way to a resize handle this close (screen px)
@@ -59,12 +63,17 @@ function toOverlay(ctm: Matrix, root: DOMRect, size: { x: number; y: number }, p
     return { x: ctm.a * cx + ctm.c * cy + ctm.e - root.left, y: ctm.b * cx + ctm.d * cy + ctm.f - root.top };
 }
 
-const Marker: React.FC<{ at: Point; ghost?: boolean }> = ({ at, ghost = false }) => (
-    <g transform={`translate(${at.x} ${at.y})`} opacity={ghost ? 0.5 : 1}>
-        <line x1={0} y1={0} x2={ARROW_PX - 6} y2={0} stroke="#d93025" strokeWidth={2} />
-        <path d={`M${ARROW_PX} 0 L${ARROW_PX - 8} -4 L${ARROW_PX - 8} 4 Z`} fill="#d93025" />
-        <line x1={0} y1={0} x2={0} y2={-(ARROW_PX - 6)} stroke="#1e8e3e" strokeWidth={2} />
-        <path d={`M0 ${-ARROW_PX} L-4 ${-(ARROW_PX - 8)} L4 ${-(ARROW_PX - 8)} Z`} fill="#1e8e3e" />
+// the plain red dot; the X / Y arrows only while the origin is edited
+const Marker: React.FC<{ at: Point; ghost?: boolean; axes?: boolean }> = ({ at, ghost = false, axes = true }) => (
+    <g transform={`translate(${at.x} ${at.y})`} opacity={ghost ? 0.5 : 1} data-origin-axes={axes || undefined}>
+        {axes && (
+            <>
+                <line x1={0} y1={0} x2={ARROW_PX - 6} y2={0} stroke="#d93025" strokeWidth={2} />
+                <path d={`M${ARROW_PX} 0 L${ARROW_PX - 8} -4 L${ARROW_PX - 8} 4 Z`} fill="#d93025" />
+                <line x1={0} y1={0} x2={0} y2={-(ARROW_PX - 6)} stroke="#1e8e3e" strokeWidth={2} />
+                <path d={`M0 ${-ARROW_PX} L-4 ${-(ARROW_PX - 8)} L4 ${-(ARROW_PX - 8)} Z`} fill="#1e8e3e" />
+            </>
+        )}
         <circle cx={0} cy={0} r={DOT_PX / 2 + 1} fill="#d93025" stroke="#ffffff" strokeWidth={1} />
     </g>
 );
@@ -100,6 +109,30 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         }
         return liveWorkOriginPoint(editor, preview) || { x: 0, y: 0 };
     }, (a: Point | null, b: Point | null) => (!a && !b) || (!!a && !!b && a.x === b.x && a.y === b.y));
+    // editing the origin elsewhere shows the arrows too: pick mode, the dialog
+    const picking = useSelector(state => !!state[headType]?.originPick);
+    const dialogOpen = useSelector(state => !!state[headType]?.originDialog);
+    const [hovered, setHovered] = useState(false);
+    const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const onHover = useCallback((on: boolean) => {
+        if (hoverTimer.current) {
+            clearTimeout(hoverTimer.current);
+            hoverTimer.current = null;
+        }
+        if (on) {
+            setHovered(true);
+        } else {
+            hoverTimer.current = setTimeout(() => {
+                hoverTimer.current = null;
+                setHovered(false);
+            }, HOVER_LEAVE_MS);
+        }
+    }, []);
+    useEffect(() => () => {
+        if (hoverTimer.current) {
+            clearTimeout(hoverTimer.current);
+        }
+    }, []);
     const [drag, setDrag] = useState<DragState | null>(null);
     const dragRef = useRef<DragState | null>(null);
     dragRef.current = drag;
@@ -256,14 +289,20 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         return <div ref={rootRef} className={styles.overlay} data-origin-overlay data-rendering={renderingTimestamp} />;
     }
     const p = toOverlay(ctm, root, size, at);
-    // the dot gives way to a resize handle of the selection on it (the arrows still grab)
-    const dotYields = Array.from(document.querySelectorAll('[data-type="resize"]')).some((grip) => {
+    // the dot gives way to a resize handle of the selection on it (the arrows, or a ring around the handle, still grab)
+    let yieldRadius = 0;
+    Array.from(document.querySelectorAll('[data-type="resize"]')).forEach((grip) => {
         const r = grip.getBoundingClientRect();
         if (!r.width && !r.height) {
-            return false;
+            return;
         }
-        return Math.hypot(r.left + r.width / 2 - root.left - p.x, r.top + r.height / 2 - root.top - p.y) <= HANDLE_PX + Math.max(r.width, r.height) / 2;
+        const half = Math.max(r.width, r.height) / 2;
+        if (Math.hypot(r.left + r.width / 2 - root.left - p.x, r.top + r.height / 2 - root.top - p.y) <= HANDLE_PX + half) {
+            yieldRadius = Math.max(yieldRadius, half * Math.SQRT2 + HANDLE_PX);
+        }
     });
+    const dotYields = yieldRadius > 0;
+    const axes = originAxesShown({ dragging: !!drag, previewing: !!previewPoint, picking, dialogOpen, hovered, locked });
     let ghost = drag?.target ? toOverlay(ctm, root, size, drag.target.point) : null;
     if (drag?.free) {
         ghost = toOverlay(ctm, root, size, drag.free);
@@ -285,6 +324,8 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
     const grabProps = {
         onMouseDown,
         onDoubleClick,
+        onMouseEnter: () => onHover(true),
+        onMouseLeave: () => onHover(false),
         'aria-disabled': disabled || undefined,
         style: { cursor: disabled ? 'not-allowed' : 'move', pointerEvents: locked ? 'none' as const : undefined },
     };
@@ -318,29 +359,47 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
             <svg className={styles.graphics} width={root.width} height={root.height}>
                 {ghost && <Marker at={ghost} ghost />}
                 <g data-origin-marker data-origin-x={at.x} data-origin-y={at.y}>
-                    <Marker at={p} />
-                    <rect
-                        className={styles.grab}
-                        data-origin-grab="x"
-                        x={p.x + DOT_PX / 2}
-                        y={p.y - GRAB_PX / 2}
-                        width={ARROW_PX - DOT_PX / 2}
-                        height={GRAB_PX}
-                        {...grabProps}
-                    >
-                        <title>{tip}</title>
-                    </rect>
-                    <rect
-                        className={styles.grab}
-                        data-origin-grab="y"
-                        x={p.x - GRAB_PX / 2}
-                        y={p.y - ARROW_PX}
-                        width={GRAB_PX}
-                        height={ARROW_PX - DOT_PX / 2}
-                        {...grabProps}
-                    >
-                        <title>{tip}</title>
-                    </rect>
+                    <Marker at={p} axes={axes} />
+                    {axes && (
+                        <rect
+                            className={styles.grab}
+                            data-origin-grab="x"
+                            x={p.x + DOT_PX / 2}
+                            y={p.y - GRAB_PX / 2}
+                            width={ARROW_PX - DOT_PX / 2}
+                            height={GRAB_PX}
+                            {...grabProps}
+                        >
+                            <title>{tip}</title>
+                        </rect>
+                    )}
+                    {axes && (
+                        <rect
+                            className={styles.grab}
+                            data-origin-grab="y"
+                            x={p.x - GRAB_PX / 2}
+                            y={p.y - ARROW_PX}
+                            width={GRAB_PX}
+                            height={ARROW_PX - DOT_PX / 2}
+                            {...grabProps}
+                        >
+                            <title>{tip}</title>
+                        </rect>
+                    )}
+                    {dotYields && !locked && (
+                        // a resize handle covers the dot: a ring just outside the handle grabs (and shows the arrows)
+                        <circle
+                            className={styles.ring}
+                            data-origin-grab="ring"
+                            cx={p.x}
+                            cy={p.y}
+                            r={yieldRadius + RING_PX / 2}
+                            strokeWidth={RING_PX}
+                            {...grabProps}
+                        >
+                            <title>{tip}</title>
+                        </circle>
+                    )}
                     <circle
                         className={styles.grab}
                         data-origin-grab="dot"
