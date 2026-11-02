@@ -238,6 +238,11 @@ export class OriginSnap {
         return pickOriginTarget(this.targets, model, originTolerance(this.ctx.ctm.a));
     }
 
+    /** Client px to a model point (mm, y up). */
+    public modelPoint(screen: Point): Point {
+        return canvasToModel(apply(this.ctx.ctm.inverse(), screen), this.ctx.size);
+    }
+
     /** Model point to client px. */
     public toScreen(p: Point): Point {
         return apply(this.ctx.ctm, modelToCanvas(p, this.ctx.size));

@@ -270,3 +270,10 @@ export function jobSetupOrigin(before: Origin | null | undefined, next: Origin):
     }
     return withOffset(next, before ? originOffset(before) : null);
 }
+
+const tenth = (v: number): number => Math.round(v * 10) / 10 + 0;
+
+/** A free origin (Alt on the marker) at a model point, rounded to 0.1 mm; at the mode zero it is the workpiece origin. */
+export function freeOriginAt(point: Point, coordinateModeValue: string): Origin {
+    return createFreeOrigin(coordinateModeValue, { x: tenth(point.x), y: tenth(point.y) });
+}

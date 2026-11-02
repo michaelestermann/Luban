@@ -4,7 +4,7 @@ import { useDispatch, useSelector, useStore } from 'react-redux';
 import { Origin } from '../../../constants/coordinate';
 import { originActions, t } from '../../../flux/editor/actions-origin';
 import { Point } from '../../../lib/object-origin';
-import { originAfterDrop } from '../../../lib/work-origin';
+import { freeOriginAt, originAfterDrop } from '../../../lib/work-origin';
 import { CURSOR_SIZE, placeLabel } from '../label-placement';
 import { OriginTarget, targetOrigin } from '../snap/origin-targets';
 import { OriginSnap } from '../snap/snap-session';
@@ -12,7 +12,7 @@ import { buildOriginTargetInput, ModelGroupLike } from './origin-input';
 import { originMarkerShown } from './origin-marker-shown';
 import { useOverlayLayout } from './use-overlay-layout';
 import { liveWorkOriginPoint, useTransformTick } from './use-live-origin';
-import { targetLabel } from './origin-labels';
+import { originLabel, originTargetName, targetLabel } from './origin-labels';
 import styles from './origin.styl';
 
 type Matrix = DOMMatrix | SVGMatrix;
@@ -40,8 +40,12 @@ const NARROW_PX = 900;
 interface DragState {
     before: Origin;
     target: OriginTarget | null;
+    /** Alt held: a free point (model mm, 0.1 mm), no snapping */
+    free: Point | null;
     cursor: Point;
 }
+
+const freePoint = (origin: Origin): Point => ({ x: origin.referenceMetadata?.offset?.x ?? 0, y: origin.referenceMetadata?.offset?.y ?? 0 });
 
 /** Screen point (relative to the overlay) of a model point. */
 function toOverlay(ctm: Matrix, root: DOMRect, size: { x: number; y: number }, p: Point): Point {
@@ -137,16 +141,32 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         }
         ctrlRef.current = event.ctrlKey || event.metaKey;
         snapRef.current = OriginSnap.start({ input: buildInput(ctrlRef.current), ctm, size });
-        setDrag({ before: store.getState()[headType].origin, target: null, cursor: { x: event.clientX, y: event.clientY } });
+        setDrag({ before: store.getState()[headType].origin, target: null, free: null, cursor: { x: event.clientX, y: event.clientY } });
     }, [disabled, getScreenCTM, buildInput, size, store, headType]);
 
     useEffect(() => {
         if (!drag) {
             return undefined;
         }
-        const pick = (event: MouseEvent) => {
+        const last = { x: 0, y: 0, alt: false };
+        const pick = (event: { clientX: number; clientY: number; altKey: boolean; ctrlKey: boolean; metaKey: boolean }) => {
             const snap = snapRef.current;
             if (!snap) {
+                return;
+            }
+            last.x = event.clientX;
+            last.y = event.clientY;
+            last.alt = event.altKey;
+            const cursor = { x: event.clientX, y: event.clientY };
+            if (event.altKey) {
+                // Alt: free placement (does not follow objects), no snapping
+                const free = freePoint(freeOriginAt(snap.modelPoint(cursor), coordinateMode.value));
+                snap.show(null);
+                const previous = dragRef.current?.free;
+                if (!previous || previous.x !== free.x || previous.y !== free.y) {
+                    dispatch(originActions.setOriginPreview(headType, freeOriginAt(free, coordinateMode.value)));
+                }
+                setDrag(d => (d ? { ...d, target: null, free, cursor } : d));
                 return;
             }
             const ctrl = event.ctrlKey || event.metaKey;
@@ -154,22 +174,25 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
                 ctrlRef.current = ctrl;
                 snap.rebuild(buildInput(ctrl));
             }
-            const target = snap.pick({ x: event.clientX, y: event.clientY });
+            const target = snap.pick(cursor);
             const previous = dragRef.current;
             // no target: the marker stays at its last snapped point
             const next = target || previous?.target || null;
             snap.show(next);
-            if (next && next !== previous?.target) {
+            if (next && (next !== previous?.target || previous?.free)) {
                 dispatch(originActions.setOriginPreview(headType, targetOrigin(next, coordinateMode.value)));
             }
-            setDrag(d => (d ? { ...d, target: next, cursor: { x: event.clientX, y: event.clientY } } : d));
+            setDrag(d => (d ? { ...d, target: next, free: null, cursor } : d));
         };
         const onMove = (event: MouseEvent) => pick(event);
         const onUp = (event: MouseEvent) => {
             pick(event);
             const state = dragRef.current;
             endDrag();
-            if (state?.target) {
+            if (state?.free) {
+                const next = freeOriginAt(state.free, coordinateMode.value);
+                dispatch(originActions.applyOrigin(headType, next, { source: 'drop', label: originLabel(originTargetName('free', null, t), null, state.free) }));
+            } else if (state?.target) {
                 const { origin: next, removedOffset } = originAfterDrop(state.before, targetOrigin(state.target, coordinateMode.value));
                 dispatch(originActions.applyOrigin(headType, next, { source: 'drop', removedOffset, label: targetLabel(state.target, t, false) }));
             }
@@ -180,6 +203,12 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
                 event.preventDefault();
                 event.stopImmediatePropagation();
                 endDrag();
+            } else if (event.key === 'Alt') {
+                // Alt pressed or released without moving: free / snapped at the same cursor (and no menu focus)
+                event.preventDefault();
+                if ((event.type === 'keydown') !== last.alt) {
+                    pick({ clientX: last.x, clientY: last.y, altKey: event.type === 'keydown', ctrlKey: event.ctrlKey, metaKey: event.metaKey });
+                }
             } else if (event.key === 'Control' || event.key === 'Meta') {
                 const snap = snapRef.current;
                 const ctrl = event.type === 'keydown';
@@ -223,6 +252,9 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         return Math.hypot(r.left + r.width / 2 - root.left - p.x, r.top + r.height / 2 - root.top - p.y) <= HANDLE_PX + Math.max(r.width, r.height) / 2;
     });
     let ghost = drag?.target ? toOverlay(ctm, root, size, drag.target.point) : null;
+    if (drag?.free) {
+        ghost = toOverlay(ctm, root, size, drag.free);
+    }
     if (!drag && previewPoint) {
         ghost = toOverlay(ctm, root, size, previewPoint);
     }
@@ -236,8 +268,8 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
     };
 
     let label = null;
-    if (drag?.target && ghost) {
-        const text = targetLabel(drag.target, t);
+    if ((drag?.target || drag?.free) && ghost) {
+        const text = drag.free ? originLabel(originTargetName('free', null, t), null, drag.free) : targetLabel(drag.target, t);
         const labelSize = { width: Math.max(60, text.length * 6.8 + 16), height: 22 };
         const cursor = { x: drag.cursor.x - root.left, y: drag.cursor.y - root.top };
         const view = { x: 0, y: 0, width: root.width, height: root.height };
@@ -295,7 +327,7 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
             {drag && (
                 <div className={styles.hint} data-origin-hint>
                     {!narrow && <span>{t('key-CncLaser/Origin-Moving the work origin · snaps to frame points')}</span>}
-                    <span className={styles.keys}>{t('key-CncLaser/Origin-Ctrl: inside groups · Esc: cancel')}</span>
+                    <span className={styles.keys}>{t('key-CncLaser/Origin-Alt: free · Ctrl: inside groups · Esc: cancel')}</span>
                 </div>
             )}
         </div>

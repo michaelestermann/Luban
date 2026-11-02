@@ -20,6 +20,7 @@ import {
     gcodeOriginHeader,
     freezeOrigin,
     jobSetupOrigin,
+    freeOriginAt,
 } from '../src/app/lib/work-origin';
 import { createObjectOrigin } from '../src/app/lib/object-origin';
 
@@ -198,5 +199,11 @@ test('jobSetupOrigin: OK without changes keeps the origin, a change keeps the of
     t.deepEqual(jobSetupOrigin(createFreeOrigin('bottom-left', { x: 2, y: 3 }), workpieceOrigin('center')), createFreeOrigin('center', { x: 2, y: 3 }));
     // locking block: no offset
     t.deepEqual(jobSetupOrigin(group, { type: 2, reference: 'center', referenceMetadata: {} }), { type: 2, reference: 'center', referenceMetadata: {} });
+    t.end();
+});
+
+test('freeOriginAt: Alt-drop point rounded to 0.1 mm, the mode zero is the workpiece origin', (t) => {
+    t.deepEqual(freeOriginAt({ x: 112.43, y: 95.96 }, 'bottom-left'), createFreeOrigin('bottom-left', { x: 112.4, y: 96 }));
+    t.deepEqual(freeOriginAt({ x: 0.02, y: -0.04 }, 'center'), workpieceOrigin('center'));
     t.end();
 });
