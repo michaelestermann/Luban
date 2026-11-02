@@ -25,6 +25,7 @@ import { Bounds } from './measure/dimension-chains';
 import { Axes, SnapRef } from './snap/snap-math';
 import { elementsBounds, SnapSession } from './snap/snap-session';
 import { getHelpers } from './rail/helper-switches';
+import { isBoxSelecting } from './box-select';
 
 const STEP_COUNT = 10;
 const THRESHOLD_DIST = 0.8;
@@ -1027,7 +1028,7 @@ class SVGCanvas extends React.PureComponent<SVGCanvasProps> {
         const x = pt.x;
         const y = pt.y;
 
-        if (this.mode === 'select' && event.which === 1 && !this.editingElem) {
+        if (isBoxSelecting({ mode: this.mode, leftButton: event.which === 1, editing: !!this.editingElem, selectorVisible: !!this.svgSelector.visible })) {
             this.svgSelector.updateBox(x, y);
             this.calculateSelectedModel(event, true);
         }
