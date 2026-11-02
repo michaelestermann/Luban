@@ -7,6 +7,7 @@ import { HEAD_LASER, PAGE_EDITOR } from '../../../constants';
 import { actions as editorActions } from '../../../flux/editor';
 import i18n from '../../../lib/i18n';
 import { canDecomposeSelection } from '../../../lib/svg-decompose';
+import { toastClearance } from '../../../lib/toast-clearance';
 import SvgIcon from '../../components/SvgIcon';
 import PointEditBar from './PointEditBar';
 import MeasureBar from './MeasureBar';
@@ -151,13 +152,19 @@ const SelectionBar: React.FC<SelectionBarProps> = ({ headType, modeBlocked = fal
     const selectedModels = modelGroup?.getSelectedModelArray?.() || [];
     const drawing = SVGCanvasMode === 'draw' || !!SVGCanvasExt?.elem;
     const drawGroup = SVGActions?.svgContentGroup?.drawGroup;
-    if (page === PAGE_EDITOR && !modeBlocked && !isOnABPosition && SVGCanvasMode === 'select' && SVGCanvasExt?.elem && drawGroup) {
+    const barAllowed = page === PAGE_EDITOR && !modeBlocked && !isOnABPosition;
+    const pointEditShown = barAllowed && SVGCanvasMode === 'select' && !!SVGCanvasExt?.elem && !!drawGroup;
+    const measureShown = barAllowed && SVGCanvasMode === 'measure';
+    const barShown = pointEditShown || measureShown || (barAllowed && !drawing && selectedModels.length > 0);
+    // a bar on the canvas: toasts open below it, not over its buttons
+    useLayoutEffect(() => (barShown ? toastClearance.claim() : undefined), [barShown]);
+    if (pointEditShown) {
         return <PointEditBar drawGroup={drawGroup} SVGActions={SVGActions} />;
     }
-    if (page === PAGE_EDITOR && !modeBlocked && !isOnABPosition && SVGCanvasMode === 'measure') {
+    if (measureShown) {
         return <MeasureBar onDone={() => dispatch(editorActions.setCanvasMode(headType, 'select', {}))} />;
     }
-    if (page !== PAGE_EDITOR || modeBlocked || isOnABPosition || drawing || selectedModels.length === 0) {
+    if (!barShown) {
         return null;
     }
 

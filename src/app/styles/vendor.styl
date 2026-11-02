@@ -37,6 +37,12 @@
 }
 
 
+// a bar on the laser / CNC canvas (selection, point edit, measure): toasts open below it (lib/toast-clearance)
+.toasts-below-canvas-bar .Toastify__toast-container {
+  top: calc(var(--tab-strip-height, 40px) + 122px);
+}
+
+
 .Toastify__toast {
    width: auto;
    text-align: center;
