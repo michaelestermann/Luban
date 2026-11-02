@@ -222,10 +222,12 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
         ghost = toOverlay(ctm, root, size, previewPoint);
     }
     const tip = isRotate ? t('key-CncLaser/Origin-Only on flat workpieces') : t('key-CncLaser/Origin-Drag to move · double-click for details');
+    // drawing, measuring, point editing: the clicks at the origin belong to the tool (e.g. a rectangle drawn
+    // from the zero point), so the marker lets them through; on a rotary workpiece it stays hoverable (tooltip)
     const grabProps = {
         onMouseDown,
         'aria-disabled': disabled || undefined,
-        style: { cursor: disabled ? 'not-allowed' : 'move' },
+        style: { cursor: disabled ? 'not-allowed' : 'move', pointerEvents: locked ? 'none' as const : undefined },
     };
 
     let label = null;
@@ -278,7 +280,7 @@ const OriginMarker: React.FC<OriginMarkerProps> = ({ headType, isActive, getScre
                         cy={p.y}
                         r={DOT_PX}
                         {...grabProps}
-                        style={{ ...grabProps.style, pointerEvents: dotYields ? 'none' : undefined }}
+                        style={{ ...grabProps.style, pointerEvents: dotYields || locked ? 'none' : undefined }}
                     >
                         <title>{tip}</title>
                     </circle>
