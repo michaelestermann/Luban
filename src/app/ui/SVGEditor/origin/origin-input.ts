@@ -2,7 +2,7 @@
  * Builds the input of the origin snap targets from the editor's model group: model bounding boxes (the
  * ones the tool paths use), groups, the selection and the workpiece (model coordinates).
  */
-import { BoxLike, unionBox } from '../../../lib/object-origin';
+import { BoxLike, normalizedBox, unionBox } from '../../../lib/object-origin';
 import { workpieceModelBox } from '../../../lib/work-origin';
 import { OriginTargetInput } from '../snap/origin-targets';
 
@@ -30,7 +30,8 @@ const boxOf = (model: ModelLike): BoxLike | null => {
         model.computeBoundingBox();
     }
     const b = model.boundingBox;
-    return b ? { min: { x: b.min.x, y: b.min.y }, max: { x: b.max.x, y: b.max.y } } : null;
+    // a mirrored object has min > max: its frame points are the normalised box
+    return b ? normalizedBox({ min: { x: b.min.x, y: b.min.y }, max: { x: b.max.x, y: b.max.y } }) : null;
 };
 
 export function buildOriginTargetInput(

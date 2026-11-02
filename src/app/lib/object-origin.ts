@@ -32,7 +32,8 @@ function isValidBox(box: BoxLike | null | undefined): boolean {
         && box.min.x <= box.max.x && box.min.y <= box.max.y;
 }
 
-function normalizedBox(box: BoxLike): BoxLike {
+/** min <= max on both axes (a mirrored object has min > max in its SvgModel.boundingBox). */
+export function normalizedBox(box: BoxLike): BoxLike {
     return {
         min: { x: Math.min(box.min.x, box.max.x), y: Math.min(box.min.y, box.max.y) },
         max: { x: Math.max(box.min.x, box.max.x), y: Math.max(box.min.y, box.max.y) },
