@@ -292,7 +292,15 @@ const startToBegin = (data) => {
             const { pathname } = url.parse(request.url);
             const p = pathname === '/' ? 'index.html' : pathname.substr(1);
             const filePath = path.normalize(`${__dirname}/app/${p}`);
-            callback(fs.createReadStream(filePath));
+            // a missing file is a failed request, never an uncaught exception (an error box that blocks the app)
+            if (!fs.existsSync(filePath)) {
+                log.warn('file protocol: not found', filePath);
+                callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+                return;
+            }
+            const stream = fs.createReadStream(filePath);
+            stream.on('error', (error) => log.error('file protocol: read failed', filePath, error));
+            callback(stream);
         },
         (error) => {
             if (error) {
