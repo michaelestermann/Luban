@@ -27,7 +27,6 @@ function prepareProduction() {
 
 const development = gulp.series(
     prepareDevelopment,
-    clean,
     gulp.parallel(
         serverBuildDevelopment,
         serverCopyDevelopment,

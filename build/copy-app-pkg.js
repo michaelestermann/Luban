@@ -10,7 +10,7 @@ function ensureDirSync(dir) {
 
 (function main() {
   const srcPkg = path.resolve(__dirname, '../src/package.json');
-  const distDir = path.resolve(__dirname, '../dist/Luban');
+  const distDir = path.resolve(__dirname, '..', process.argv[2] || 'dist/Luban');
   const distSrcDir = path.join(distDir, 'src');
 
   // 1) dist/Luban/package.json — used by electron-builder as the app package

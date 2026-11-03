@@ -38,13 +38,18 @@ export function appCopyProduction() {
 // Production Build
 //
 export function appBuildProduction() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const webpackConfig = require('../../webpack.config.app.production');
         webpack(webpackConfig, (err, stats) => {
             if (err) {
-                throw new PluginError('app:build-prod', err);
+                reject(new PluginError('app:build-prod', err));
+                return;
             }
             log('[app:build-prod]', stats.toString({ colors: true }));
+            if (stats.hasErrors()) {
+                reject(new PluginError('app:build-prod', 'Webpack compilation failed'));
+                return;
+            }
             resolve();
         });
     });

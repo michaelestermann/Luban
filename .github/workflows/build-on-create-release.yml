@@ -25,10 +25,10 @@ jobs:
             - name: Checkout submodules
               run: git submodule update --init --recursive
 
-            - name: Use Node.js 16
+            - name: Use Node.js 22
               uses: actions/setup-node@v3
               with:
-                  node-version: 16
+                  node-version: 22
 
             - run: npm install -g npm@^9
             - run: npm install
@@ -73,10 +73,10 @@ jobs:
               run: |
                 python -m pip install --upgrade pip
 
-            - name: Use Node.js 16
+            - name: Use Node.js 22
               uses: actions/setup-node@v3
               with:
-                  node-version: 16
+                  node-version: 22
 
             # install setuptools to reintroduce distutils missing in Python 3.12
             # https://github.com/nodejs/node-gyp/issues/2869
@@ -152,10 +152,10 @@ jobs:
                 sudo ln -sf /usr/bin/python3 /usr/bin/python
                 python -m pip install --upgrade pip
 
-            - name: Use Node.js 16
+            - name: Use Node.js 22
               uses: actions/setup-node@v3
               with:
-                  node-version: 16
+                  node-version: 22
 
             - run: npm install -g npm@^9 --unsafe-perm
             - run: npm install --unsafe-perm

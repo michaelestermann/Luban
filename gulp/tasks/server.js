@@ -20,9 +20,9 @@ export function serverCopyDevelopment() {
 export function serverBuildDevelopment(cb) {
     const exec = require('child_process').exec;
     // Build TypeScript server code and transpile Electron main process files for development
-    exec('npm run build:server && npm run build:main', () => {
-        cb();
-    });
+    const child = exec('npm run build:server && npm run build:main && npm run build:server-worker', cb);
+    child.stdout.pipe(process.stdout);
+    child.stderr.pipe(process.stderr);
 }
 
 //
@@ -36,7 +36,7 @@ export function serverStartDevelopment(cb) {
         script: './output/src/main',
         // script: './bin/cli',
         args: args,
-        ignore: ['.git', 'node_modules/**/node_modules'],
+        ignore: ['.git', 'node_modules/**/node_modules', 'output/src/app/**'],
         delay: 8000,
         verbose: true,
         exec: 'electron --inspect --trace-warnings',
@@ -44,26 +44,19 @@ export function serverStartDevelopment(cb) {
         execMap: {
             js: 'node --harmony',
         },
-        events: {
-            restart:
-                "osascript -e 'display notification \"App restarted due to:\n'$FILENAME'\" with title \"nodemon\"'",
-        },
         watch: [
-            'packages/luban-platform/',
-            'src/shared/',
-            'src/server/',
+            'output/src/',
         ],
         env: {
             NODE_ENV: 'development',
         },
         ext: 'js json ts',
-        tasks: ['serverBuildDevelopment'],
         done: cb,
         stdout: false,
     })
         .once('quit', (code) => {
             log('nodedmon has quit with code', code);
-            process.exit();
+            process.exit(code || 0);
         })
         .on('restart', (files) => {
             log('App restarted due to: ', files);
@@ -89,13 +82,18 @@ export function serverCopyProduction() {
 // Production Build
 //
 export function serverBuildProduction() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const webpackConfig = require('../../webpack.config.server.production');
         webpack(webpackConfig, (err, stats) => {
             if (err) {
-                throw new PluginError('server:build', err);
+                reject(new PluginError('server:build', err));
+                return;
             }
             log('[server:build]', stats.toString({ colors: true }));
+            if (stats.hasErrors()) {
+                reject(new PluginError('server:build', 'Webpack compilation failed'));
+                return;
+            }
             resolve();
         });
     });

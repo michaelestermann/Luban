@@ -16,8 +16,7 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
-const destDir = path.join(repoRoot, 'dist', 'Luban');
-const outputDir = path.join(repoRoot, 'output');
+const destDir = path.resolve(repoRoot, process.argv[2] || 'dist/Luban');
 const resourcesDir = path.join(destDir, 'resources');
 
 function rimraf(target) {
@@ -46,8 +45,6 @@ try {
     console.log('[prebuild-prod] Starting prebuild...');
 
     // Cleanup
-    rimraf(outputDir);
-    ensureDir(outputDir);
     rimraf(destDir);
     ensureDir(destDir);
 
