@@ -75,6 +75,7 @@ class Visualizer extends React.PureComponent {
         isRotate: PropTypes.bool,
         toolHead: PropTypes.string,
         gcodeFile: PropTypes.object,
+        activeGcodeFile: PropTypes.object,
         headType: PropTypes.string,
 
         isLaserPrintAutoMode: PropTypes.bool.isRequired,
@@ -801,16 +802,17 @@ class Visualizer extends React.PureComponent {
     render() {
         const state = this.state;
         const notice = this.notice();
-        const { gcodeFile } = this.props;
+        // name and time of the file drawn on the canvas, not of the file selected in the list
+        const { activeGcodeFile } = this.props;
         return (
             <div style={{ top: 0, bottom: 0, left: 0, right: 0 }}>
                 <div className={styles['visualizer-progress']}>
                     <ProgressBar tips={notice} progress={this.props.progress * 100} />
                 </div>
-                {gcodeFile !== null && (
+                {activeGcodeFile && (
                     <div className={styles['visualizer-info']}>
-                        <p>{i18n._(gcodeFile?.renderGcodeFileName)}</p>
-                        <p>{humanReadableTime(gcodeFile?.estimated_time)}</p>
+                        <p>{i18n._(activeGcodeFile.renderGcodeFileName)}</p>
+                        <p>{humanReadableTime(activeGcodeFile.estimated_time)}</p>
                     </div>
                 )}
                 <div className={styles['canvas-wrapper']}>
@@ -910,6 +912,7 @@ const mapStateToProps = (state) => {
         uploadState: workspace.uploadState,
         gcodeList: workspace.gcodeList,
         gcodeFile: workspace.gcodeFile,
+        activeGcodeFile: workspace.activeGcodeFile,
 
         gcodePrintingInfo: workspace.gcodePrintingInfo,
         isLaserPrintAutoMode: workspace.isLaserPrintAutoMode,

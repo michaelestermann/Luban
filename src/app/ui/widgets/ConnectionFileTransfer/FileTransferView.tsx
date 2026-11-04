@@ -199,7 +199,6 @@ const WifiTransport: React.FC<FileTransferViewProps> = (props) => {
                 return;
             }
             await dispatch(gcodeActions.renderGcodeFile(find, false, true));
-            await dispatch(workspaceActions.updateState({ activeGcodeFile: find }));
             await dispatch(workspaceActions.updateStateGcodeFileName(find.renderGcodeFileName || find.name));
 
 

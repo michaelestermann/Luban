@@ -157,6 +157,8 @@ const clearGcode = (isPreview = false) => {
             previewModelGroup.remove(...previewModelGroup.children);
         } else {
             modelGroup.remove(...modelGroup.children);
+            // the canvas is empty: no file is drawn on it any more
+            dispatch(baseActions.updateState({ activeGcodeFile: null }));
         }
         dispatch(
             baseActions.updateState({
@@ -379,6 +381,8 @@ const renderGcodeFile = (
             await dispatch(
                 baseActions.updateState({
                     gcodeFile,
+                    // the file drawn on the canvas, named in the visualizer label
+                    activeGcodeFile: gcodeFile,
                     stage: WORKSPACE_STAGE.LOADING_GCODE,
                     renderState: 'rendering',
                     progress: 0,
