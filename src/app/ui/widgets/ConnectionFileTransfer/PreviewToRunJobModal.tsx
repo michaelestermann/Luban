@@ -35,7 +35,7 @@ const PreviewToRunJobModal = ({
                 <div className="width-438">
                     {
                         includes(headTypeArr, selectFileType)
-                            ? i18n._('key-Workspace/RunJobWarningModal-Mismatch body', { headType: headTypeWithI18n, fileType: fileTypeWithI18n })
+                            ? i18n._('key-Workspace/RunJobWarningModal-Mismatch body', { headType: headTypeWithI18n, gcodeType: fileTypeWithI18n })
                             : i18n._('key-Workspace/RunJobWarningModal-Unknown body', { headType: headTypeWithI18n })
                     }
                 </div>

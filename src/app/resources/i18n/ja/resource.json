@@ -2157,7 +2157,7 @@
     "key-Workspace/Purifier-Medium": "中間",
     "key-Workspace/Purifier-Switch": "切り替え",
     "key-Workspace/Purifier-You should replace the filter cartridge.": "フィルターカートリッジを交換してください。",
-    "key-Workspace/RunJobWarningModal-Mismatch body": "G コードファイル内の作業タイプ ({{codeType}}) が、現在プリンターに接続されているの実行ヘッドタイプ ({{headType}}) と一致しないため、例外が発生する可能性があります。作業を開始するかどうかを確認してください。",
+    "key-Workspace/RunJobWarningModal-Mismatch body": "G コードファイル内の作業タイプ ({{gcodeType}}) が、現在プリンターに接続されているの実行ヘッドタイプ ({{headType}}) と一致しないため、例外が発生する可能性があります。作業を開始するかどうかを確認してください。",
     "key-Workspace/RunJobWarningModal-Mismatch header": "一貫性のない作業タイプ",
     "key-Workspace/RunJobWarningModal-Unknown body": "G コードファイル内の作業タイプが不明です。現在プリンターに接続されているの実行ヘッド（{{headType}}）を使用してを作業開始するかどうかを確認してください。",
     "key-Workspace/RunJobWarningModal-Unknown header": "作業種類不明",
