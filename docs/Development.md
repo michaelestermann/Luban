@@ -1,13 +1,15 @@
 # Development
 
-If you want to contribute to Luban, install Node.js 22 or newer. The locked build
+To work on Luban, install Node.js 22 or newer and Python 3.11. The locked build
 dependencies no longer support Node.js 16.
 
-Or you can follow the instructions below to set up the development environment for specific platform:
+Follow the instructions for your platform to set up the development environment:
 
-- macOS: (No documentation for now)
+- macOS: [macOS Environment](Environment-macOS.md)
 - Linux (Ubuntu/Debian/CentOS): [Linux Environment](Environment-Linux.md)
 - Windows: [Windows Environment](Environment-Windows.md)
+
+For an overview of the app's screens and features, see the [Feature guide](Features.md).
 
 
 ### Install dependencies and start dev server
@@ -20,7 +22,7 @@ Or you can follow the instructions below to set up the development environment f
     > git submodule update --init
     ```
 
-- Use `npm` to install package dependencies:
+- Use `npm` to install package dependencies. This also rebuilds the native modules for Electron:
 
     ```Bash
     > npm install
@@ -32,13 +34,19 @@ Or you can follow the instructions below to set up the development environment f
     > npm run dev
     ```
 
+    This opens the Electron app. The frontend is also served at http://localhost:8080
+    and the backend at http://localhost:8000, so you can open the app in Chrome as well.
+
 ### Build installer locally
 
 ```Bash
 > npm run build:mac-x64
 > npm run build:mac-arm64
 > npm run build:win-x64
+> npm run build:linux-x64
 ```
+
+The installers are written to the `output` folder.
 
 ### Available tasks
 
@@ -53,7 +61,11 @@ These commands work in the default shells on macOS, Windows, and Linux:
 | `npm run start-prod` | Run the built production HTTP server without Electron. |
 | `npm run prod` | Build production files and run the production HTTP server. |
 | `npm run serve` | Run only the frontend dev server; use `build-dev` first and run the backend separately. |
-| `npm run build:mac`, `build:mac-x64`, `build:mac-arm64`, `build:win-x64`, `build:linux-x64` | Build production files and package an installer for the selected platform/architecture. |
+| `npm run build:mac`, `build:mac-x64`, `build:mac-arm64`, `build:win-x64`, `build:win-x64-portable`, `build:linux-x64` | Build production files and package an installer for the selected platform/architecture. |
+| `npm test` | Run the unit tests in `test/` with tape. |
+| `npm run lint` | Run ESLint and Stylint. ESLint also runs in the pre-push hook. |
+| `npm run update-i18n` | Extract new translation keys into `src/app/resources/i18n`. |
+| `npm run commit` | Write a commit message in the required format with Commitizen. |
 
 Initialize the resource submodules before building. Development uses ports 8080
 and 8000; stop an existing Luban instance before starting another one. Startup
@@ -64,13 +76,19 @@ target platform. Native dependencies are rebuilt for the selected Electron
 architecture during packaging. After changing Node/Electron versions or CPU
 architecture, run `npm run electron-rebuild` if native modules fail to load.
 
+### Commit messages
+
+Commit messages are checked by commitlint. Use the format `<Type>: <Subject>`,
+for example `Fix: Keep the origin marker on its object`. See
+[Contributing](../CONTRIBUTING.md#commit) for the types and rules.
+
 ### Additional Notes
 
-- For developers in China, you can use taobao mirror to install npm packages.
+- For developers in China, you can use the npmmirror registry to install npm packages.
 
     ```Bash
-    > npm config set registry https://registry.npm.taobao.org/
-    > ELECTRON_MIRROR="https://npm.taobao.org/mirrors/electron/" npm install
+    > npm config set registry https://registry.npmmirror.com/
+    > ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/" npm install
     ```
 
 ### FAQ
@@ -79,7 +97,10 @@ architecture, run `npm run electron-rebuild` if native modules fail to load.
 
   **A:** Check your system proxy and try `rm -rf node_modules/electron && npm install` again.
 
-- **Q:** Develop in Firefox encounters an blank screen?
+- **Q:** Native modules fail to load after updating Node.js or switching CPU architecture?
 
-  **A:** There is a compatible problem of `getScreenCTM()` in using SVG in Firefox, switch to Chrome.
+  **A:** Run `npm run electron-rebuild`.
 
+- **Q:** Develop in Firefox encounters a blank screen?
+
+  **A:** There is a compatibility problem of `getScreenCTM()` with SVG in Firefox; use Chrome.

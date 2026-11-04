@@ -1,23 +1,13 @@
 ## Windows 10 / Windows 11
 
 - Install `Git` from https://git-scm.com/.
-- Install Node.js 22 from https://nodejs.org/dist/latest-v22.x/.
-- Install node-gyp compilation environment for the third-party denpendencies.
-  - **Official:** You can follow [node-gyp installation instructions](https://github.com/nodejs/node-gyp#on-windows).
-  - **Alternative:** Open `Git Bash` as administrator and follow the steps below. This will take about half an hour.
+- Install Node.js 22 from https://nodejs.org/en/download (LTS, 64-bit).
+- Install the compilation tools for native dependencies (node-gyp):
+  - **Simplest:** In the Node.js installer, check **"Automatically install the necessary tools"**. This installs Python and the Visual Studio Build Tools.
+  - **Manual:** Install [Python 3.11](https://www.python.org/downloads/) and [Visual Studio Build Tools 2022](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the **"Desktop development with C++"** workload. See the [node-gyp instructions for Windows](https://github.com/nodejs/node-gyp#on-windows).
 
-    ```Bash
-    > npm install -g windows-build-tools
-    > npm config set msvs_version 2017
-    ```
-    
-    or
+The CI builds Windows installers with Node.js 22, Python 3.11 and Visual Studio 2022 (`windows-2022` runner).
 
-    ```Bash
-    > npm config set @xiekun1992:registry=https://npm.pkg.github.com/
-    > npm config set //npm.pkg.github.com/:_authToken=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
-    > npm install -g @xiekun1992/windows-build-tools@5.2.3
-    > npm config set msvs_version 2017
-    ```
+`npm install` patches node-gyp to build native modules with the Clang toolset used by Node.js 22 (`build/patch-node-gyp.js`), so no extra configuration such as `msvs_version` is needed.
 
-    **Note**: By now the latest version of `windows-build-tools` is v5.2.2, which has an issue of Visual Studio Build Tools in endless wait loop. In order to save your time, we fixed the bug and provide the second way.
+The `npm run` tasks work in PowerShell, Command Prompt and Git Bash.
