@@ -19,5 +19,11 @@
     > brew install python@3.11
     ```
 
+- On Apple silicon, install Rosetta 2. The bundled slicing and toolpath engines (`LunarMP`, `LunarSlicer`, `LunarTPP`) are x86_64-only, so without Rosetta importing a 3D model stalls at 75%, generating G-code stalls at 10%, and the server log shows `spawn Unknown system error -86`:
+
+    ```Bash
+    > softwareupdate --install-rosetta --agree-to-license
+    ```
+
 The CI builds macOS installers (`x64` and `arm64`) on `macos-latest` with Node.js 22 and Python 3.11.
 In CI, signing and notarization run only when the signing credentials are available.
