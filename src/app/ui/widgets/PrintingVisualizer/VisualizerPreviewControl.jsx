@@ -156,15 +156,15 @@ function VisualizerPreviewControl() {
                 gcodePreviewModeToogleVisible: 0
             }));
         }
+    }, [displayedType, dispatch]);
+
+    // the preview hides the model group for its gray copy: only while G-code is shown,
+    // a mount in model view (e.g. switching tabs) must not hide the models
+    useEffect(() => {
         if (displayedType === 'gcode') {
             dispatch(printingActions.setShowOriginalModel(showOriginalModel));
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the displayed type only; showOriginalModel changes are handled by the next effect
-    }, [displayedType]);
-
-    useEffect(() => {
-        dispatch(printingActions.setShowOriginalModel(showOriginalModel));
-    }, [showOriginalModel, dispatch]);
+    }, [displayedType, showOriginalModel, dispatch]);
 
     useEffect(() => {
         setAllShowTypes(gcodeTypeInitialVisibility);
