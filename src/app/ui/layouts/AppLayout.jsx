@@ -779,7 +779,8 @@ class AppLayout extends React.PureComponent {
             });
             UniApi.Event.on('appbar-menu:shortcut', (...commands) => {
                 if (commands && commands.length > 0) {
-                    Mousetrap.trigger(commands[0]);
+                    // the ShortcutManager binds every key with the keydown action
+                    Mousetrap.trigger(commands[0], 'keydown');
                 }
             });
             UniApi.Event.on('appbar-menu:new-file', async ({ headType, isRotate }) => {
