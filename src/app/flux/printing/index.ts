@@ -4825,7 +4825,7 @@ export const actions = {
                             if (modelInfos.length === 1) {
                                 const state = getState().printing;
                                 const progress = 0.25 + data.progress * 0.5;
-                                if (!silentLoading && progress - state.progress > 0.01 || progress > 0.75 - EPSILON) {
+                                if (!silentLoading && (progress - state.progress > 0.01 || progress > 0.75 - EPSILON)) {
                                     dispatch(
                                         actions.updateState({
                                             stage: STEP_STAGE.PRINTING_LOADING_MODEL,
