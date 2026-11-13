@@ -20,6 +20,7 @@ fileAssociations:
 # global pack options
 #
 asar: false
+afterPack: build/adhoc-sign.js
 asarUnpack: []
 
 #
@@ -43,6 +44,8 @@ mac:
     gatekeeperAssess: false
     entitlements: build/entitlements.mac.plist
     entitlementsInherit: build/entitlements.mac.plist
+    extendInfo:
+        NSLocalNetworkUsageDescription: Snapmaker Luban connects to Snapmaker machines on your local network.
 
 
 dmg:
