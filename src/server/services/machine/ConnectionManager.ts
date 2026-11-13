@@ -328,7 +328,7 @@ class ConnectionManager {
         log.info(`Detected protocol: ${this.protocol}`);
 
         if (this.protocol === NetworkProtocol.Unknown) {
-            this.socket && this.socket.emit(SocketEvent.ConnectionOpen, {
+            socket.emit(SocketEvent.ConnectionOpen, {
                 code: 404,
                 msg: 'Unable to detect protocol of communication.',
             });
