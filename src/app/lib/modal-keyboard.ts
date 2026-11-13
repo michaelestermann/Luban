@@ -102,12 +102,24 @@ export function pushModal(modal: OpenModal): () => void {
     };
 }
 
-export function isModalOpen(): boolean {
-    return openModals.length > 0;
+// A dialog whose element was removed from the document without unmounting it never unregisters:
+// it must not keep the keyboard. (A null element is a dialog still rendering into its portal.)
+function isDetached(modal: OpenModal): boolean {
+    const element = modal.element();
+    return !!element && !element.isConnected;
 }
 
 export function topModal(): OpenModal | null {
-    return openModals.length ? openModals[openModals.length - 1] : null;
+    for (let i = openModals.length - 1; i >= 0; i--) {
+        if (!isDetached(openModals[i])) {
+            return openModals[i];
+        }
+    }
+    return null;
+}
+
+export function isModalOpen(): boolean {
+    return topModal() !== null;
 }
 
 /**

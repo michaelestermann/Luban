@@ -22,6 +22,14 @@ const repairGuidePopup = () => {
     });
 };
 
+let openRepairModelPopup: { close: () => void } | null = null;
+
+/** Closes the repair prompt without an answer (the models it asked about are no longer being loaded). */
+export const dismissRepairModelPopup = () => {
+    openRepairModelPopup?.close();
+    openRepairModelPopup = null;
+};
+
 export const repairModelPopup = async (models) => {
     let ignore = false;
     const modelNames = models.map((c) => {
@@ -64,5 +72,6 @@ export const repairModelPopup = async (models) => {
                 reject(ignore);
             }
         });
+        openRepairModelPopup = action;
     });
 };

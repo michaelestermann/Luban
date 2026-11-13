@@ -21,7 +21,7 @@ import Canvas from '../../components/SMCanvas';
 import { emitUpdateControlInputEvent } from '../../components/SMCanvas/TransformControls';
 import { toast } from '../../components/Toast';
 import { PageMode } from '../../pages/PageMode';
-import { repairModelPopup } from '../../views/repair-model/repair-model-popup';
+import { dismissRepairModelPopup, repairModelPopup } from '../../views/repair-model/repair-model-popup';
 import { SceneToast } from '../../views/toasts/SceneToast';
 import ModeToggleBtn from './ModeToggleBtn';
 import PrintableCube from './PrintableCube';
@@ -535,12 +535,7 @@ class Visualizer extends PureComponent {
                 }
             }
         } else {
-            // resolve repair model box
-            const repairModelBox = document.getElementsByClassName('repair-model-modal');
-            if (repairModelBox.length > 0) {
-                const parentNode = repairModelBox[0].parentNode;
-                parentNode.remove();
-            }
+            dismissRepairModelPopup();
         }
 
         this.canvas.current.renderScene();

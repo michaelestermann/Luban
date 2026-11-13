@@ -75,6 +75,19 @@ test('modalKeyboard: the last opened dialog is the topmost', (t) => {
     t.end();
 });
 
+test('modalKeyboard: a dialog taken out of the document without closing blocks no key', (t) => {
+    const mounted = { element: () => ({ isConnected: true }) };
+    const detached = { element: () => ({ isConnected: false }) };
+    const closeMounted = pushModal(mounted);
+    const closeDetached = pushModal(detached);
+    t.equal(topModal(), mounted, 'the detached dialog is skipped');
+    closeMounted();
+    t.equal(topModal(), null, 'only the detached dialog is left: no top');
+    t.equal(isModalOpen(), false, 'and none counts as open');
+    closeDetached();
+    t.end();
+});
+
 test('modalKeyboard: the default button is the last enabled primary one, or the only button', (t) => {
     const b = (primary, disabled = false) => ({ primary, disabled });
     t.equal(defaultButtonIndex([b(false), b(true)]), 1, 'Cancel, Delete (primary)');
